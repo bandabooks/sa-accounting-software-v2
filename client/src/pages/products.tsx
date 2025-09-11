@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Search, Edit, Trash2, Package, Tag, DollarSign, Boxes, CheckCircle, AlertTriangle } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Package, Tag, DollarSign, Boxes, CheckCircle, AlertTriangle, Eye, Settings, Copy, Archive, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
@@ -20,8 +24,13 @@ import { PageLoader } from "@/components/ui/global-loader";
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "products" | "services">("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isStockDialogOpen, setIsStockDialogOpen] = useState(false);
+  const [stockAdjustment, setStockAdjustment] = useState({ quantity: 0, reason: "" });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -130,13 +139,22 @@ export default function Products() {
       product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = !statusFilter || 
-      (statusFilter === "active" && product.isActive !== false) ||
-      (statusFilter === "services" && product.isService === true) ||
-      (statusFilter === "lowStock" && product.isService !== true && 
-       product.stockQuantity !== null && product.stockQuantity <= (product.minStockLevel || 10));
+    // Prioritize statusFilter when both statusFilter and typeFilter are set
+    if (statusFilter) {
+      const matchesStatus = 
+        (statusFilter === "active" && product.isActive !== false) ||
+        (statusFilter === "services" && product.isService === true) ||
+        (statusFilter === "lowStock" && product.isService !== true && 
+         product.stockQuantity !== null && product.stockQuantity <= (product.minStockLevel || 10));
+      return matchesSearch && matchesStatus;
+    }
+
+    // Only apply type filter if no status filter
+    const matchesType = typeFilter === "all" || 
+      (typeFilter === "products" && !product.isService) ||
+      (typeFilter === "services" && product.isService);
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesType;
   });
 
   const handleDeleteProduct = (id: number) => {
@@ -161,6 +179,55 @@ export default function Products() {
   const handleDialogClose = () => {
     setIsCreateDialogOpen(false);
     setEditingProduct(null);
+  };
+
+  const handleProductCardClick = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleStockAdjustment = () => {
+    if (!selectedProduct || selectedProduct.isService) return;
+    
+    setStockAdjustment({ quantity: 0, reason: "" });
+    setIsStockDialogOpen(true);
+  };
+
+  const submitStockAdjustment = async () => {
+    if (!selectedProduct || stockAdjustment.quantity === 0) return;
+    
+    try {
+      await apiRequest(`/api/products/${selectedProduct.id}/stock-adjustment`, "POST", {
+        adjustment: stockAdjustment.quantity,
+        reason: stockAdjustment.reason,
+        newQuantity: (selectedProduct.stockQuantity || 0) + stockAdjustment.quantity
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/stats"] });
+      toast({
+        title: "Success",
+        description: "Stock adjusted successfully",
+      });
+      setIsStockDialogOpen(false);
+      setStockAdjustment({ quantity: 0, reason: "" });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to adjust stock",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicateProduct = async (product: Product) => {
+    const duplicatedProduct = {
+      ...product,
+      name: `${product.name} (Copy)`,
+      sku: product.sku ? `${product.sku}-COPY` : undefined,
+      id: undefined,
+    };
+    createProductMutation.mutate(duplicatedProduct);
   };
 
   const getCategoryName = (categoryId: number | null) => {
@@ -222,7 +289,11 @@ export default function Products() {
         </div>
         <div className="flex gap-4">
           <Link href="/products/categories">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              data-testid="button-manage-categories"
+            >
               <Tag className="w-4 h-4" />
               Manage Categories
             </Button>
@@ -257,8 +328,8 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center space-x-2 mb-6">
+      {/* Professional Filtering */}
+      <div className="flex items-center space-x-4 mb-6">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -266,15 +337,39 @@ export default function Products() {
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            data-testid="input-search-products"
           />
         </div>
-        {statusFilter && (
+        
+        <Tabs 
+          value={typeFilter} 
+          onValueChange={(value) => {
+            setTypeFilter(value as any);
+            // Clear status filter when switching type filter to avoid conflicts
+            if (value !== "all") {
+              setStatusFilter("");
+            }
+          }} 
+          className="w-auto"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="all" data-testid="filter-all">All</TabsTrigger>
+            <TabsTrigger value="products" data-testid="filter-products">Products Only</TabsTrigger>
+            <TabsTrigger value="services" data-testid="filter-services">Services Only</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {(statusFilter || typeFilter !== "all") && (
           <Button
             variant="outline"
-            onClick={() => setStatusFilter("")}
+            onClick={() => {
+              setStatusFilter("");
+              setTypeFilter("all");
+            }}
             className="whitespace-nowrap"
+            data-testid="button-clear-filter"
           >
-            Clear Filter
+            Clear Filters
           </Button>
         )}
       </div>
@@ -285,17 +380,6 @@ export default function Products() {
           <CardDescription>All your products and services</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
 
           {productsLoading ? (
             <div className="flex items-center justify-center h-32">
@@ -306,10 +390,15 @@ export default function Products() {
               {filteredProducts.map((product) => {
                 const stockStatus = getStockStatus(product);
                 return (
-                  <Card key={product.id} className="hover:shadow-lg transition-shadow">
+                  <Card 
+                    key={product.id} 
+                    className="hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02]"
+                    onClick={() => handleProductCardClick(product)}
+                    data-testid={`card-product-${product.id}`}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="flex-1">
                           <CardTitle className="text-lg">{product.name}</CardTitle>
                           <CardDescription className="text-sm">
                             {product.sku && (
@@ -323,20 +412,73 @@ export default function Products() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditProduct(product)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditProduct(product);
+                            }}
                             data-testid={`button-edit-product-${product.id}`}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteProduct(product.id)}
-                            disabled={deleteProductMutation.isPending}
-                            data-testid={`button-delete-product-${product.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`button-actions-product-${product.id}`}
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleProductCardClick(product);
+                                }}
+                                data-testid={`menu-view-${product.id}`}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              {!product.isService && (
+                                <DropdownMenuItem 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProduct(product);
+                                    handleStockAdjustment();
+                                  }}
+                                  data-testid={`menu-stock-${product.id}`}
+                                >
+                                  <Settings className="w-4 h-4 mr-2" />
+                                  Adjust Stock
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDuplicateProduct(product);
+                                }}
+                                data-testid={`menu-duplicate-${product.id}`}
+                              >
+                                <Copy className="w-4 h-4 mr-2" />
+                                Duplicate
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProduct(product.id);
+                                }}
+                                className="text-red-600"
+                                data-testid={`menu-delete-${product.id}`}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </CardHeader>
@@ -392,7 +534,7 @@ export default function Products() {
                 {searchTerm ? "No products match your search." : "Get started by adding your first product."}
               </p>
               <Link href="/products/create">
-                <Button>
+                <Button data-testid="button-add-product-empty">
                   <Plus className="w-4 h-4 mr-2" />
                   Add Product
                 </Button>
@@ -401,6 +543,184 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
+
+      {/* Product Detail Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct?.name}</DialogTitle>
+            <DialogDescription>
+              View detailed information and manage this product or service
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">SKU</Label>
+                  <p className="text-sm text-gray-600" data-testid="text-product-sku">{selectedProduct.sku || "N/A"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Category</Label>
+                  <p className="text-sm text-gray-600" data-testid="text-product-category">{getCategoryName(selectedProduct.categoryId)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Type</Label>
+                  <Badge variant={selectedProduct.isService ? "secondary" : "default"}>
+                    {selectedProduct.isService ? "Service" : "Product"}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Price</Label>
+                  <p className="text-lg font-bold" data-testid="text-product-price">{formatCurrency(selectedProduct.unitPrice)}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                {!selectedProduct.isService && (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium">Current Stock</Label>
+                      <p className="text-sm text-gray-600" data-testid="text-current-stock">{selectedProduct.stockQuantity || 0}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Minimum Stock Level</Label>
+                      <p className="text-sm text-gray-600">{selectedProduct.minStockLevel || 0}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Stock Status</Label>
+                      {(() => {
+                        const status = getStockStatus(selectedProduct);
+                        return status ? <Badge variant={status.variant}>{status.status}</Badge> : null;
+                      })()}
+                    </div>
+                  </>
+                )}
+                
+                <div>
+                  <Label className="text-sm font-medium">VAT Rate</Label>
+                  <p className="text-sm text-gray-600">{selectedProduct.vatRate || 0}%</p>
+                </div>
+              </div>
+
+              {selectedProduct.description && (
+                <div className="md:col-span-2">
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm text-gray-600 mt-1">{selectedProduct.description}</p>
+                </div>
+              )}
+
+              <div className="md:col-span-2 flex gap-2 pt-4">
+                <Button 
+                  onClick={() => {
+                    setIsDetailDialogOpen(false);
+                    handleEditProduct(selectedProduct);
+                  }}
+                  data-testid="button-edit-from-details"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Product
+                </Button>
+                
+                {!selectedProduct.isService && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsDetailDialogOpen(false);
+                      handleStockAdjustment();
+                    }}
+                    data-testid="button-adjust-stock-from-details"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Adjust Stock
+                  </Button>
+                )}
+                
+                <Button 
+                  variant="outline"
+                  onClick={() => handleDuplicateProduct(selectedProduct)}
+                  data-testid="button-duplicate-from-details"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Duplicate
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Adjustment Dialog */}
+      <Dialog open={isStockDialogOpen} onOpenChange={setIsStockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Stock - {selectedProduct?.name}</DialogTitle>
+            <DialogDescription>
+              Make stock quantity adjustments with reason for audit trail
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Current Stock</Label>
+                <p className="text-lg font-bold">{selectedProduct.stockQuantity || 0} units</p>
+              </div>
+              
+              <div>
+                <Label htmlFor="adjustment">Adjustment Quantity</Label>
+                <Input
+                  id="adjustment"
+                  type="number"
+                  value={stockAdjustment.quantity}
+                  onChange={(e) => setStockAdjustment(prev => ({
+                    ...prev,
+                    quantity: parseInt(e.target.value) || 0
+                  }))}
+                  placeholder="Enter adjustment (+ to add, - to subtract)"
+                  data-testid="input-stock-adjustment"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  New quantity will be: {(selectedProduct.stockQuantity || 0) + stockAdjustment.quantity}
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="reason">Reason for Adjustment</Label>
+                <Textarea
+                  id="reason"
+                  value={stockAdjustment.reason}
+                  onChange={(e) => setStockAdjustment(prev => ({
+                    ...prev,
+                    reason: e.target.value
+                  }))}
+                  placeholder="Enter reason for stock adjustment..."
+                  data-testid="textarea-adjustment-reason"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={submitStockAdjustment}
+                  disabled={stockAdjustment.quantity === 0 || !stockAdjustment.reason.trim()}
+                  data-testid="button-submit-stock-adjustment"
+                >
+                  Submit Adjustment
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setIsStockDialogOpen(false);
+                    setStockAdjustment({ quantity: 0, reason: "" });
+                  }}
+                  data-testid="button-cancel-stock-adjustment"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

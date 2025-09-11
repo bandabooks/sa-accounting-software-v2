@@ -6144,6 +6144,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock adjustment endpoint
+  app.post("/api/products/:id/stock-adjustment", authenticate, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { adjustment, reason } = req.body;
+
+      if (!adjustment || typeof adjustment !== 'number' || !reason || typeof reason !== 'string') {
+        return res.status(400).json({ error: 'Invalid adjustment data. Requires numeric adjustment and string reason.' });
+      }
+
+      // Get current product to validate and compute new stock
+      const product = await storage.getProduct(id);
+      if (!product) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+
+      if (product.isService) {
+        return res.status(400).json({ error: 'Cannot adjust stock for services' });
+      }
+
+      const currentStock = product.stockQuantity || 0;
+      const newQuantity = currentStock + adjustment;
+
+      // Prevent negative stock
+      if (newQuantity < 0) {
+        return res.status(400).json({ error: `Cannot reduce stock below 0. Current: ${currentStock}, Adjustment: ${adjustment}` });
+      }
+
+      // Update the product stock
+      await storage.updateProduct(id, { stockQuantity: newQuantity });
+
+      // Log the adjustment
+      await logAudit((req as AuthenticatedRequest).user!.id, 'STOCK_ADJUSTED', 'product', id);
+
+      res.json({ 
+        message: "Stock adjusted successfully",
+        previousQuantity: currentStock,
+        newQuantity: newQuantity,
+        adjustment: adjustment
+      });
+    } catch (error) {
+      console.error('Error adjusting stock:', error);
+      res.status(500).json({ error: 'Failed to adjust stock' });
+    }
+  });
+
   // ============================================================================
   // ENHANCED INVENTORY MANAGEMENT API ROUTES
   // ============================================================================
