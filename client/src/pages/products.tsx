@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { MiniDashboard } from "@/components/MiniDashboard";
 import { DashboardCard } from "@/components/DashboardCard";
+import ProductForm from "@/components/ProductForm";
 import type { Product, ProductCategory } from "@shared/schema";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
@@ -18,6 +20,8 @@ import { PageLoader } from "@/components/ui/global-loader";
 export default function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -38,12 +42,59 @@ export default function Products() {
     queryKey: ["/api/products/stats"],
   });
 
+  const createProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      return await apiRequest("/api/products", "POST", productData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/stats"] });
+      toast({
+        title: "Success",
+        description: "Product created successfully",
+      });
+      setIsCreateDialogOpen(false);
+      setEditingProduct(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, ...productData }: any) => {
+      return await apiRequest(`/api/products/${id}`, "PUT", productData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/stats"] });
+      toast({
+        title: "Success", 
+        description: "Product updated successfully",
+      });
+      setIsCreateDialogOpen(false);
+      setEditingProduct(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product",
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteProductMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest(`/api/products/${id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/stats"] });
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -63,6 +114,8 @@ export default function Products() {
     loadingStates: [
       { isLoading: productsLoading, message: 'Loading products...' },
       { isLoading: statsLoading, message: 'Loading product statistics...' },
+      { isLoading: createProductMutation.isPending, message: 'Creating product...' },
+      { isLoading: updateProductMutation.isPending, message: 'Updating product...' },
       { isLoading: deleteProductMutation.isPending, message: 'Deleting product...' },
     ],
     progressSteps: ['Fetching products', 'Loading categories', 'Processing inventory'],
@@ -90,6 +143,24 @@ export default function Products() {
     if (window.confirm("Are you sure you want to delete this product?")) {
       deleteProductMutation.mutate(id);
     }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleProductSubmit = (productData: any) => {
+    if (editingProduct) {
+      updateProductMutation.mutate({ id: editingProduct.id, ...productData });
+    } else {
+      createProductMutation.mutate(productData);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setIsCreateDialogOpen(false);
+    setEditingProduct(null);
   };
 
   const getCategoryName = (categoryId: number | null) => {
@@ -156,12 +227,33 @@ export default function Products() {
               Manage Categories
             </Button>
           </Link>
-          <Link href="/products/create">
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Product
-            </Button>
-          </Link>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="flex items-center gap-2"
+                onClick={() => {
+                  setEditingProduct(null);
+                }}
+                data-testid="button-add-product"
+              >
+                <Plus className="w-4 h-4" />
+                Add Product/Service
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? "Edit Product/Service" : "Add New Product/Service"}
+                </DialogTitle>
+              </DialogHeader>
+              <ProductForm
+                product={editingProduct}
+                onSubmit={handleProductSubmit}
+                onCancel={handleDialogClose}
+                isLoading={createProductMutation.isPending || updateProductMutation.isPending}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -228,16 +320,20 @@ export default function Products() {
                           </CardDescription>
                         </div>
                         <div className="flex gap-2">
-                          <Link href={`/products/${product.id}/edit`}>
-                            <Button variant="outline" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditProduct(product)}
+                            data-testid={`button-edit-product-${product.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleDeleteProduct(product.id)}
                             disabled={deleteProductMutation.isPending}
+                            data-testid={`button-delete-product-${product.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
