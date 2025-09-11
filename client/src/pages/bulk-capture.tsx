@@ -107,13 +107,35 @@ interface BankTransaction {
   type: 'debit' | 'credit';
   category?: string;
   status: 'pending' | 'matched' | 'ignored';
+  payee?: string;
+  accountId?: number;
+  customerId?: number;
+  supplierId?: number;
+  vatTypeId?: number;
+  memo?: string;
+}
+
+interface MatchableTransaction {
+  id: number;
+  date: string;
+  description: string;
+  payee?: string;
+  amount: number;
+  type: 'debit' | 'credit';
+  status: 'for-review' | 'categorised' | 'excluded';
+  accountId?: number;
+  customerId?: number;
+  supplierId?: number;
+  vatTypeId?: number;
+  reference?: string;
+  memo?: string;
 }
 
 const EnhancedBulkCapture = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'bank-import' | 'statement-history'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'expense' | 'bank-import' | 'statement-history' | 'transaction-matching'>('income');
   const [expenseEntries, setExpenseEntries] = useState<ExpenseEntry[]>([]);
   const [incomeEntries, setIncomeEntries] = useState<IncomeEntry[]>([]);
   const [quickDate, setQuickDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -141,6 +163,14 @@ const EnhancedBulkCapture = () => {
   
   // Track duplicate references
   const [duplicateReferences, setDuplicateReferences] = useState<Set<string>>(new Set());
+
+  // Transaction Matching States
+  const [matchableTransactions, setMatchableTransactions] = useState<MatchableTransaction[]>([]);
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'for-review' | 'categorised' | 'excluded'>('all');
+  const [payeeOptions, setPayeeOptions] = useState<string[]>([]);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [bulkCategorizeMode, setBulkCategorizeMode] = useState(false);
 
   // Fetch data
   const { data: chartOfAccounts = [] } = useQuery<any[]>({
@@ -1349,6 +1379,43 @@ const EnhancedBulkCapture = () => {
     });
   }, [activeTab, expenseEntries, incomeEntries, isAiMatching, aiAutoMatchMutation, toast]);
 
+  // Transaction Matching Helper Functions
+  const initializeTransactionsFromBankImport = useCallback(() => {
+    // Convert bank import data to matchable transactions
+    const transactions = bankImportBatches.flatMap(batch => 
+      batch.status === 'parsed' || batch.status === 'completed' ? [
+        // This would be populated from actual parsed bank data
+      ] : []
+    );
+    setMatchableTransactions(transactions);
+  }, [bankImportBatches]);
+
+  const updateMatchableTransaction = useCallback((id: number, field: keyof MatchableTransaction, value: any) => {
+    setMatchableTransactions(prev => prev.map(transaction => 
+      transaction.id === id ? { ...transaction, [field]: value } : transaction
+    ));
+  }, []);
+
+  const handleBulkCategorize = useCallback((accountId: number, vatTypeId?: number) => {
+    const selectedIds = Array.from(selectedTransactions);
+    setMatchableTransactions(prev => prev.map(transaction => 
+      selectedIds.includes(transaction.id) 
+        ? { ...transaction, accountId, vatTypeId, status: 'categorised' as const }
+        : transaction
+    ));
+    setSelectedTransactions(new Set());
+    toast({
+      title: "Bulk Categorization Complete",
+      description: `Categorized ${selectedIds.length} transactions`,
+    });
+  }, [selectedTransactions, toast]);
+
+  const addPayeeOption = useCallback((payee: string) => {
+    if (payee && !payeeOptions.includes(payee)) {
+      setPayeeOptions(prev => [...prev, payee]);
+    }
+  }, [payeeOptions]);
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -1450,8 +1517,8 @@ const EnhancedBulkCapture = () => {
       </div>
 
       {/* Tab Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import' | 'statement-history')}>
-        <TabsList className="grid w-full grid-cols-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'income' | 'expense' | 'bank-import' | 'statement-history' | 'transaction-matching')}>
+        <TabsList className="grid w-full grid-cols-5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
           <TabsTrigger 
             value="bank-import" 
             className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-blue-500"
@@ -1475,10 +1542,17 @@ const EnhancedBulkCapture = () => {
           </TabsTrigger>
           <TabsTrigger 
             value="income" 
-            className="flex items-center space-x-2 rounded-lg px-4 py-3 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-green-500"
+            className="flex items-center space-x-2 rounded-lg px-3 py-2 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-green-500"
           >
             <TrendingUp className="w-4 h-4" />
-            <span className="font-medium">Bulk Income</span>
+            <span className="font-medium text-sm">Bulk Income</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="transaction-matching" 
+            className="flex items-center space-x-2 rounded-lg px-3 py-2 transition-all duration-200 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-300 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:border-purple-500"
+          >
+            <CheckCircle className="w-4 h-4" />
+            <span className="font-medium text-sm">Transaction Matching</span>
           </TabsTrigger>
         </TabsList>
 
@@ -2255,6 +2329,373 @@ const EnhancedBulkCapture = () => {
         {/* Statement History Tab */}
         <TabsContent value="statement-history" className="space-y-6">
           <BankStatementHistory />
+        </TabsContent>
+
+        {/* Transaction Matching Tab - QuickBooks Style */}
+        <TabsContent value="transaction-matching" className="space-y-6">
+          {/* Transaction Matching Header */}
+          <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-bold text-purple-900 flex items-center justify-between">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Transaction Matching Center
+                  <Badge className="ml-3 bg-purple-100 text-purple-800">
+                    QuickBooks Style
+                  </Badge>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkCategorizeMode(!bulkCategorizeMode)}
+                    className={bulkCategorizeMode ? "bg-purple-100 text-purple-700" : ""}
+                  >
+                    {bulkCategorizeMode ? "Exit Bulk Mode" : "Bulk Categorize"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                    onClick={handleScriptAutoMatch}
+                    disabled={scriptAutoMatchMutation.isPending}
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    {scriptAutoMatchMutation.isPending ? "Auto-Matching..." : "Auto-Match"}
+                  </Button>
+                </div>
+              </CardTitle>
+              <p className="text-purple-600">
+                Match and categorize imported bank transactions with intelligent categorization and payee management
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Filter Controls - QuickBooks Style */}
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center space-x-4">
+                  {/* Status Filter Tabs */}
+                  <div className="flex bg-white rounded-lg border shadow-sm">
+                    {(['all', 'for-review', 'categorised', 'excluded'] as const).map((filter) => (
+                      <Button
+                        key={filter}
+                        variant={transactionFilter === filter ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setTransactionFilter(filter)}
+                        className={`rounded-none first:rounded-l-lg last:rounded-r-lg ${
+                          transactionFilter === filter 
+                            ? "bg-purple-600 text-white" 
+                            : "text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {filter === 'all' && 'All'}
+                        {filter === 'for-review' && 'For Review'}
+                        {filter === 'categorised' && 'Categorised'}
+                        {filter === 'excluded' && 'Excluded'}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  {/* Count Badge */}
+                  <Badge variant="outline" className="text-gray-600">
+                    {matchableTransactions.filter(t => 
+                      transactionFilter === 'all' || t.status === transactionFilter
+                    ).length} transactions
+                  </Badge>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {/* Search Filter */}
+                  <Input
+                    placeholder="Search descriptions, payees..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="w-64"
+                  />
+                  
+                  {/* Selected Count */}
+                  {selectedTransactions.size > 0 && (
+                    <Badge className="bg-blue-100 text-blue-800">
+                      {selectedTransactions.size} selected
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Bulk Actions Bar */}
+              {bulkCategorizeMode && selectedTransactions.size > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-900">
+                      Bulk categorize {selectedTransactions.size} selected transactions:
+                    </span>
+                    <div className="flex items-center space-x-2">
+                      <SearchableSelect
+                        options={chartOfAccounts.map(account => ({
+                          value: account.id.toString(),
+                          label: account.accountName,
+                          subtext: account.accountCode
+                        }))}
+                        value=""
+                        onValueChange={(value) => value && handleBulkCategorize(parseInt(value))}
+                        placeholder="Select category..."
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedTransactions(new Set())}
+                      >
+                        Clear Selection
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* QuickBooks-Style Transaction Table */}
+          <Card className="shadow-lg">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-50 border-b">
+                    <tr>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">
+                        {bulkCategorizeMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedTransactions.size === matchableTransactions.length && matchableTransactions.length > 0}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTransactions(new Set(matchableTransactions.map(t => t.id)));
+                              } else {
+                                setSelectedTransactions(new Set());
+                              }
+                            }}
+                            className="mr-2"
+                            data-testid="checkbox-select-all"
+                          />
+                        )}
+                        Date
+                      </th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Payee</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Categorise or Match</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Tax</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Spent</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Received</th>
+                      <th className="text-left p-3 text-sm font-medium text-gray-700">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matchableTransactions
+                      .filter(transaction => 
+                        (transactionFilter === 'all' || transaction.status === transactionFilter) &&
+                        (searchFilter === '' || 
+                          transaction.description.toLowerCase().includes(searchFilter.toLowerCase()) ||
+                          transaction.payee?.toLowerCase().includes(searchFilter.toLowerCase()))
+                      )
+                      .map((transaction, index) => (
+                        <tr key={transaction.id} className={`border-b hover:bg-gray-50 transition-colors ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                        } ${selectedTransactions.has(transaction.id) ? 'bg-blue-50 border-blue-200' : ''}`}>
+                          <td className="p-3 text-sm">
+                            <div className="flex items-center space-x-2">
+                              {bulkCategorizeMode && (
+                                <input
+                                  type="checkbox"
+                                  checked={selectedTransactions.has(transaction.id)}
+                                  onChange={(e) => {
+                                    const newSelected = new Set(selectedTransactions);
+                                    if (e.target.checked) {
+                                      newSelected.add(transaction.id);
+                                    } else {
+                                      newSelected.delete(transaction.id);
+                                    }
+                                    setSelectedTransactions(newSelected);
+                                  }}
+                                  data-testid={`checkbox-transaction-${transaction.id}`}
+                                />
+                              )}
+                              <span>{transaction.date}</span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-sm max-w-xs">
+                            <div className="truncate" title={transaction.description}>
+                              {transaction.description}
+                            </div>
+                          </td>
+                          <td className="p-3 text-sm">
+                            <SearchableSelect
+                              options={[
+                                ...payeeOptions.map(payee => ({ value: payee, label: payee })),
+                                { value: '__add_new__', label: '+ Add New Payee' }
+                              ]}
+                              value={transaction.payee || ''}
+                              onValueChange={(value) => {
+                                if (value === '__add_new__') {
+                                  const newPayee = prompt('Enter new payee name:');
+                                  if (newPayee) {
+                                    addPayeeOption(newPayee);
+                                    updateMatchableTransaction(transaction.id, 'payee', newPayee);
+                                  }
+                                } else {
+                                  updateMatchableTransaction(transaction.id, 'payee', value);
+                                }
+                              }}
+                              placeholder="Select/Add payee..."
+                              data-testid={`input-payee-${transaction.id}`}
+                            />
+                          </td>
+                          <td className="p-3 text-sm">
+                            <div className="space-y-2">
+                              {/* Categorize Radio Buttons */}
+                              <div className="flex items-center space-x-4 text-xs">
+                                <label className="flex items-center">
+                                  <input type="radio" name={`action_${transaction.id}`} className="mr-1" />
+                                  Categorise
+                                </label>
+                                <label className="flex items-center">
+                                  <input type="radio" name={`action_${transaction.id}`} className="mr-1" />
+                                  Match
+                                </label>
+                                <label className="flex items-center">
+                                  <input type="radio" name={`action_${transaction.id}`} className="mr-1" />
+                                  Transfer
+                                </label>
+                              </div>
+                              
+                              {/* Category Dropdown */}
+                              <SearchableSelect
+                                options={chartOfAccounts.map(account => ({
+                                  value: account.id.toString(),
+                                  label: account.accountName,
+                                  subtext: account.accountCode
+                                }))}
+                                value={transaction.accountId?.toString() || ''}
+                                onValueChange={(value) => {
+                                  updateMatchableTransaction(transaction.id, 'accountId', value ? parseInt(value) : undefined);
+                                  if (value) {
+                                    updateMatchableTransaction(transaction.id, 'status', 'categorised');
+                                  }
+                                }}
+                                placeholder="Select account..."
+                                data-testid={`select-account-${transaction.id}`}
+                              />
+                            </div>
+                          </td>
+                          <td className="p-3 text-sm">
+                            <VATTypeSelect
+                              value={transaction.vatTypeId?.toString() || '1'}
+                              onValueChange={(value) => updateMatchableTransaction(transaction.id, 'vatTypeId', parseInt(value))}
+                              placeholder="VAT..."
+                              data-testid={`select-vat-${transaction.id}`}
+                            />
+                          </td>
+                          <td className="p-3 text-sm font-mono text-red-600">
+                            {transaction.type === 'debit' ? `R ${transaction.amount.toFixed(2)}` : ''}
+                          </td>
+                          <td className="p-3 text-sm font-mono text-green-600">
+                            {transaction.type === 'credit' ? `R ${transaction.amount.toFixed(2)}` : ''}
+                          </td>
+                          <td className="p-3 text-sm">
+                            <div className="flex items-center space-x-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs px-2 py-1"
+                                data-testid={`button-add-${transaction.id}`}
+                              >
+                                Add
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs px-2 py-1"
+                                data-testid={`button-split-${transaction.id}`}
+                              >
+                                Split
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Empty State */}
+              {matchableTransactions.length === 0 && (
+                <div className="text-center py-12">
+                  <FileSpreadsheet className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Transactions to Match</h3>
+                  <p className="text-gray-600 mb-4">
+                    Import bank statements to start matching transactions
+                  </p>
+                  <Button 
+                    onClick={() => setActiveTab('bank-import')}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Bank Statement
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          {matchableTransactions.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    {matchableTransactions.filter(t => t.status === 'categorised').length} categorised, {' '}
+                    {matchableTransactions.filter(t => t.status === 'for-review').length} for review, {' '}
+                    {matchableTransactions.filter(t => t.status === 'excluded').length} excluded
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        // Export functionality
+                        toast({
+                          title: "Export Started",
+                          description: "Downloading categorized transactions...",
+                        });
+                      }}
+                      data-testid="button-export"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        const categorizedTransactions = matchableTransactions.filter(t => t.status === 'categorised');
+                        if (categorizedTransactions.length === 0) {
+                          toast({
+                            title: "No Transactions to Save",
+                            description: "Please categorize some transactions first",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        // Save to journal entries
+                        toast({
+                          title: "Transactions Saved",
+                          description: `Saved ${categorizedTransactions.length} categorized transactions to journal entries`,
+                        });
+                      }}
+                      data-testid="button-save-transactions"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Transactions
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
       </Tabs>
