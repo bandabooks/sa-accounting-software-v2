@@ -103,9 +103,9 @@ export default function ProductCreate() {
     const formattedData = {
       ...data,
       companyId: companyId || 0,
-      categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
-      incomeAccountId: parseInt(data.incomeAccountId),
-      expenseAccountId: parseInt(data.expenseAccountId),
+      categoryId: data.categoryId,
+      incomeAccountId: data.incomeAccountId,
+      expenseAccountId: data.expenseAccountId,
     };
     createProductMutation.mutate(formattedData);
   };
