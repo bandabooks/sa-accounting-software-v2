@@ -52,13 +52,15 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
     queryKey: ["/api/product-categories"],
   });
 
+  // Load accounts with proper field normalization
   const { data: accounts = [] } = useQuery<any[]>({
     queryKey: ["/api/chart-of-accounts"],
-    queryFn: async () => {
-      const response = await fetch("/api/chart-of-accounts?showAll=true");
-      if (!response.ok) throw new Error("Failed to fetch accounts");
-      return response.json();
-    }
+    select: (data) => data.map((account) => ({
+      id: account.id,
+      accountCode: account.accountCode || account.code,
+      accountName: account.accountName || account.name,
+      accountType: account.accountType || account.type,
+    }))
   });
 
   const form = useForm<ProductFormData>({
