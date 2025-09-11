@@ -54,6 +54,11 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
 
   const { data: accounts = [] } = useQuery<any[]>({
     queryKey: ["/api/chart-of-accounts"],
+    queryFn: async () => {
+      const response = await fetch("/api/chart-of-accounts?showAll=true");
+      if (!response.ok) throw new Error("Failed to fetch accounts");
+      return response.json();
+    }
   });
 
   const form = useForm<ProductFormData>({
@@ -466,16 +471,11 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                           {account.accountCode} - {account.accountName}
                         </SelectItem>
                       ))}
-                      {/* Show ALL revenue accounts if none found via API */}
+                      {/* Show message if no accounts are found */}
                       {getRevenueAccounts().length === 0 && (
-                        <>
-                          <SelectItem value="4000">4000 - Sales Revenue</SelectItem>
-                          <SelectItem value="4001">4001 - Service Revenue</SelectItem>
-                          <SelectItem value="4002">4002 - Consulting Revenue</SelectItem>
-                          <SelectItem value="4003">4003 - Rental Revenue</SelectItem>
-                          <SelectItem value="4100">4100 - Other Revenue</SelectItem>
-                          <SelectItem value="4101">4101 - Interest Income</SelectItem>
-                        </>
+                        <SelectItem value="" disabled className="text-gray-500">
+                          No revenue accounts found - please create accounts first
+                        </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -504,30 +504,11 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                           {account.accountCode} - {account.accountName}
                         </SelectItem>
                       ))}
-                      {/* Show ALL appropriate accounts if none found via API */}
+                      {/* Show message if no accounts are found */}
                       {getExpenseAccounts().length === 0 && (
-                        <>
-                          {isService ? (
-                            // Service cost accounts
-                            <>
-                              <SelectItem value="6000">6000 - Administrative Expenses</SelectItem>
-                              <SelectItem value="6200">6200 - Professional Fees</SelectItem>
-                              <SelectItem value="6203">6203 - Consulting Fees</SelectItem>
-                              <SelectItem value="6001">6001 - Salaries & Wages - Admin</SelectItem>
-                              <SelectItem value="6002">6002 - Employee Benefits</SelectItem>
-                            </>
-                          ) : (
-                            // Product cost accounts
-                            <>
-                              <SelectItem value="5000">5000 - Cost of Goods Sold</SelectItem>
-                              <SelectItem value="5001">5001 - Cost of Materials</SelectItem>
-                              <SelectItem value="5002">5002 - Cost of Labor - Direct</SelectItem>
-                              <SelectItem value="5003">5003 - Manufacturing Overhead</SelectItem>
-                              <SelectItem value="5010">5010 - Freight & Shipping Costs</SelectItem>
-                              <SelectItem value="5011">5011 - Import Duties</SelectItem>
-                            </>
-                          )}
-                        </>
+                        <SelectItem value="" disabled className="text-gray-500">
+                          No {isService ? 'service cost' : 'cost of sales'} accounts found - please create accounts first
+                        </SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -556,16 +537,11 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                             {account.accountCode} - {account.accountName}
                           </SelectItem>
                         ))}
-                        {/* Show ALL inventory accounts if none found via API */}
+                        {/* Show message if no accounts are found */}
                         {getInventoryAccounts().length === 0 && (
-                          <>
-                            <SelectItem value="1500">1500 - Finished Goods</SelectItem>
-                            <SelectItem value="1501">1501 - Raw Materials</SelectItem>
-                            <SelectItem value="1502">1502 - Work in Progress</SelectItem>
-                            <SelectItem value="1503">1503 - Merchandise Inventory</SelectItem>
-                            <SelectItem value="1200">1200 - Inventory</SelectItem>
-                            <SelectItem value="1201">1201 - Parts & Supplies</SelectItem>
-                          </>
+                          <SelectItem value="" disabled className="text-gray-500">
+                            No inventory accounts found - please create accounts first
+                          </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
