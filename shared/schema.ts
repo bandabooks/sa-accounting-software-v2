@@ -7239,3 +7239,493 @@ export type InsertContractEvent = z.infer<typeof insertContractEventSchema>;
 
 export type ContractToken = typeof contractTokens.$inferSelect;
 export type InsertContractToken = z.infer<typeof insertContractTokenSchema>;
+
+// ========================================
+// ENHANCED RECONCILIATION SYSTEM FOR SA BANKING
+// ========================================
+
+// SA Banking Reconciliation Rules - Handles bank-specific quirks
+export const saBankingRules = pgTable("sa_banking_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  bankName: varchar("bank_name", { length: 50 }).notNull(), // FNB, ABSA, Standard Bank, Nedbank, Capitec
+  ruleType: varchar("rule_type", { length: 30 }).notNull(), // 'settlement_delay', 'reference_format', 'fee_pattern', 'eft_processing'
+  ruleName: varchar("rule_name", { length: 100 }).notNull(),
+  ruleDescription: text("rule_description"),
+  
+  // Rule configuration
+  matchingCriteria: jsonb("matching_criteria").notNull().default({}), // Bank-specific matching logic
+  settlementDelayHours: integer("settlement_delay_hours").default(0), // Expected delay for transactions
+  referencePatterns: jsonb("reference_patterns").default([]), // Array of regex patterns for reference matching
+  feeCategories: jsonb("fee_categories").default([]), // Bank fee categorization rules
+  
+  // SA-specific configurations
+  eftProcessingWindow: jsonb("eft_processing_window").default({}), // {start: "08:00", end: "16:30", excludeWeekends: true}
+  immediatePaymentMethods: jsonb("immediate_payment_methods").default([]), // Array of instant payment methods
+  crossBankDelay: integer("cross_bank_delay_hours").default(24), // Delay for cross-bank transfers
+  
+  isActive: boolean("is_active").default(true),
+  priority: integer("priority").default(1), // Higher priority rules override lower ones
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyBankIdx: index("sa_banking_rules_company_bank_idx").on(table.companyId, table.bankName),
+  ruleTypeIdx: index("sa_banking_rules_type_idx").on(table.ruleType),
+  priorityIdx: index("sa_banking_rules_priority_idx").on(table.priority),
+}));
+
+// Enhanced Reconciliation Sessions with SA Banking Focus
+export const reconciliationSessions = pgTable("reconciliation_sessions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  sessionId: varchar("session_id", { length: 50 }).notNull().unique(),
+  sessionName: varchar("session_name", { length: 100 }).notNull(),
+  
+  // Session configuration
+  bankAccountIds: jsonb("bank_account_ids").notNull().default([]), // Array of bank account IDs to reconcile
+  reconciliationType: varchar("reconciliation_type", { length: 30 }).notNull().default("automated"), // 'automated', 'manual', 'hybrid'
+  reconciliationPeriod: jsonb("reconciliation_period").notNull(), // {from: "2024-01-01", to: "2024-01-31"}
+  
+  // SA Banking specific settings
+  considerBankDelays: boolean("consider_bank_delays").default(true),
+  crossBankMatching: boolean("cross_bank_matching").default(true),
+  confidenceThreshold: decimal("confidence_threshold", { precision: 5, scale: 2 }).default("0.75"),
+  autoApproveThreshold: decimal("auto_approve_threshold", { precision: 5, scale: 2 }).default("0.90"),
+  
+  // Session status and metrics
+  status: varchar("status", { length: 30 }).notNull().default("pending"), // pending, processing, review_required, completed, failed
+  totalTransactions: integer("total_transactions").default(0),
+  matchedTransactions: integer("matched_transactions").default(0),
+  pendingReview: integer("pending_review").default(0),
+  autoApproved: integer("auto_approved").default(0),
+  duplicatesFound: integer("duplicates_found").default(0),
+  
+  // Processing details
+  processingStarted: timestamp("processing_started"),
+  processingCompleted: timestamp("processing_completed"),
+  lastProcessedTransaction: varchar("last_processed_transaction", { length: 255 }),
+  errorMessages: jsonb("error_messages").default([]),
+  
+  // User tracking
+  createdBy: integer("created_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("reconciliation_sessions_company_idx").on(table.companyId),
+  statusIdx: index("reconciliation_sessions_status_idx").on(table.status),
+  sessionIdIdx: index("reconciliation_sessions_session_id_idx").on(table.sessionId),
+}));
+
+// Transaction Matching Results with Confidence Scoring
+export const transactionMatches = pgTable("transaction_matches", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  sessionId: integer("session_id").notNull().references(() => reconciliationSessions.id),
+  
+  // Source transaction details
+  sourceTransactionId: varchar("source_transaction_id", { length: 255 }).notNull(),
+  sourceType: varchar("source_type", { length: 30 }).notNull(), // 'bank_statement', 'journal_entry', 'invoice', 'expense'
+  sourceAccountId: integer("source_account_id").references(() => bankAccounts.id),
+  
+  // Matched transaction details
+  matchedTransactionId: varchar("matched_transaction_id", { length: 255 }),
+  matchedType: varchar("matched_type", { length: 30 }), // 'bank_statement', 'journal_entry', 'invoice', 'expense'
+  matchedAccountId: integer("matched_account_id").references(() => bankAccounts.id),
+  
+  // Matching analysis
+  matchType: varchar("match_type", { length: 30 }).notNull(), // 'exact', 'fuzzy', 'partial', 'cross_bank', 'delayed'
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }).notNull(),
+  matchingAlgorithm: varchar("matching_algorithm", { length: 50 }).notNull(), // Algorithm used for matching
+  
+  // SA Banking specific matching factors
+  bankDelayConsidered: boolean("bank_delay_considered").default(false),
+  referenceFormatMatched: boolean("reference_format_matched").default(false),
+  crossBankTransfer: boolean("cross_bank_transfer").default(false),
+  immediatePayment: boolean("immediate_payment").default(false),
+  
+  // Transaction details
+  transactionDate: timestamp("transaction_date").notNull(),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("ZAR"),
+  
+  // Approval workflow
+  status: varchar("status", { length: 30 }).notNull().default("pending"), // pending, approved, rejected, needs_review
+  autoApproved: boolean("auto_approved").default(false),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Matching metadata
+  matchingFactors: jsonb("matching_factors").default({}), // Detailed breakdown of matching factors
+  alternativeMatches: jsonb("alternative_matches").default([]), // Other potential matches found
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companySessionIdx: index("transaction_matches_company_session_idx").on(table.companyId, table.sessionId),
+  confidenceIdx: index("transaction_matches_confidence_idx").on(table.confidenceScore),
+  statusIdx: index("transaction_matches_status_idx").on(table.status),
+  sourceTransactionIdx: index("transaction_matches_source_idx").on(table.sourceTransactionId),
+}));
+
+// Manual Review Queue for Complex Reconciliation Cases
+export const reconciliationReviewQueue = pgTable("reconciliation_review_queue", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  sessionId: integer("session_id").references(() => reconciliationSessions.id),
+  matchId: integer("match_id").references(() => transactionMatches.id),
+  
+  // Queue management
+  queuePosition: integer("queue_position").notNull(),
+  priority: varchar("priority", { length: 20 }).notNull().default("medium"), // low, medium, high, urgent
+  reviewType: varchar("review_type", { length: 30 }).notNull(), // 'low_confidence', 'multiple_matches', 'cross_bank', 'large_amount', 'unusual_pattern'
+  
+  // Review context
+  reviewReason: text("review_reason").notNull(),
+  complexityScore: decimal("complexity_score", { precision: 5, scale: 2 }).default("0.00"),
+  potentialMatches: jsonb("potential_matches").default([]), // Array of potential matching transactions
+  suggestedAction: varchar("suggested_action", { length: 30 }), // 'approve', 'reject', 'manual_match', 'split_transaction'
+  
+  // SA Banking context
+  bankingComplexity: jsonb("banking_complexity").default({}), // Details about SA banking complexities involved
+  timelineAnalysis: jsonb("timeline_analysis").default({}), // Analysis of transaction timing vs expected SA banking windows
+  
+  // Assignment and workflow
+  assignedTo: integer("assigned_to").references(() => users.id),
+  assignedAt: timestamp("assigned_at"),
+  status: varchar("status", { length: 30 }).notNull().default("pending"), // pending, in_review, escalated, completed, cancelled
+  
+  // Review completion
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewDecision: varchar("review_decision", { length: 30 }), // approved, rejected, manual_match, escalated
+  reviewNotes: text("review_notes"),
+  timeSpentSeconds: integer("time_spent_seconds").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyQueueIdx: index("reconciliation_review_queue_company_idx").on(table.companyId),
+  priorityPositionIdx: index("reconciliation_review_queue_priority_idx").on(table.priority, table.queuePosition),
+  statusIdx: index("reconciliation_review_queue_status_idx").on(table.status),
+  assignedIdx: index("reconciliation_review_queue_assigned_idx").on(table.assignedTo),
+}));
+
+// SA Banking Fee Patterns and Analysis
+export const saBankingFeePatterns = pgTable("sa_banking_fee_patterns", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  bankName: varchar("bank_name", { length: 50 }).notNull(),
+  accountType: varchar("account_type", { length: 30 }).notNull(), // current, savings, credit, etc.
+  
+  // Fee pattern details
+  feeType: varchar("fee_type", { length: 50 }).notNull(), // 'monthly_admin', 'eft', 'atm_withdrawal', 'card_payment', 'statement_fee'
+  feeDescription: text("fee_description").notNull(),
+  expectedAmount: decimal("expected_amount", { precision: 10, scale: 2 }),
+  amountRange: jsonb("amount_range").default({}), // {min: 10.00, max: 15.00}
+  
+  // Pattern recognition
+  frequency: varchar("frequency", { length: 20 }).notNull(), // 'monthly', 'per_transaction', 'daily', 'weekly'
+  expectedTiming: jsonb("expected_timing").default({}), // When fees are typically charged
+  descriptionPatterns: jsonb("description_patterns").default([]), // Array of regex patterns for fee identification
+  
+  // Historical analysis
+  totalOccurrences: integer("total_occurrences").default(0),
+  averageAmount: decimal("average_amount", { precision: 10, scale: 2 }).default("0.00"),
+  lastSeenDate: timestamp("last_seen_date"),
+  monthlyTotal: decimal("monthly_total", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // SA Banking specific details
+  sarsTaxImplication: boolean("sars_tax_implication").default(false), // Whether fee affects tax calculations
+  vatApplicable: boolean("vat_applicable").default(false),
+  autoCategorizeTo: integer("auto_categorize_to").references(() => chartOfAccounts.id), // Automatic categorization account
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyBankIdx: index("sa_banking_fee_patterns_company_bank_idx").on(table.companyId, table.bankName),
+  feeTypeIdx: index("sa_banking_fee_patterns_fee_type_idx").on(table.feeType),
+  frequencyIdx: index("sa_banking_fee_patterns_frequency_idx").on(table.frequency),
+}));
+
+// Cross-Bank Transaction Mapping for Multi-Bank Reconciliation
+export const crossBankTransactionMaps = pgTable("cross_bank_transaction_maps", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  
+  // Primary transaction (outgoing)
+  primaryTransactionId: varchar("primary_transaction_id", { length: 255 }).notNull(),
+  primaryBankAccountId: integer("primary_bank_account_id").references(() => bankAccounts.id),
+  primaryBankName: varchar("primary_bank_name", { length: 50 }).notNull(),
+  
+  // Secondary transaction (incoming)
+  secondaryTransactionId: varchar("secondary_transaction_id", { length: 255 }),
+  secondaryBankAccountId: integer("secondary_bank_account_id").references(() => bankAccounts.id),
+  secondaryBankName: varchar("secondary_bank_name", { length: 50 }),
+  
+  // Transfer details
+  transferType: varchar("transfer_type", { length: 30 }).notNull(), // 'internal_transfer', 'external_transfer', 'payment'
+  transferAmount: decimal("transfer_amount", { precision: 15, scale: 2 }).notNull(),
+  transferReference: varchar("transfer_reference", { length: 255 }),
+  
+  // SA Banking timing analysis
+  expectedDelayHours: integer("expected_delay_hours").notNull(),
+  actualDelayHours: integer("actual_delay_hours"),
+  withinExpectedWindow: boolean("within_expected_window"),
+  
+  // Mapping status
+  mappingStatus: varchar("mapping_status", { length: 30 }).notNull().default("pending"), // pending, mapped, failed, timeout
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 2 }).default("0.00"),
+  mappingMethod: varchar("mapping_method", { length: 30 }), // 'reference_match', 'amount_timing', 'pattern_based'
+  
+  // Tracking
+  primaryTransactionDate: timestamp("primary_transaction_date").notNull(),
+  secondaryTransactionDate: timestamp("secondary_transaction_date"),
+  mappedAt: timestamp("mapped_at"),
+  mappedBy: integer("mapped_by").references(() => users.id),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("cross_bank_transaction_maps_company_idx").on(table.companyId),
+  primaryTransactionIdx: index("cross_bank_transaction_maps_primary_idx").on(table.primaryTransactionId),
+  transferTypeIdx: index("cross_bank_transaction_maps_transfer_type_idx").on(table.transferType),
+  statusIdx: index("cross_bank_transaction_maps_status_idx").on(table.mappingStatus),
+}));
+
+// Bulk Approval Workflows for Reconciliation
+export const reconciliationBulkApprovals = pgTable("reconciliation_bulk_approvals", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  sessionId: integer("session_id").references(() => reconciliationSessions.id),
+  
+  // Bulk approval details
+  approvalBatchId: varchar("approval_batch_id", { length: 50 }).notNull().unique(),
+  approvalCriteria: jsonb("approval_criteria").notNull(), // Criteria used for bulk selection
+  selectedMatchIds: jsonb("selected_match_ids").notNull(), // Array of transaction match IDs
+  
+  // Approval thresholds
+  minConfidenceScore: decimal("min_confidence_score", { precision: 5, scale: 2 }).notNull(),
+  maxAmountThreshold: decimal("max_amount_threshold", { precision: 15, scale: 2 }),
+  allowedMatchTypes: jsonb("allowed_match_types").default([]), // Array of match types included
+  
+  // SA Banking specific filters
+  bankFilterCriteria: jsonb("bank_filter_criteria").default({}), // Bank-specific filtering rules
+  excludeCrossBankTransfers: boolean("exclude_cross_bank_transfers").default(false),
+  requireImmediatePaymentMatch: boolean("require_immediate_payment_match").default(false),
+  
+  // Approval execution
+  status: varchar("status", { length: 30 }).notNull().default("pending"), // pending, executing, completed, failed, cancelled
+  totalSelected: integer("total_selected").notNull(),
+  totalApproved: integer("total_approved").default(0),
+  totalFailed: integer("total_failed").default(0),
+  failureReasons: jsonb("failure_reasons").default([]),
+  
+  // User tracking
+  requestedBy: integer("requested_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  executedAt: timestamp("executed_at"),
+  completedAt: timestamp("completed_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("reconciliation_bulk_approvals_company_idx").on(table.companyId),
+  batchIdIdx: index("reconciliation_bulk_approvals_batch_id_idx").on(table.approvalBatchId),
+  statusIdx: index("reconciliation_bulk_approvals_status_idx").on(table.status),
+  requestedByIdx: index("reconciliation_bulk_approvals_requested_by_idx").on(table.requestedBy),
+}));
+
+// Relations for Enhanced Reconciliation System
+export const saBankingRulesRelations = relations(saBankingRules, ({ one }) => ({
+  company: one(companies, {
+    fields: [saBankingRules.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [saBankingRules.createdBy],
+    references: [users.id]
+  })
+}));
+
+export const reconciliationSessionsRelations = relations(reconciliationSessions, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [reconciliationSessions.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [reconciliationSessions.createdBy],
+    references: [users.id]
+  }),
+  approvedByUser: one(users, {
+    fields: [reconciliationSessions.approvedBy],
+    references: [users.id]
+  }),
+  matches: many(transactionMatches),
+  reviewQueue: many(reconciliationReviewQueue),
+  bulkApprovals: many(reconciliationBulkApprovals)
+}));
+
+export const transactionMatchesRelations = relations(transactionMatches, ({ one }) => ({
+  company: one(companies, {
+    fields: [transactionMatches.companyId],
+    references: [companies.id]
+  }),
+  session: one(reconciliationSessions, {
+    fields: [transactionMatches.sessionId],
+    references: [reconciliationSessions.id]
+  }),
+  sourceAccount: one(bankAccounts, {
+    fields: [transactionMatches.sourceAccountId],
+    references: [bankAccounts.id]
+  }),
+  matchedAccount: one(bankAccounts, {
+    fields: [transactionMatches.matchedAccountId],
+    references: [bankAccounts.id]
+  }),
+  reviewedByUser: one(users, {
+    fields: [transactionMatches.reviewedBy],
+    references: [users.id]
+  })
+}));
+
+export const reconciliationReviewQueueRelations = relations(reconciliationReviewQueue, ({ one }) => ({
+  company: one(companies, {
+    fields: [reconciliationReviewQueue.companyId],
+    references: [companies.id]
+  }),
+  session: one(reconciliationSessions, {
+    fields: [reconciliationReviewQueue.sessionId],
+    references: [reconciliationSessions.id]
+  }),
+  match: one(transactionMatches, {
+    fields: [reconciliationReviewQueue.matchId],
+    references: [transactionMatches.id]
+  }),
+  assignedToUser: one(users, {
+    fields: [reconciliationReviewQueue.assignedTo],
+    references: [users.id]
+  }),
+  reviewedByUser: one(users, {
+    fields: [reconciliationReviewQueue.reviewedBy],
+    references: [users.id]
+  })
+}));
+
+export const saBankingFeePatternsRelations = relations(saBankingFeePatterns, ({ one }) => ({
+  company: one(companies, {
+    fields: [saBankingFeePatterns.companyId],
+    references: [companies.id]
+  }),
+  autoCategorizationAccount: one(chartOfAccounts, {
+    fields: [saBankingFeePatterns.autoCategorizeTo],
+    references: [chartOfAccounts.id]
+  })
+}));
+
+export const crossBankTransactionMapsRelations = relations(crossBankTransactionMaps, ({ one }) => ({
+  company: one(companies, {
+    fields: [crossBankTransactionMaps.companyId],
+    references: [companies.id]
+  }),
+  primaryBankAccount: one(bankAccounts, {
+    fields: [crossBankTransactionMaps.primaryBankAccountId],
+    references: [bankAccounts.id]
+  }),
+  secondaryBankAccount: one(bankAccounts, {
+    fields: [crossBankTransactionMaps.secondaryBankAccountId],
+    references: [bankAccounts.id]
+  }),
+  mappedByUser: one(users, {
+    fields: [crossBankTransactionMaps.mappedBy],
+    references: [users.id]
+  })
+}));
+
+export const reconciliationBulkApprovalsRelations = relations(reconciliationBulkApprovals, ({ one }) => ({
+  company: one(companies, {
+    fields: [reconciliationBulkApprovals.companyId],
+    references: [companies.id]
+  }),
+  session: one(reconciliationSessions, {
+    fields: [reconciliationBulkApprovals.sessionId],
+    references: [reconciliationSessions.id]
+  }),
+  requestedByUser: one(users, {
+    fields: [reconciliationBulkApprovals.requestedBy],
+    references: [users.id]
+  }),
+  approvedByUser: one(users, {
+    fields: [reconciliationBulkApprovals.approvedBy],
+    references: [users.id]
+  })
+}));
+
+// Insert Schemas for Enhanced Reconciliation System
+export const insertSaBankingRuleSchema = createInsertSchema(saBankingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReconciliationSessionSchema = createInsertSchema(reconciliationSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTransactionMatchSchema = createInsertSchema(transactionMatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReconciliationReviewQueueSchema = createInsertSchema(reconciliationReviewQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSaBankingFeePatternSchema = createInsertSchema(saBankingFeePatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCrossBankTransactionMapSchema = createInsertSchema(crossBankTransactionMaps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReconciliationBulkApprovalSchema = createInsertSchema(reconciliationBulkApprovals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for Enhanced Reconciliation System
+export type SaBankingRule = typeof saBankingRules.$inferSelect;
+export type InsertSaBankingRule = z.infer<typeof insertSaBankingRuleSchema>;
+
+export type ReconciliationSession = typeof reconciliationSessions.$inferSelect;
+export type InsertReconciliationSession = z.infer<typeof insertReconciliationSessionSchema>;
+
+export type TransactionMatch = typeof transactionMatches.$inferSelect;
+export type InsertTransactionMatch = z.infer<typeof insertTransactionMatchSchema>;
+
+export type ReconciliationReviewQueue = typeof reconciliationReviewQueue.$inferSelect;
+export type InsertReconciliationReviewQueue = z.infer<typeof insertReconciliationReviewQueueSchema>;
+
+export type SaBankingFeePattern = typeof saBankingFeePatterns.$inferSelect;
+export type InsertSaBankingFeePattern = z.infer<typeof insertSaBankingFeePatternSchema>;
+
+export type CrossBankTransactionMap = typeof crossBankTransactionMaps.$inferSelect;
+export type InsertCrossBankTransactionMap = z.infer<typeof insertCrossBankTransactionMapSchema>;
+
+export type ReconciliationBulkApproval = typeof reconciliationBulkApprovals.$inferSelect;
+export type InsertReconciliationBulkApproval = z.infer<typeof insertReconciliationBulkApprovalSchema>;

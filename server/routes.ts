@@ -76,6 +76,11 @@ import payrollRoutes from "./routes/payroll";
 import { contractService } from "./contracts";
 import { registerEmployeeRoutes } from "./routes/employees";
 import { sarsService } from "./sarsService";
+import { SAReconciliationService } from "./services/saReconciliationService";
+
+// Create SAReconciliationService instance with proper storage injection
+const saReconciliationService = new SAReconciliationService(storage);
+
 import { 
   insertCustomerSchema, 
   insertInvoiceSchema, 
@@ -128,6 +133,13 @@ import {
   insertPaymentExceptionSchema,
   insertExceptionEscalationSchema,
   insertExceptionAlertSchema,
+  // Enhanced Reconciliation schema imports
+  insertReconciliationSessionSchema,
+  insertTransactionMatchSchema,
+  insertReconciliationReviewQueueSchema,
+  insertSaBankingRuleSchema,
+  insertSaBankingFeePatternSchema,
+  insertCrossBankTransactionMapSchema,
   // Enhanced Sales Module schema imports  
   insertSalesOrderSchema,
   insertSalesOrderItemSchema,
@@ -167,6 +179,57 @@ import {
   servicePackagePricing
 } from "@shared/schema";
 import { z } from "zod";
+
+// Enhanced Reconciliation validation schemas
+const createReconciliationSessionSchema = z.object({
+  body: insertReconciliationSessionSchema.extend({
+    sessionName: z.string().min(1, "Session name is required"),
+    bankAccountIds: z.array(z.number()).min(1, "At least one bank account is required"),
+    reconciliationType: z.enum(['automated', 'manual', 'hybrid']).default('automated'),
+    reconciliationPeriod: z.object({
+      from: z.string().datetime(),
+      to: z.string().datetime()
+    }),
+    considerBankDelays: z.boolean().default(true),
+    crossBankMatching: z.boolean().default(true),
+    confidenceThreshold: z.number().min(0).max(1).default(0.85),
+    autoApproveThreshold: z.number().min(0).max(1).default(0.95)
+  })
+});
+
+const bulkApproveMatchesSchema = z.object({
+  body: z.object({
+    matchIds: z.array(z.number()).min(1, "At least one match ID is required")
+  })
+});
+
+const completeReviewItemSchema = z.object({
+  body: z.object({
+    decision: z.enum(['approve', 'reject', 'escalate']),
+    notes: z.string().optional(),
+    timeSpent: z.number().min(0).optional().default(0)
+  })
+});
+
+const rejectMatchSchema = z.object({
+  body: z.object({
+    rejectionReason: z.string().min(1, "Rejection reason is required")
+  })
+});
+
+const assignReviewItemSchema = z.object({
+  body: z.object({
+    assignedTo: z.number().positive("Valid user ID required")
+  })
+});
+
+const createSaBankingRuleSchema = z.object({
+  body: insertSaBankingRuleSchema
+});
+
+const createSaBankingFeePatternSchema = z.object({
+  body: insertSaBankingFeePatternSchema
+});
 import { createPayFastService } from "./payfast";
 import { emailService } from "./services/emailService";
 import { db } from "./db";
@@ -13069,6 +13132,693 @@ ${transactions.transactions ? transactions.transactions.map((t: any) =>
       res.status(500).json({ message: "Failed to match bank transactions" });
     }
   });
+
+  // ====== ENHANCED SA RECONCILIATION SYSTEM API ROUTES ======
+
+  // Enhanced Reconciliation Sessions
+  app.get("/api/enhanced-reconciliation/sessions", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { status } = req.query;
+      const sessions = await storage.getReconciliationSessions(companyId, status as string);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Failed to fetch reconciliation sessions:", error);
+      res.status(500).json({ message: "Failed to fetch reconciliation sessions" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/sessions/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const session = await storage.getReconciliationSession(parseInt(id), companyId);
+      if (!session) {
+        return res.status(404).json({ message: "Reconciliation session not found" });
+      }
+
+      res.json(session);
+    } catch (error) {
+      console.error("Failed to fetch reconciliation session:", error);
+      res.status(500).json({ message: "Failed to fetch reconciliation session" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/sessions", authenticate, validateRequest(createReconciliationSessionSchema), async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      // Generate unique session ID
+      const sessionId = `sa-recon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const sessionData = {
+        ...req.body,
+        sessionId,
+        companyId,
+        createdBy: userId,
+        status: 'processing'
+      };
+
+      const session = await storage.createReconciliationSession(sessionData);
+      
+      try {
+        // Get bank accounts and transactions for the reconciliation
+        const bankAccounts = [];
+        const transactions = [];
+        
+        for (const bankAccountId of req.body.bankAccountIds) {
+          const account = await storage.getBankAccount(bankAccountId);
+          if (!account || account.companyId !== companyId) {
+            throw new Error(`Bank account ${bankAccountId} not found or access denied`);
+          }
+          bankAccounts.push(account);
+          
+          // Get transactions for the period
+          const accountTransactions = await storage.getBankTransactions(bankAccountId, {
+            from: new Date(req.body.reconciliationPeriod.from),
+            to: new Date(req.body.reconciliationPeriod.to)
+          });
+          
+          transactions.push(...accountTransactions.map(t => ({
+            id: t.id.toString(),
+            description: t.description || '',
+            amount: parseFloat(t.amount.toString()),
+            date: t.date.toISOString(),
+            type: parseFloat(t.amount.toString()) >= 0 ? 'credit' as const : 'debit' as const,
+            bankName: account.bankName || 'Unknown',
+            accountNumber: account.accountNumber,
+            reference: t.reference,
+            rawData: t
+          })));
+        }
+
+        if (transactions.length === 0) {
+          await storage.updateReconciliationSessionStatus(session.id, 'completed', ['No transactions found for the specified period']);
+          return res.json({ ...session, status: 'completed', message: 'No transactions to reconcile' });
+        }
+
+        // Set up reconciliation context
+        const context = {
+          companyId,
+          bankAccounts: bankAccounts.map(acc => ({
+            id: acc.id,
+            bankName: acc.bankName || 'Unknown',
+            accountNumber: acc.accountNumber,
+            accountType: acc.accountType || 'current'
+          })),
+          reconciliationPeriod: req.body.reconciliationPeriod,
+          preferences: {
+            considerBankDelays: req.body.considerBankDelays,
+            crossBankMatching: req.body.crossBankMatching,
+            confidenceThreshold: req.body.confidenceThreshold,
+            autoApproveThreshold: req.body.autoApproveThreshold
+          }
+        };
+
+        // Perform actual SA reconciliation
+        console.log(`🏦 Starting SA reconciliation for session ${sessionId} with ${transactions.length} transactions`);
+        const reconciliationResult = await saReconciliationService.performSAReconciliation(transactions, context);
+
+        // Store reconciliation matches
+        const matchPromises = reconciliationResult.matches.map(match => 
+          storage.createTransactionMatch({
+            sessionId: session.id,
+            sourceTransactionId: match.transactionId,
+            matchedTransactionId: match.matchedTransactionId,
+            confidence: match.confidence,
+            matchType: match.matchType,
+            status: match.confidence >= req.body.autoApproveThreshold ? 'approved' : 'pending',
+            saSpecificFactors: match.saSpecificFactors,
+            timeline: match.timeline,
+            reasoning: match.reasoning,
+            alternativeMatches: match.alternativeMatches,
+            companyId
+          })
+        );
+
+        const transactionMatches = await Promise.all(matchPromises);
+
+        // Store review queue items for complex matches
+        const reviewPromises = reconciliationResult.reviewQueue.map(item =>
+          storage.createReconciliationReviewQueueItem({
+            sessionId: session.id,
+            transactionId: item.transaction.id,
+            reason: item.reason,
+            complexity: item.complexity,
+            suggestedAction: item.suggestedAction,
+            priority: item.complexity > 8 ? 'high' : item.complexity > 5 ? 'medium' : 'low',
+            status: 'pending',
+            companyId
+          })
+        );
+
+        await Promise.all(reviewPromises);
+
+        // Store cross-bank transaction maps
+        if (reconciliationResult.crossBankMaps.length > 0) {
+          const crossBankPromises = reconciliationResult.crossBankMaps.map(map =>
+            storage.createCrossBankTransactionMap({
+              primaryBankAccountId: map.primaryBankAccountId,
+              secondaryBankAccountId: map.secondaryBankAccountId,
+              primaryTransactionId: map.primaryTransactionId,
+              secondaryTransactionId: map.secondaryTransactionId,
+              confidence: map.confidence,
+              mappingType: map.mappingType,
+              saSpecificFactors: map.saSpecificFactors,
+              verificationStatus: 'pending',
+              companyId
+            })
+          );
+
+          await Promise.all(crossBankPromises);
+        }
+
+        // Update session status
+        await storage.updateReconciliationSessionStatus(session.id, 'completed');
+        
+        await logAudit(userId, 'CREATE', 'reconciliation_session', session.id, 
+          `Created enhanced reconciliation session with ${transactionMatches.length} matches and ${reconciliationResult.reviewQueue.length} review items`);
+        
+        console.log(`✅ SA reconciliation completed for session ${sessionId}: ${transactionMatches.length} matches, ${reconciliationResult.reviewQueue.length} review items`);
+
+        res.json({
+          ...session,
+          status: 'completed',
+          statistics: {
+            totalTransactions: transactions.length,
+            matchesFound: transactionMatches.length,
+            reviewQueueItems: reconciliationResult.reviewQueue.length,
+            crossBankMaps: reconciliationResult.crossBankMaps.length,
+            autoApproved: transactionMatches.filter(m => m.status === 'approved').length,
+            averageConfidence: transactionMatches.length > 0 
+              ? transactionMatches.reduce((sum, m) => sum + parseFloat(m.confidence.toString()), 0) / transactionMatches.length 
+              : 0
+          }
+        });
+
+      } catch (processingError) {
+        console.error("Reconciliation processing failed:", processingError);
+        await storage.updateReconciliationSessionStatus(session.id, 'failed', [processingError.message]);
+        
+        res.status(500).json({
+          ...session,
+          status: 'failed',
+          message: "Reconciliation processing failed",
+          error: processingError.message
+        });
+      }
+
+    } catch (error) {
+      console.error("Failed to create reconciliation session:", error);
+      res.status(500).json({ message: "Failed to create reconciliation session", error: error.message });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/sessions/:id/statistics", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const statistics = await storage.getReconciliationSessionStatistics(parseInt(id), companyId);
+      res.json(statistics);
+    } catch (error) {
+      console.error("Failed to fetch session statistics:", error);
+      res.status(500).json({ message: "Failed to fetch session statistics" });
+    }
+  });
+
+  // Transaction Matches Management
+  app.get("/api/enhanced-reconciliation/matches", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { sessionId, status } = req.query;
+      const sessionIdNum = sessionId ? parseInt(sessionId as string) : undefined;
+      const matches = await storage.getTransactionMatches(companyId, sessionIdNum, status as string);
+      res.json(matches);
+    } catch (error) {
+      console.error("Failed to fetch transaction matches:", error);
+      res.status(500).json({ message: "Failed to fetch transaction matches" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/matches/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const match = await storage.getTransactionMatch(parseInt(id), companyId);
+      if (!match) {
+        return res.status(404).json({ message: "Transaction match not found" });
+      }
+
+      res.json(match);
+    } catch (error) {
+      console.error("Failed to fetch transaction match:", error);
+      res.status(500).json({ message: "Failed to fetch transaction match" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/matches/:id/approve", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const match = await storage.approveTransactionMatch(parseInt(id), userId);
+      if (!match) {
+        return res.status(404).json({ message: "Transaction match not found" });
+      }
+
+      await logAudit(userId, 'UPDATE', 'transaction_match', match.id, 'Approved transaction match');
+      res.json(match);
+    } catch (error) {
+      console.error("Failed to approve transaction match:", error);
+      res.status(500).json({ message: "Failed to approve transaction match" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/matches/:id/reject", authenticate, validateRequest(rejectMatchSchema), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { rejectionReason } = req.body;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const match = await storage.rejectTransactionMatch(parseInt(id), userId, rejectionReason);
+      if (!match) {
+        return res.status(404).json({ message: "Transaction match not found" });
+      }
+
+      await logAudit(userId, 'UPDATE', 'transaction_match', match.id, `Rejected transaction match: ${rejectionReason}`);
+      res.json(match);
+    } catch (error) {
+      console.error("Failed to reject transaction match:", error);
+      res.status(500).json({ message: "Failed to reject transaction match" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/matches/bulk-approve", authenticate, validateRequest(bulkApproveMatchesSchema), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { matchIds } = req.body;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const result = await storage.bulkApproveTransactionMatches(matchIds, userId, companyId);
+      
+      await logAudit(userId, 'UPDATE', 'transaction_match', 0, `Bulk approved ${result.approved} transaction matches`);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to bulk approve transaction matches:", error);
+      res.status(500).json({ message: "Failed to bulk approve transaction matches" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/matches/high-confidence", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { sessionId, threshold } = req.query;
+      const sessionIdNum = sessionId ? parseInt(sessionId as string) : undefined;
+      const thresholdNum = threshold ? parseFloat(threshold as string) : 0.9;
+      
+      const matches = await storage.getHighConfidenceMatches(companyId, sessionIdNum, thresholdNum);
+      res.json(matches);
+    } catch (error) {
+      console.error("Failed to fetch high confidence matches:", error);
+      res.status(500).json({ message: "Failed to fetch high confidence matches" });
+    }
+  });
+
+  // Review Queue Management
+  app.get("/api/enhanced-reconciliation/review-queue", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { status, assignedTo } = req.query;
+      const assignedToNum = assignedTo ? parseInt(assignedTo as string) : undefined;
+      
+      const queue = await storage.getReconciliationReviewQueue(companyId, status as string, assignedToNum);
+      res.json(queue);
+    } catch (error) {
+      console.error("Failed to fetch review queue:", error);
+      res.status(500).json({ message: "Failed to fetch review queue" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/review-queue/:id", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const item = await storage.getReconciliationReviewQueueItem(parseInt(id), companyId);
+      if (!item) {
+        return res.status(404).json({ message: "Review queue item not found" });
+      }
+
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to fetch review queue item:", error);
+      res.status(500).json({ message: "Failed to fetch review queue item" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/review-queue/:id/assign", authenticate, validateRequest(assignReviewItemSchema), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { assignedTo } = req.body;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const item = await storage.assignReviewQueueItem(parseInt(id), assignedTo, companyId);
+      if (!item) {
+        return res.status(404).json({ message: "Review queue item not found" });
+      }
+
+      await logAudit(userId, 'UPDATE', 'review_queue_item', item.id, `Assigned review item to user ${assignedTo}`);
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to assign review queue item:", error);
+      res.status(500).json({ message: "Failed to assign review queue item" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/review-queue/:id/complete", authenticate, validateRequest(completeReviewItemSchema), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { decision, notes, timeSpent } = req.body;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const item = await storage.completeReviewQueueItem(parseInt(id), userId, decision, notes, timeSpent);
+      if (!item) {
+        return res.status(404).json({ message: "Review queue item not found" });
+      }
+
+      await logAudit(userId, 'UPDATE', 'review_queue_item', item.id, `Completed review with decision: ${decision}`);
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to complete review queue item:", error);
+      res.status(500).json({ message: "Failed to complete review queue item" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/review-queue/next-item", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const item = await storage.getNextReviewQueueItem(companyId, userId);
+      res.json(item);
+    } catch (error) {
+      console.error("Failed to fetch next review queue item:", error);
+      res.status(500).json({ message: "Failed to fetch next review queue item" });
+    }
+  });
+
+  // SA Banking Rules Management
+  app.get("/api/enhanced-reconciliation/sa-banking-rules", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { bankName, ruleType } = req.query;
+      const rules = await storage.getSaBankingRules(companyId, bankName as string, ruleType as string);
+      res.json(rules);
+    } catch (error) {
+      console.error("Failed to fetch SA banking rules:", error);
+      res.status(500).json({ message: "Failed to fetch SA banking rules" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/sa-banking-rules", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const ruleData = {
+        ...req.body,
+        companyId,
+        createdBy: userId
+      };
+
+      const rule = await storage.createSaBankingRule(ruleData);
+      
+      await logAudit(userId, 'CREATE', 'sa_banking_rule', rule.id, 'Created SA banking rule');
+      res.json(rule);
+    } catch (error) {
+      console.error("Failed to create SA banking rule:", error);
+      res.status(500).json({ message: "Failed to create SA banking rule" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/sa-banking-rules/active/:bankName", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { bankName } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const rules = await storage.getActiveSaBankingRules(companyId, bankName);
+      res.json(rules);
+    } catch (error) {
+      console.error("Failed to fetch active SA banking rules:", error);
+      res.status(500).json({ message: "Failed to fetch active SA banking rules" });
+    }
+  });
+
+  // Fee Patterns Management
+  app.get("/api/enhanced-reconciliation/fee-patterns", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { bankName, feeType } = req.query;
+      const patterns = await storage.getSaBankingFeePatterns(companyId, bankName as string, feeType as string);
+      res.json(patterns);
+    } catch (error) {
+      console.error("Failed to fetch fee patterns:", error);
+      res.status(500).json({ message: "Failed to fetch fee patterns" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/fee-patterns", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const patternData = {
+        ...req.body,
+        companyId,
+        createdBy: userId
+      };
+
+      const pattern = await storage.createSaBankingFeePattern(patternData);
+      
+      await logAudit(userId, 'CREATE', 'sa_banking_fee_pattern', pattern.id, 'Created SA banking fee pattern');
+      res.json(pattern);
+    } catch (error) {
+      console.error("Failed to create fee pattern:", error);
+      res.status(500).json({ message: "Failed to create fee pattern" });
+    }
+  });
+
+  // Cross Bank Transaction Maps
+  app.get("/api/enhanced-reconciliation/cross-bank-maps", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { status } = req.query;
+      const maps = await storage.getCrossBankTransactionMaps(companyId, status as string);
+      res.json(maps);
+    } catch (error) {
+      console.error("Failed to fetch cross bank maps:", error);
+      res.status(500).json({ message: "Failed to fetch cross bank maps" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/cross-bank-maps/unmapped", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { maxAge } = req.query;
+      const maxAgeNum = maxAge ? parseInt(maxAge as string) : 7; // Default 7 days
+      
+      const unmapped = await storage.getUnmappedCrossBankTransactions(companyId, maxAgeNum);
+      res.json(unmapped);
+    } catch (error) {
+      console.error("Failed to fetch unmapped cross bank transactions:", error);
+      res.status(500).json({ message: "Failed to fetch unmapped cross bank transactions" });
+    }
+  });
+
+  // Bulk Approvals Management
+  app.get("/api/enhanced-reconciliation/bulk-approvals", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { status } = req.query;
+      const approvals = await storage.getReconciliationBulkApprovals(companyId, status as string);
+      res.json(approvals);
+    } catch (error) {
+      console.error("Failed to fetch bulk approvals:", error);
+      res.status(500).json({ message: "Failed to fetch bulk approvals" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/bulk-approvals", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const approvalData = {
+        ...req.body,
+        companyId,
+        createdBy: userId
+      };
+
+      const approval = await storage.createReconciliationBulkApproval(approvalData);
+      
+      await logAudit(userId, 'CREATE', 'reconciliation_bulk_approval', approval.id, 'Created bulk approval');
+      res.json(approval);
+    } catch (error) {
+      console.error("Failed to create bulk approval:", error);
+      res.status(500).json({ message: "Failed to create bulk approval" });
+    }
+  });
+
+  app.post("/api/enhanced-reconciliation/bulk-approvals/:batchId/execute", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { batchId } = req.params;
+      const companyId = req.user?.companyId;
+      const userId = req.user?.id;
+      if (!companyId || !userId) {
+        return res.status(400).json({ message: "User and company ID required" });
+      }
+
+      const result = await storage.executeBulkApproval(batchId, userId, companyId);
+      
+      await logAudit(userId, 'UPDATE', 'reconciliation_bulk_approval', 0, `Executed bulk approval ${batchId}: ${result.totalApproved} approved`);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to execute bulk approval:", error);
+      res.status(500).json({ message: "Failed to execute bulk approval" });
+    }
+  });
+
+  // Enhanced Reconciliation Analytics
+  app.get("/api/enhanced-reconciliation/analytics", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { periodStart, periodEnd } = req.query;
+      const startDate = periodStart ? new Date(periodStart as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = periodEnd ? new Date(periodEnd as string) : new Date();
+      
+      const analytics = await storage.getReconciliationAnalytics(companyId, startDate, endDate);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Failed to fetch reconciliation analytics:", error);
+      res.status(500).json({ message: "Failed to fetch reconciliation analytics" });
+    }
+  });
+
+  app.get("/api/enhanced-reconciliation/analytics/bank/:bankName", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { bankName } = req.params;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      const { periodStart, periodEnd } = req.query;
+      const startDate = periodStart ? new Date(periodStart as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const endDate = periodEnd ? new Date(periodEnd as string) : new Date();
+      
+      const analytics = await storage.getBankSpecificAnalytics(companyId, bankName, startDate, endDate);
+      res.json(analytics);
+    } catch (error) {
+      console.error("Failed to fetch bank-specific analytics:", error);
+      res.status(500).json({ message: "Failed to fetch bank-specific analytics" });
+    }
+  });
+
+  // ====== END ENHANCED SA RECONCILIATION SYSTEM API ROUTES ======
 
   app.get("/api/bank-accounts/:id/unmatched-transactions", authenticate, async (req: AuthenticatedRequest, res) => {
     try {

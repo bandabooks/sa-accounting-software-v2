@@ -492,12 +492,35 @@ import {
   bankStatementImports,
   transactionStatuses,
   transactionFingerprints,
+  // Enhanced SA Reconciliation System imports
+  saBankingRules,
+  reconciliationSessions,
+  transactionMatches,
+  reconciliationReviewQueue,
+  saBankingFeePatterns,
+  crossBankTransactionMaps,
+  reconciliationBulkApprovals,
   type BankStatementImport,
   type InsertBankStatementImport,
   type TransactionStatus,
   type InsertTransactionStatus,
   type TransactionFingerprint,
   type InsertTransactionFingerprint,
+  // Enhanced SA Reconciliation System types
+  type SaBankingRule,
+  type InsertSaBankingRule,
+  type ReconciliationSession,
+  type InsertReconciliationSession,
+  type TransactionMatch,
+  type InsertTransactionMatch,
+  type ReconciliationReviewQueue,
+  type InsertReconciliationReviewQueue,
+  type SaBankingFeePattern,
+  type InsertSaBankingFeePattern,
+  type CrossBankTransactionMap,
+  type InsertCrossBankTransactionMap,
+  type ReconciliationBulkApproval,
+  type InsertReconciliationBulkApproval,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -1258,6 +1281,121 @@ export interface IStorage {
   getAiDuplicateDetections(companyId: number, transactionId?: string): Promise<AiDuplicateDetection[]>;
   updateDuplicateVerification(id: number, isVerified: boolean, action?: string): Promise<AiDuplicateDetection | undefined>;
   getPendingDuplicates(companyId: number): Promise<AiDuplicateDetection[]>;
+
+  // ====== ENHANCED SA RECONCILIATION SYSTEM ======
+  
+  // SA Banking Rules Management
+  getSaBankingRules(companyId: number, bankName?: string, ruleType?: string): Promise<SaBankingRule[]>;
+  getSaBankingRule(id: number, companyId: number): Promise<SaBankingRule | undefined>;
+  createSaBankingRule(rule: InsertSaBankingRule): Promise<SaBankingRule>;
+  updateSaBankingRule(id: number, rule: Partial<InsertSaBankingRule>): Promise<SaBankingRule | undefined>;
+  deleteSaBankingRule(id: number, companyId: number): Promise<boolean>;
+  getActiveSaBankingRules(companyId: number, bankName: string): Promise<SaBankingRule[]>;
+
+  // Reconciliation Sessions Management
+  getReconciliationSessions(companyId: number, status?: string): Promise<ReconciliationSession[]>;
+  getReconciliationSession(id: number, companyId: number): Promise<ReconciliationSession | undefined>;
+  getReconciliationSessionBySessionId(sessionId: string, companyId: number): Promise<ReconciliationSession | undefined>;
+  createReconciliationSession(session: InsertReconciliationSession): Promise<ReconciliationSession>;
+  updateReconciliationSession(id: number, session: Partial<InsertReconciliationSession>): Promise<ReconciliationSession | undefined>;
+  deleteReconciliationSession(id: number, companyId: number): Promise<boolean>;
+  updateReconciliationSessionStatus(id: number, status: string, errorMessages?: any[]): Promise<ReconciliationSession | undefined>;
+  getReconciliationSessionStatistics(sessionId: number, companyId: number): Promise<{
+    totalTransactions: number;
+    matchedTransactions: number;
+    pendingReview: number;
+    autoApproved: number;
+    duplicatesFound: number;
+  }>;
+
+  // Transaction Matches Management
+  getTransactionMatches(companyId: number, sessionId?: number, status?: string): Promise<TransactionMatch[]>;
+  getTransactionMatch(id: number, companyId: number): Promise<TransactionMatch | undefined>;
+  createTransactionMatch(match: InsertTransactionMatch): Promise<TransactionMatch>;
+  batchCreateTransactionMatches(matches: InsertTransactionMatch[]): Promise<TransactionMatch[]>;
+  updateTransactionMatch(id: number, match: Partial<InsertTransactionMatch>): Promise<TransactionMatch | undefined>;
+  deleteTransactionMatch(id: number, companyId: number): Promise<boolean>;
+  approveTransactionMatch(id: number, reviewedBy: number): Promise<TransactionMatch | undefined>;
+  rejectTransactionMatch(id: number, reviewedBy: number, rejectionReason: string): Promise<TransactionMatch | undefined>;
+  getTransactionMatchesBySourceTransaction(sourceTransactionId: string, companyId: number): Promise<TransactionMatch[]>;
+  getHighConfidenceMatches(companyId: number, sessionId?: number, threshold?: number): Promise<TransactionMatch[]>;
+  bulkApproveTransactionMatches(matchIds: number[], reviewedBy: number, companyId: number): Promise<{
+    approved: number;
+    failed: number;
+    errors: string[];
+  }>;
+
+  // Review Queue Management
+  getReconciliationReviewQueue(companyId: number, status?: string, assignedTo?: number): Promise<ReconciliationReviewQueue[]>;
+  getReconciliationReviewQueueItem(id: number, companyId: number): Promise<ReconciliationReviewQueue | undefined>;
+  createReconciliationReviewQueueItem(item: InsertReconciliationReviewQueue): Promise<ReconciliationReviewQueue>;
+  batchCreateReconciliationReviewQueue(items: InsertReconciliationReviewQueue[]): Promise<ReconciliationReviewQueue[]>;
+  updateReconciliationReviewQueueItem(id: number, item: Partial<InsertReconciliationReviewQueue>): Promise<ReconciliationReviewQueue | undefined>;
+  deleteReconciliationReviewQueueItem(id: number, companyId: number): Promise<boolean>;
+  assignReviewQueueItem(id: number, assignedTo: number, companyId: number): Promise<ReconciliationReviewQueue | undefined>;
+  completeReviewQueueItem(id: number, reviewedBy: number, decision: string, notes?: string, timeSpent?: number): Promise<ReconciliationReviewQueue | undefined>;
+  getReviewQueueByPriority(companyId: number, priority: string): Promise<ReconciliationReviewQueue[]>;
+  getNextReviewQueueItem(companyId: number, assignedTo?: number): Promise<ReconciliationReviewQueue | undefined>;
+
+  // SA Banking Fee Patterns Management
+  getSaBankingFeePatterns(companyId: number, bankName?: string, feeType?: string): Promise<SaBankingFeePattern[]>;
+  getSaBankingFeePattern(id: number, companyId: number): Promise<SaBankingFeePattern | undefined>;
+  createSaBankingFeePattern(pattern: InsertSaBankingFeePattern): Promise<SaBankingFeePattern>;
+  updateSaBankingFeePattern(id: number, pattern: Partial<InsertSaBankingFeePattern>): Promise<SaBankingFeePattern | undefined>;
+  deleteSaBankingFeePattern(id: number, companyId: number): Promise<boolean>;
+  getActiveFeePatterns(companyId: number, bankName: string): Promise<SaBankingFeePattern[]>;
+  updateFeePatternStatistics(patternId: number, occurrences: number, averageAmount: number, lastSeen: Date): Promise<SaBankingFeePattern | undefined>;
+
+  // Cross Bank Transaction Maps Management
+  getCrossBankTransactionMaps(companyId: number, status?: string): Promise<CrossBankTransactionMap[]>;
+  getCrossBankTransactionMap(id: number, companyId: number): Promise<CrossBankTransactionMap | undefined>;
+  createCrossBankTransactionMap(map: InsertCrossBankTransactionMap): Promise<CrossBankTransactionMap>;
+  batchCreateCrossBankTransactionMaps(maps: InsertCrossBankTransactionMap[]): Promise<CrossBankTransactionMap[]>;
+  updateCrossBankTransactionMap(id: number, map: Partial<InsertCrossBankTransactionMap>): Promise<CrossBankTransactionMap | undefined>;
+  deleteCrossBankTransactionMap(id: number, companyId: number): Promise<boolean>;
+  findCrossBankMapping(primaryTransactionId: string, companyId: number): Promise<CrossBankTransactionMap | undefined>;
+  updateMappingStatus(id: number, status: string, secondaryTransactionId?: string, mappedBy?: number): Promise<CrossBankTransactionMap | undefined>;
+  getUnmappedCrossBankTransactions(companyId: number, maxAge?: number): Promise<CrossBankTransactionMap[]>;
+
+  // Bulk Approvals Management
+  getReconciliationBulkApprovals(companyId: number, status?: string): Promise<ReconciliationBulkApproval[]>;
+  getReconciliationBulkApproval(id: number, companyId: number): Promise<ReconciliationBulkApproval | undefined>;
+  getReconciliationBulkApprovalByBatchId(batchId: string, companyId: number): Promise<ReconciliationBulkApproval | undefined>;
+  createReconciliationBulkApproval(approval: InsertReconciliationBulkApproval): Promise<ReconciliationBulkApproval>;
+  updateReconciliationBulkApproval(id: number, approval: Partial<InsertReconciliationBulkApproval>): Promise<ReconciliationBulkApproval | undefined>;
+  deleteReconciliationBulkApproval(id: number, companyId: number): Promise<boolean>;
+  executeBulkApproval(batchId: string, approvedBy: number, companyId: number): Promise<{
+    totalSelected: number;
+    totalApproved: number;
+    totalFailed: number;
+    failureReasons: string[];
+  }>;
+  updateBulkApprovalProgress(batchId: string, approved: number, failed: number, errors?: string[]): Promise<ReconciliationBulkApproval | undefined>;
+
+  // Enhanced Reconciliation Analytics
+  getReconciliationAnalytics(companyId: number, periodStart: Date, periodEnd: Date): Promise<{
+    totalSessions: number;
+    totalTransactions: number;
+    autoMatchRate: number;
+    averageConfidence: number;
+    crossBankTransfers: number;
+    feesIdentified: number;
+    reviewQueueVolume: number;
+    processingTime: {
+      averageSeconds: number;
+      medianSeconds: number;
+    };
+  }>;
+  getBankSpecificAnalytics(companyId: number, bankName: string, periodStart: Date, periodEnd: Date): Promise<{
+    transactionVolume: number;
+    matchAccuracy: number;
+    averageSettlementDelay: number;
+    feePatternAccuracy: number;
+    commonIssues: Array<{
+      issue: string;
+      frequency: number;
+    }>;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -18053,6 +18191,358 @@ export class DatabaseStorage implements IStorage {
     });
 
     return summary;
+  }
+
+  // ====== Enhanced SA Reconciliation System Storage Methods ======
+
+  async getReconciliationSessions(companyId: number, status?: string): Promise<ReconciliationSession[]> {
+    const query = this.db.select().from(reconciliationSessions).where(eq(reconciliationSessions.companyId, companyId));
+    
+    if (status) {
+      query.where(and(eq(reconciliationSessions.companyId, companyId), eq(reconciliationSessions.status, status)));
+    }
+    
+    return await query.orderBy(desc(reconciliationSessions.createdAt));
+  }
+
+  async getReconciliationSession(id: number, companyId: number): Promise<ReconciliationSession | undefined> {
+    const result = await this.db.select().from(reconciliationSessions)
+      .where(and(eq(reconciliationSessions.id, id), eq(reconciliationSessions.companyId, companyId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async getReconciliationSessionBySessionId(sessionId: string, companyId: number): Promise<ReconciliationSession | undefined> {
+    const result = await this.db.select().from(reconciliationSessions)
+      .where(and(eq(reconciliationSessions.sessionId, sessionId), eq(reconciliationSessions.companyId, companyId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async createReconciliationSession(session: InsertReconciliationSession): Promise<ReconciliationSession> {
+    const result = await this.db.insert(reconciliationSessions).values(session).returning();
+    return result[0];
+  }
+
+  async updateReconciliationSession(id: number, session: Partial<InsertReconciliationSession>): Promise<ReconciliationSession | undefined> {
+    const result = await this.db.update(reconciliationSessions)
+      .set({ ...session, updatedAt: new Date() })
+      .where(eq(reconciliationSessions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteReconciliationSession(id: number, companyId: number): Promise<boolean> {
+    const result = await this.db.delete(reconciliationSessions)
+      .where(and(eq(reconciliationSessions.id, id), eq(reconciliationSessions.companyId, companyId)));
+    return result.rowsAffected > 0;
+  }
+
+  async updateReconciliationSessionStatus(id: number, status: string, errorMessages?: any[]): Promise<ReconciliationSession | undefined> {
+    const updateData: any = { 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    if (errorMessages) {
+      updateData.errorMessages = errorMessages;
+    }
+    
+    if (status === 'completed') {
+      updateData.completedAt = new Date();
+    }
+    
+    const result = await this.db.update(reconciliationSessions)
+      .set(updateData)
+      .where(eq(reconciliationSessions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getReconciliationSessionStatistics(sessionId: number, companyId: number): Promise<{
+    totalTransactions: number;
+    matchedTransactions: number;
+    pendingReview: number;
+    averageConfidence: number;
+    processingTime: number;
+  }> {
+    // Get session to verify access
+    const session = await this.getReconciliationSession(sessionId, companyId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Get match statistics
+    const matches = await this.db.select().from(transactionMatches)
+      .where(eq(transactionMatches.sessionId, sessionId));
+
+    const totalTransactions = matches.length;
+    const matchedTransactions = matches.filter(m => m.status === 'approved').length;
+    const pendingReview = matches.filter(m => m.status === 'pending').length;
+    
+    const confidences = matches.map(m => parseFloat(m.confidence.toString()));
+    const averageConfidence = confidences.length > 0 
+      ? confidences.reduce((a, b) => a + b, 0) / confidences.length 
+      : 0;
+    
+    const processingTime = session.completedAt && session.createdAt
+      ? (session.completedAt.getTime() - session.createdAt.getTime()) / 1000
+      : 0;
+
+    return {
+      totalTransactions,
+      matchedTransactions,
+      pendingReview,
+      averageConfidence,
+      processingTime
+    };
+  }
+
+  async getTransactionMatches(companyId: number, sessionId?: number, status?: string): Promise<TransactionMatch[]> {
+    let query = this.db.select().from(transactionMatches)
+      .innerJoin(reconciliationSessions, eq(transactionMatches.sessionId, reconciliationSessions.id))
+      .where(eq(reconciliationSessions.companyId, companyId));
+    
+    if (sessionId) {
+      query = query.where(and(
+        eq(reconciliationSessions.companyId, companyId),
+        eq(transactionMatches.sessionId, sessionId)
+      ));
+    }
+    
+    if (status) {
+      query = query.where(and(
+        eq(reconciliationSessions.companyId, companyId),
+        eq(transactionMatches.status, status)
+      ));
+    }
+    
+    const results = await query.orderBy(desc(transactionMatches.createdAt));
+    return results.map(r => r.transaction_matches);
+  }
+
+  async getTransactionMatch(id: number, companyId: number): Promise<TransactionMatch | undefined> {
+    const result = await this.db.select().from(transactionMatches)
+      .innerJoin(reconciliationSessions, eq(transactionMatches.sessionId, reconciliationSessions.id))
+      .where(and(
+        eq(transactionMatches.id, id), 
+        eq(reconciliationSessions.companyId, companyId)
+      ))
+      .limit(1);
+    return result[0]?.transaction_matches;
+  }
+
+  async approveTransactionMatch(matchId: number, userId: number): Promise<TransactionMatch | undefined> {
+    const result = await this.db.update(transactionMatches)
+      .set({ 
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(transactionMatches.id, matchId))
+      .returning();
+    return result[0];
+  }
+
+  async rejectTransactionMatch(matchId: number, userId: number, rejectionReason: string): Promise<TransactionMatch | undefined> {
+    const result = await this.db.update(transactionMatches)
+      .set({ 
+        status: 'rejected',
+        rejectionReason,
+        rejectedBy: userId,
+        rejectedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(transactionMatches.id, matchId))
+      .returning();
+    return result[0];
+  }
+
+  async bulkApproveTransactionMatches(matchIds: number[], userId: number, companyId: number): Promise<{
+    approved: number;
+    failed: number;
+    errors: string[];
+  }> {
+    let approved = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const matchId of matchIds) {
+      try {
+        // Verify the match belongs to the company
+        const match = await this.getTransactionMatch(matchId, companyId);
+        if (!match) {
+          errors.push(`Match ${matchId} not found`);
+          failed++;
+          continue;
+        }
+
+        await this.approveTransactionMatch(matchId, userId);
+        approved++;
+      } catch (error) {
+        errors.push(`Failed to approve match ${matchId}: ${error}`);
+        failed++;
+      }
+    }
+
+    return { approved, failed, errors };
+  }
+
+  async getHighConfidenceMatches(companyId: number, sessionId?: number, threshold: number = 0.9): Promise<TransactionMatch[]> {
+    let query = this.db.select().from(transactionMatches)
+      .innerJoin(reconciliationSessions, eq(transactionMatches.sessionId, reconciliationSessions.id))
+      .where(and(
+        eq(reconciliationSessions.companyId, companyId),
+        gte(transactionMatches.confidence, threshold),
+        eq(transactionMatches.status, 'pending')
+      ));
+    
+    if (sessionId) {
+      query = query.where(and(
+        eq(reconciliationSessions.companyId, companyId),
+        eq(transactionMatches.sessionId, sessionId),
+        gte(transactionMatches.confidence, threshold),
+        eq(transactionMatches.status, 'pending')
+      ));
+    }
+    
+    const results = await query.orderBy(desc(transactionMatches.confidence));
+    return results.map(r => r.transaction_matches);
+  }
+
+  async getReconciliationReviewQueue(companyId: number, status?: string, assignedTo?: number): Promise<ReconciliationReviewQueue[]> {
+    let query = this.db.select().from(reconciliationReviewQueue)
+      .where(eq(reconciliationReviewQueue.companyId, companyId));
+    
+    if (status) {
+      query = query.where(and(
+        eq(reconciliationReviewQueue.companyId, companyId),
+        eq(reconciliationReviewQueue.status, status)
+      ));
+    }
+    
+    if (assignedTo) {
+      query = query.where(and(
+        eq(reconciliationReviewQueue.companyId, companyId),
+        eq(reconciliationReviewQueue.assignedTo, assignedTo)
+      ));
+    }
+    
+    return await query.orderBy(desc(reconciliationReviewQueue.priority), desc(reconciliationReviewQueue.createdAt));
+  }
+
+  async getReconciliationReviewQueueItem(id: number, companyId: number): Promise<ReconciliationReviewQueue | undefined> {
+    const result = await this.db.select().from(reconciliationReviewQueue)
+      .where(and(eq(reconciliationReviewQueue.id, id), eq(reconciliationReviewQueue.companyId, companyId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async assignReviewQueueItem(id: number, assignedTo: number, companyId: number): Promise<ReconciliationReviewQueue | undefined> {
+    const result = await this.db.update(reconciliationReviewQueue)
+      .set({ 
+        assignedTo,
+        status: 'in_review',
+        assignedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(reconciliationReviewQueue.id, id), eq(reconciliationReviewQueue.companyId, companyId)))
+      .returning();
+    return result[0];
+  }
+
+  async completeReviewQueueItem(id: number, userId: number, decision: string, notes: string, timeSpent: number): Promise<ReconciliationReviewQueue | undefined> {
+    const result = await this.db.update(reconciliationReviewQueue)
+      .set({ 
+        status: 'completed',
+        decision,
+        reviewNotes: notes,
+        timeSpent,
+        completedBy: userId,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(reconciliationReviewQueue.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getSaBankingRules(companyId: number): Promise<SaBankingRule[]> {
+    return await this.db.select().from(saBankingRules)
+      .where(eq(saBankingRules.companyId, companyId))
+      .orderBy(desc(saBankingRules.priority));
+  }
+
+  async createSaBankingRule(rule: InsertSaBankingRule): Promise<SaBankingRule> {
+    const result = await this.db.insert(saBankingRules).values(rule).returning();
+    return result[0];
+  }
+
+  async getActiveSaBankingRules(companyId: number, bankName: string): Promise<SaBankingRule[]> {
+    return await this.db.select().from(saBankingRules)
+      .where(and(
+        eq(saBankingRules.companyId, companyId),
+        eq(saBankingRules.bankName, bankName),
+        eq(saBankingRules.isActive, true)
+      ))
+      .orderBy(desc(saBankingRules.priority));
+  }
+
+  async getSaBankingFeePatterns(companyId: number): Promise<SaBankingFeePattern[]> {
+    return await this.db.select().from(saBankingFeePatterns)
+      .where(eq(saBankingFeePatterns.companyId, companyId))
+      .orderBy(desc(saBankingFeePatterns.createdAt));
+  }
+
+  async createSaBankingFeePattern(pattern: InsertSaBankingFeePattern): Promise<SaBankingFeePattern> {
+    const result = await this.db.insert(saBankingFeePatterns).values(pattern).returning();
+    return result[0];
+  }
+
+  async getTransactionMatchesBySourceTransaction(sourceTransactionId: string, companyId: number): Promise<TransactionMatch[]> {
+    return await this.db.select().from(transactionMatches)
+      .innerJoin(reconciliationSessions, eq(transactionMatches.sessionId, reconciliationSessions.id))
+      .where(and(
+        eq(transactionMatches.sourceTransactionId, sourceTransactionId),
+        eq(reconciliationSessions.companyId, companyId)
+      ))
+      .then(results => results.map(r => r.transaction_matches));
+  }
+
+  // Additional storage methods for enhanced reconciliation processing
+  async createTransactionMatch(match: InsertTransactionMatch): Promise<TransactionMatch> {
+    const result = await this.db.insert(transactionMatches).values(match).returning();
+    return result[0];
+  }
+
+  async createReconciliationReviewQueueItem(item: InsertReconciliationReviewQueue): Promise<ReconciliationReviewQueue> {
+    const result = await this.db.insert(reconciliationReviewQueue).values(item).returning();
+    return result[0];
+  }
+
+  async createCrossBankTransactionMap(map: InsertCrossBankTransactionMap): Promise<CrossBankTransactionMap> {
+    const result = await this.db.insert(crossBankTransactionMaps).values(map).returning();
+    return result[0];
+  }
+
+  async getBankTransactions(bankAccountId: number, dateRange?: { from: Date; to: Date }): Promise<BankTransaction[]> {
+    let query = this.db.select().from(bankTransactions).where(eq(bankTransactions.bankAccountId, bankAccountId));
+    
+    if (dateRange) {
+      query = query.where(and(
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        gte(bankTransactions.date, dateRange.from),
+        lte(bankTransactions.date, dateRange.to)
+      ));
+    }
+    
+    return await query.orderBy(desc(bankTransactions.date));
+  }
+
+  async getBankAccount(id: number): Promise<BankAccount | undefined> {
+    const result = await this.db.select().from(bankAccounts).where(eq(bankAccounts.id, id)).limit(1);
+    return result[0];
   }
 }
 

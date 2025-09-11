@@ -55,6 +55,8 @@ import ChartOfAccounts from "@/pages/chart-of-accounts";
 import ChartManagement from "@/pages/chart-management";
 import JournalEntries from "@/pages/journal-entries";
 import Banking from "@/pages/banking";
+import BankReconciliation from "@/pages/bank-reconciliation";
+import EnhancedReconciliation from "@/pages/enhanced-reconciliation";
 import GeneralLedger from "@/pages/general-ledger";
 import FixedAssets from "@/pages/fixed-assets";
 import FixedAssetCreate from "@/pages/fixed-asset-create";
@@ -883,10 +885,15 @@ function AuthenticatedApp() {
             <CashFlowForecastCreate />
           </ProtectedRoute>
         </Route>
-        {/* Bank reconciliation now part of unified banking */}
+        {/* Bank reconciliation routes */}
         <Route path="/bank-reconciliation">
           <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
-            <Banking />
+            <BankReconciliation />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/enhanced-reconciliation">
+          <ProtectedRoute permission={PERMISSIONS.BANKING_VIEW}>
+            <EnhancedReconciliation />
           </ProtectedRoute>
         </Route>
 
