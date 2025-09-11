@@ -40,11 +40,12 @@ interface CashFlowAnalysis {
 }
 
 interface VATComplianceAnalysis {
-  vatDeductibleAmount: number;
+  vatDeductible: number;
   vatLiability: number;
   complianceScore: number;
   issues: string[];
   recommendations: string[];
+  monthlyBreakdown: Array<{ month: string; deductible: number; liability: number }>;
 }
 
 interface TransactionPattern {
@@ -133,7 +134,7 @@ export class SABankingOptimizationEngine {
       vatAnalysis,
       patterns
     ] = await Promise.all([
-      this.analyzeBankFees(transactions, bankAccount),
+      this.analyzeBankFees(transactions, bankAccount, analysisMonths),
       this.analyzeCashFlow(transactions),
       this.analyzeVATCompliance(transactions, companyId),
       this.identifyTransactionPatterns(transactions)
@@ -167,7 +168,8 @@ export class SABankingOptimizationEngine {
    */
   private async analyzeBankFees(
     transactions: BankTransaction[], 
-    bankAccount: BankAccount
+    bankAccount: BankAccount,
+    analysisMonths: number = 12
   ): Promise<BankFeeAnalysis> {
     const bankFees = transactions.filter(t => 
       t.description.toLowerCase().includes('service fee') ||
@@ -194,8 +196,8 @@ export class SABankingOptimizationEngine {
       }
     });
 
-    // Calculate monthly average
-    totalMonthlyFees = totalMonthlyFees / 12; // Assuming 12 months of data
+    // Calculate monthly average using actual analysis period
+    totalMonthlyFees = totalMonthlyFees / Math.max(1, analysisMonths);
 
     // Generate optimization recommendations
     const bankName = this.identifyBank(bankAccount.bankName);
@@ -204,11 +206,29 @@ export class SABankingOptimizationEngine {
     const recommendations: string[] = [];
     let potentialSavings = 0;
 
-    // Compare with other banks
-    const competitiveAnalysis = this.compareWithCompetitors(totalMonthlyFees, transactions.length);
+    // Compare with other banks using enhanced analysis
+    const cashTransactions = transactions.filter(t => 
+      t.description.toLowerCase().includes('cash') || 
+      t.description.toLowerCase().includes('atm')
+    ).length;
+    
+    const averageBalance = transactions
+      .filter(t => t.balance !== null)
+      .map(t => parseFloat(t.balance!))
+      .reduce((sum, balance) => sum + balance, 0) / Math.max(1, transactions.length);
+
+    const competitiveAnalysis = this.compareWithCompetitors(
+      totalMonthlyFees, 
+      transactions.length, 
+      averageBalance, 
+      cashTransactions
+    );
+    
     if (competitiveAnalysis.savings > 0) {
-      recommendations.push(`Switch to ${competitiveAnalysis.bank} for potential savings of R${competitiveAnalysis.savings.toFixed(2)} per month`);
-      potentialSavings += competitiveAnalysis.savings * 12;
+      recommendations.push(
+        `Switch to ${competitiveAnalysis.bank} ${competitiveAnalysis.accountType} account for potential savings of R${competitiveAnalysis.savings.toFixed(2)} per month`
+      );
+      potentialSavings += competitiveAnalysis.savings * analysisMonths;
     }
 
     // Transaction pattern optimization
@@ -283,16 +303,17 @@ export class SABankingOptimizationEngine {
   }
 
   /**
-   * Analyze VAT compliance
+   * Analyze VAT compliance with SA-specific rules and monthly breakdown
    */
   private async analyzeVATCompliance(
     transactions: BankTransaction[], 
     companyId: number
   ): Promise<VATComplianceAnalysis> {
-    let vatDeductibleAmount = 0;
+    let vatDeductible = 0;
     let vatLiability = 0;
     const issues: string[] = [];
     const recommendations: string[] = [];
+    const monthlyBreakdown = new Map<string, { deductible: number; liability: number }>();
 
     // Analyze each transaction for VAT implications
     for (const transaction of transactions) {
@@ -303,62 +324,136 @@ export class SABankingOptimizationEngine {
       });
 
       const amount = Math.abs(parseFloat(transaction.amount));
+      const transactionMonth = new Date(transaction.transactionDate).toISOString().slice(0, 7);
+
+      // Initialize monthly breakdown if not exists
+      if (!monthlyBreakdown.has(transactionMonth)) {
+        monthlyBreakdown.set(transactionMonth, { deductible: 0, liability: 0 });
+      }
+
+      const monthData = monthlyBreakdown.get(transactionMonth)!;
 
       if (category.vatApplicable) {
+        const vatRate = category.vatRate || 0.15; // Default 15% VAT for SA
+        
         if (category.type === 'expense') {
-          vatDeductibleAmount += amount * 0.15; // 15% VAT
+          // VAT-inclusive amount calculation: VAT = amount * (vatRate / (1 + vatRate))
+          const vatAmount = amount * (vatRate / (1 + vatRate));
+          vatDeductible += vatAmount;
+          monthData.deductible += vatAmount;
         } else if (category.type === 'income') {
-          vatLiability += amount * 0.15;
+          // VAT on income (output VAT)
+          const vatAmount = amount * (vatRate / (1 + vatRate));
+          vatLiability += vatAmount;
+          monthData.liability += vatAmount;
         }
       }
     }
 
-    // Calculate compliance score based on various factors
+    // Enhanced SA-specific compliance scoring based on SARS requirements
     let complianceScore = 100;
 
-    // Check for annual turnover threshold
+    // Check for VAT registration threshold (R1M annual turnover)
     const annualTurnover = transactions
       .filter(t => parseFloat(t.amount) > 0)
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
+    const hasVatIndicators = transactions.some(t => 
+      t.description.toLowerCase().includes('vat') ||
+      t.description.toLowerCase().includes('sars') ||
+      t.description.toLowerCase().includes('efiling')
+    );
+
     if (annualTurnover > 1000000) {
-      if (transactions.some(t => t.description.toLowerCase().includes('vat'))) {
-        complianceScore += 10; // Bonus for active VAT management
+      if (hasVatIndicators) {
+        complianceScore += 5; // Bonus for active VAT management
+        recommendations.push('Excellent VAT compliance practices detected for mandatory VAT vendor');
       } else {
-        issues.push('Annual turnover exceeds R1M but no VAT registration detected');
-        complianceScore -= 20;
-        recommendations.push('Consider VAT registration - mandatory for turnover > R1M');
+        issues.push('Annual turnover exceeds R1M but no VAT registration activity detected');
+        complianceScore -= 30;
+        recommendations.push('CRITICAL: VAT registration mandatory for annual turnover > R1M - register immediately to avoid penalties');
       }
+    } else if (annualTurnover > 500000 && !hasVatIndicators) {
+      recommendations.push('Consider voluntary VAT registration - you\'re approaching the R1M threshold');
     }
 
-    // Check for VAT-deductible expense documentation
-    const expenseTransactions = transactions.filter(t => parseFloat(t.amount) < 0);
-    const undocumentedExpenses = expenseTransactions.filter(t => !t.reference && Math.abs(parseFloat(t.amount)) > 100);
-    
-    if (undocumentedExpenses.length > expenseTransactions.length * 0.1) {
-      issues.push(`${undocumentedExpenses.length} expense transactions lack proper reference/documentation`);
-      complianceScore -= 15;
-      recommendations.push('Ensure all VAT-deductible expenses have proper documentation and references');
-    }
-
-    // Check for regular VAT payments
+    // Check VAT payment regularity and amounts
     const vatPayments = transactions.filter(t => 
-      t.description.toLowerCase().includes('vat') && 
+      (t.description.toLowerCase().includes('vat payment') ||
+       t.description.toLowerCase().includes('sars') ||
+       t.description.toLowerCase().includes('efiling')) && 
       parseFloat(t.amount) < 0
     );
 
-    if (vatLiability > 10000 && vatPayments.length === 0) {
-      issues.push('High VAT liability but no VAT payments detected');
-      complianceScore -= 25;
-      recommendations.push('Ensure regular VAT payments to SARS to avoid penalties');
+    const netVatLiability = vatLiability - vatDeductible;
+    
+    if (netVatLiability > 5000) {
+      if (vatPayments.length === 0) {
+        issues.push('Significant VAT liability but no VAT payments detected - may indicate non-compliance');
+        complianceScore -= 35;
+        recommendations.push('URGENT: Submit VAT returns and make payments to SARS immediately to avoid penalties');
+      } else {
+        const totalVatPaid = vatPayments.reduce((sum, payment) => sum + Math.abs(parseFloat(payment.amount)), 0);
+        const paymentRatio = totalVatPaid / netVatLiability;
+        
+        if (paymentRatio < 0.8) {
+          issues.push('VAT payments appear insufficient compared to calculated liability');
+          complianceScore -= 20;
+          recommendations.push('Review VAT calculations and ensure all liabilities are paid to SARS');
+        } else if (paymentRatio > 1.2) {
+          recommendations.push('VAT payments appear higher than liability - consider reviewing input tax claims');
+        }
+      }
     }
 
+    // Check expense documentation for VAT deductions
+    const expenseTransactions = transactions.filter(t => parseFloat(t.amount) < 0);
+    const largeUndocumentedExpenses = expenseTransactions.filter(t => 
+      !t.reference && Math.abs(parseFloat(t.amount)) > 500
+    );
+    
+    if (largeUndocumentedExpenses.length > 0) {
+      issues.push(`${largeUndocumentedExpenses.length} large expense transactions (>R500) lack proper reference/documentation`);
+      complianceScore -= Math.min(25, largeUndocumentedExpenses.length * 5);
+      recommendations.push('Ensure all expenses >R500 have proper tax invoices and references for VAT deduction claims');
+    }
+
+    // Check for quarterly VAT return pattern (for registered vendors)
+    if (hasVatIndicators && vatPayments.length > 0) {
+      const paymentMonths = vatPayments.map(p => new Date(p.transactionDate).getMonth());
+      const quarterlyPattern = paymentMonths.some(month => [2, 5, 8, 11].includes(month)); // Mar, Jun, Sep, Dec
+      
+      if (!quarterlyPattern) {
+        issues.push('VAT payments don\'t follow standard quarterly pattern - may indicate irregular submissions');
+        complianceScore -= 15;
+        recommendations.push('Ensure VAT returns are submitted quarterly by the 25th of the month following quarter-end');
+      }
+    }
+
+    // Check for input tax ratios (should be reasonable for business type)
+    if (vatDeductible > 0 && vatLiability > 0) {
+      const inputTaxRatio = vatDeductible / vatLiability;
+      if (inputTaxRatio > 0.9) {
+        recommendations.push('High input tax ratio detected - ensure all claims are legitimate and properly documented');
+      }
+    }
+
+    // Convert monthly breakdown to array format
+    const monthlyBreakdownArray = Array.from(monthlyBreakdown.entries())
+      .map(([month, data]) => ({
+        month,
+        deductible: Math.round(data.deductible * 100) / 100,
+        liability: Math.round(data.liability * 100) / 100
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
     return {
-      vatDeductibleAmount,
-      vatLiability,
-      complianceScore: Math.max(0, complianceScore),
+      vatDeductible: Math.round(vatDeductible * 100) / 100,
+      vatLiability: Math.round(vatLiability * 100) / 100,
+      complianceScore: Math.max(0, Math.min(100, complianceScore)),
       issues,
-      recommendations
+      recommendations,
+      monthlyBreakdown: monthlyBreakdownArray
     };
   }
 
@@ -483,7 +578,7 @@ export class SABankingOptimizationEngine {
         metadata: {
           complianceScore: vatAnalysis.complianceScore,
           issues: vatAnalysis.issues,
-          vatDeductible: vatAnalysis.vatDeductibleAmount,
+          vatDeductible: vatAnalysis.vatDeductible,
           vatLiability: vatAnalysis.vatLiability
         },
         createdAt: new Date()
@@ -530,8 +625,17 @@ export class SABankingOptimizationEngine {
     startDate: Date,
     endDate: Date
   ): Promise<BankTransaction[]> {
-    // This would be implemented using the storage layer
-    return []; // Mock implementation
+    try {
+      return await this.storage.getBankTransactionsByPeriod(
+        companyId,
+        bankAccountId,
+        startDate,
+        endDate
+      );
+    } catch (error) {
+      console.error('Error fetching transactions for period:', error);
+      return [];
+    }
   }
 
   private identifyBank(bankName: string): keyof typeof this.bankFeeStructures {
@@ -544,20 +648,62 @@ export class SABankingOptimizationEngine {
     return 'fnb'; // Default
   }
 
-  private compareWithCompetitors(monthlyFees: number, transactionCount: number): { bank: string; savings: number } {
-    // Compare current fees with competitors
-    let bestOption = { bank: '', savings: 0 };
+  private compareWithCompetitors(
+    currentMonthlyFees: number, 
+    transactionCount: number, 
+    averageBalance: number = 0,
+    cashTransactions: number = 0
+  ): { bank: string; savings: number; accountType: string } {
+    let bestOption = { bank: '', savings: 0, accountType: 'standard' };
     
     Object.entries(this.bankFeeStructures).forEach(([bankName, structure]) => {
-      const estimatedFees = structure.monthlyMaintenance.standard + 
-                           (transactionCount * structure.transactionFees.electronic);
-      
-      if (monthlyFees - estimatedFees > bestOption.savings) {
-        bestOption = { bank: bankName, savings: monthlyFees - estimatedFees };
-      }
+      // Calculate estimated fees for different account types
+      Object.entries(structure.monthlyMaintenance).forEach(([accountType, maintenanceFee]) => {
+        let estimatedMonthlyFees = maintenanceFee;
+        
+        // Add transaction fees based on mix
+        const electronicTransactions = Math.max(0, transactionCount - cashTransactions);
+        estimatedMonthlyFees += electronicTransactions * structure.transactionFees.electronic;
+        estimatedMonthlyFees += cashTransactions * structure.transactionFees.cash;
+        
+        // Add estimated ATM fees (assume 2 ATM withdrawals per month)
+        estimatedMonthlyFees += 2 * structure.cashWithdrawal.own_atm;
+        
+        // Account for balance-based benefits (some banks waive fees for high balances)
+        if (bankName === 'capitec' && averageBalance < 25000) {
+          // Capitec charges transaction fees for low balances
+          estimatedMonthlyFees += Math.min(transactionCount * 1.5, 50); // Cap at R50
+        }
+        
+        if (bankName === 'fnb' && averageBalance > 75000 && accountType === 'platinum') {
+          estimatedMonthlyFees *= 0.8; // 20% discount for high balance
+        }
+        
+        // Calculate potential savings
+        const potentialSavings = currentMonthlyFees - estimatedMonthlyFees;
+        
+        if (potentialSavings > bestOption.savings && potentialSavings > 10) { // Minimum R10 saving
+          bestOption = { 
+            bank: this.formatBankName(bankName), 
+            savings: potentialSavings, 
+            accountType 
+          };
+        }
+      });
     });
 
     return bestOption;
+  }
+
+  private formatBankName(bankName: string): string {
+    const nameMap: { [key: string]: string } = {
+      'fnb': 'FNB',
+      'standardbank': 'Standard Bank',
+      'absa': 'Absa',
+      'nedbank': 'Nedbank',
+      'capitec': 'Capitec Bank'
+    };
+    return nameMap[bankName] || bankName.toUpperCase();
   }
 
   private determineFrequency(dates: Date[]): 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'irregular' {
