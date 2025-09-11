@@ -27,6 +27,7 @@ const productFormSchema = z.object({
   vatRate: z.string().optional(),
   incomeAccountId: z.string().min(1, "Income account is required"),
   expenseAccountId: z.string().min(1, "Expense account is required"),
+  inventoryAccountId: z.string().optional(), // Only for products
   stockQuantity: z.number().optional(),
   minStockLevel: z.number().optional(),
   isService: z.boolean().default(false),
@@ -66,6 +67,7 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
       vatRate: product?.vatRate ? product.vatRate.toString() : "15.00",
       incomeAccountId: product?.incomeAccountId ? product.incomeAccountId.toString() : "",
       expenseAccountId: product?.expenseAccountId ? product.expenseAccountId.toString() : "",
+      inventoryAccountId: product?.inventoryAccountId ? product.inventoryAccountId.toString() : "",
       stockQuantity: product?.stockQuantity || 0,
       minStockLevel: product?.minStockLevel || 0,
       isService: product?.isService || false,
@@ -79,6 +81,46 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
   const costPrice = parseFloat(form.watch("costPrice") || "0");
   const vatRate = parseFloat(form.watch("vatRate") || "15");
   const vatInclusive = form.watch("vatInclusive");
+
+  // Get filtered accounts based on type
+  const getRevenueAccounts = () => {
+    return accounts.filter(acc => 
+      acc.accountType === "Revenue" || 
+      acc.accountType === "revenue" || 
+      acc.accountName?.toLowerCase().includes("revenue") ||
+      acc.accountName?.toLowerCase().includes("sales") ||
+      acc.accountName?.toLowerCase().includes("service")
+    );
+  };
+
+  const getExpenseAccounts = () => {
+    if (isService) {
+      return accounts.filter(acc => 
+        acc.accountType === "Expense" ||
+        acc.accountType === "expense" ||
+        acc.accountName?.toLowerCase().includes("professional") ||
+        acc.accountName?.toLowerCase().includes("service") ||
+        acc.accountName?.toLowerCase().includes("consulting")
+      );
+    } else {
+      return accounts.filter(acc => 
+        acc.accountType === "Cost of Goods Sold" ||
+        acc.accountType === "cost of goods sold" ||
+        acc.accountName?.toLowerCase().includes("cost of goods") ||
+        acc.accountName?.toLowerCase().includes("cogs")
+      );
+    }
+  };
+
+  const getInventoryAccounts = () => {
+    return accounts.filter(acc => 
+      acc.accountType === "Asset" ||
+      acc.accountType === "asset" ||
+      acc.accountName?.toLowerCase().includes("inventory") ||
+      acc.accountName?.toLowerCase().includes("finished goods") ||
+      acc.accountName?.toLowerCase().includes("stock")
+    );
+  };
 
   // Calculate VAT and pricing
   const calculateVAT = () => {
@@ -134,9 +176,11 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
       categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
       incomeAccountId: parseInt(data.incomeAccountId),
       expenseAccountId: parseInt(data.expenseAccountId),
-      unitPrice: parseFloat(data.unitPrice),
-      costPrice: data.costPrice ? parseFloat(data.costPrice) : 0,
-      vatRate: data.vatRate ? parseFloat(data.vatRate) : 15,
+      inventoryAccountId: data.inventoryAccountId ? parseInt(data.inventoryAccountId) : undefined,
+      // Keep prices as strings as expected by backend
+      unitPrice: data.unitPrice,
+      costPrice: data.costPrice || "0.00",
+      vatRate: data.vatRate || "15.00",
     };
     onSubmit(formattedData);
   };
@@ -392,7 +436,16 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="4000">4000 - Sales Revenue</SelectItem>
+                      {getRevenueAccounts().map((account) => (
+                        <SelectItem key={account.id} value={account.id.toString()}>
+                          {account.accountCode} - {account.accountName}
+                        </SelectItem>
+                      ))}
+                      {getRevenueAccounts().length === 0 && (
+                        <SelectItem value="4000" className="text-gray-500">
+                          4000 - Sales Revenue (Default)
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -405,21 +458,65 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
               name="expenseAccountId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-sm">Cost of Sales Account</FormLabel>
+                  <FormLabel className="text-sm">
+                    {isService ? "Service Cost Account" : "Cost of Sales Account"}
+                  </FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-9" data-testid="select-expense-account">
-                        <SelectValue placeholder="Select expense account" />
+                        <SelectValue placeholder={`Select ${isService ? 'service cost' : 'cost of sales'} account`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="5000">5000 - Cost of Goods Sold</SelectItem>
+                      {getExpenseAccounts().map((account) => (
+                        <SelectItem key={account.id} value={account.id.toString()}>
+                          {account.accountCode} - {account.accountName}
+                        </SelectItem>
+                      ))}
+                      {getExpenseAccounts().length === 0 && (
+                        <SelectItem value={isService ? "6000" : "5000"} className="text-gray-500">
+                          {isService ? "6000 - Professional Services (Default)" : "5000 - Cost of Goods Sold (Default)"}
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {/* Inventory Asset Account - Only for Products */}
+            {!isService && (
+              <FormField
+                control={form.control}
+                name="inventoryAccountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Inventory Asset Account</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-9" data-testid="select-inventory-account">
+                          <SelectValue placeholder="Select inventory asset account" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {getInventoryAccounts().map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            {account.accountCode} - {account.accountName}
+                          </SelectItem>
+                        ))}
+                        {getInventoryAccounts().length === 0 && (
+                          <SelectItem value="1500" className="text-gray-500">
+                            1500 - Finished Goods (Default)
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
 
