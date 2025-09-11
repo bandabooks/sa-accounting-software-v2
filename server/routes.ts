@@ -10026,6 +10026,219 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bank Fee Analytics Endpoints
+  app.get("/api/bank-fees/summary/:organizationId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = parseInt(req.params.organizationId);
+      const { year, month, accountId } = req.query;
+
+      // Validate user has access to this organization
+      if (authReq.user?.companyId !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock data for demonstration - replace with actual database queries
+      const summary = {
+        totalThisMonth: 125.50,
+        totalAmount: 847.50,
+        totalTransactions: 15,
+        connectedBanks: 2
+      };
+
+      const analytics = {
+        monthlyTotals: {
+          '2025-04': 89.50,
+          '2025-05': 73.20,
+          '2025-06': 95.50
+        },
+        categoryTotals: {
+          'Monthly Admin': 225.00,
+          'ATM/Cash': 37.50,
+          'EFT': 48.00
+        },
+        bankTotals: {
+          'FNB': 285.00,
+          'Standard Bank': 120.50
+        }
+      };
+
+      const bankAccounts = [
+        { id: 1, name: 'FNB Business Current', bankName: 'FNB', lastSync: '2025-09-11T15:30:00Z' },
+        { id: 2, name: 'Standard Bank Savings', bankName: 'Standard Bank', lastSync: '2025-09-11T14:20:00Z' }
+      ];
+
+      const data = [
+        {
+          month: '2025-06',
+          bank_account: 'FNB Business Current',
+          bank_name: 'FNB',
+          account_id: 1,
+          category: 'Monthly Admin',
+          transaction_count: 1,
+          total_amount: 75.00,
+          earliest_date: '2025-06-01',
+          latest_date: '2025-06-01',
+          last_sync: '2025-09-11T15:30:00Z'
+        },
+        {
+          month: '2025-06',
+          bank_account: 'FNB Business Current', 
+          bank_name: 'FNB',
+          account_id: 1,
+          category: 'ATM/Cash',
+          transaction_count: 2,
+          total_amount: 25.00,
+          earliest_date: '2025-06-15',
+          latest_date: '2025-06-22',
+          last_sync: '2025-09-11T15:30:00Z'
+        }
+      ];
+
+      await logAudit(authReq.user?.id || 0, 'READ', 'bank_fee_summary', organizationId, {
+        filters: { year, month, accountId }
+      });
+
+      res.json({ summary, analytics, bankAccounts, data });
+    } catch (error) {
+      console.error('Error fetching bank fee summary:', error);
+      res.status(500).json({ message: "Failed to fetch bank fee summary" });
+    }
+  });
+
+  app.get("/api/bank-fees/categories/:organizationId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = parseInt(req.params.organizationId);
+
+      // Validate user has access to this organization
+      if (authReq.user?.companyId !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock data for demonstration - replace with actual database queries
+      const categories = [
+        { category: 'Monthly Admin', transaction_count: 3, total_amount: 225.00, avg_amount: 75.00 },
+        { category: 'ATM/Cash', transaction_count: 3, total_amount: 37.50, avg_amount: 12.50 },
+        { category: 'EFT', transaction_count: 6, total_amount: 48.00, avg_amount: 8.00 }
+      ];
+
+      res.json({ categories });
+    } catch (error) {
+      console.error('Error fetching bank fee categories:', error);
+      res.status(500).json({ message: "Failed to fetch bank fee categories" });
+    }
+  });
+
+  app.get("/api/bank-fees/trends/:organizationId", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const organizationId = parseInt(req.params.organizationId);
+
+      // Validate user has access to this organization
+      if (authReq.user?.companyId !== organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock data for demonstration - replace with actual database queries
+      const trends = [
+        { month_name: 'April 2025', total_amount: 89.50 },
+        { month_name: 'May 2025', total_amount: 73.20 },
+        { month_name: 'June 2025', total_amount: 95.50 }
+      ];
+
+      res.json({ trends });
+    } catch (error) {
+      console.error('Error fetching bank fee trends:', error);
+      res.status(500).json({ message: "Failed to fetch bank fee trends" });
+    }
+  });
+
+  // Bank Account Verification Endpoints
+  app.post("/api/bank-account/verify", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { accountNumber, bankId, idType, idNumber, name, initials, accountType } = req.body;
+
+      // Basic validation
+      if (!accountNumber || !bankId || !idType || !idNumber || !name || !accountType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      // Mock verification response for demonstration
+      // In production, this would integrate with Stitch Money's bank verification API
+      const verificationResult = {
+        success: true,
+        verificationId: `VER-${Date.now()}`,
+        recordId: Math.floor(Math.random() * 1000),
+        accountVerificationResult: 'MATCH' as const,
+        detailedAccountVerificationResults: {
+          accountExists: true,
+          identityDocumentMatch: true,
+          lastNameMatch: true,
+          accountOpen: true,
+          accountOpenForMoreThanThreeMonths: true
+        },
+        metadata: {
+          bankId,
+          accountType,
+          idType,
+          verificationDate: new Date().toISOString(),
+          environment: 'sandbox'
+        }
+      };
+
+      // Log the verification attempt
+      await logAudit(authReq.user?.id || 0, 'CREATE', 'bank_verification', 0, {
+        bankId,
+        accountType,
+        idType,
+        result: verificationResult.accountVerificationResult
+      });
+
+      res.json(verificationResult);
+    } catch (error) {
+      console.error('Error verifying bank account:', error);
+      res.status(500).json({ message: "Failed to verify bank account" });
+    }
+  });
+
+  app.get("/api/bank-account/verifications", authenticate, async (req, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const companyId = authReq.user?.companyId;
+
+      // Mock verification history for demonstration
+      const verifications = [
+        {
+          id: 1,
+          verificationId: 'VER-2025-001',
+          accountNumber: '1234567890',
+          bankId: 'FNB_SOUTH_AFRICA',
+          accountType: 'CURRENT',
+          idType: 'ID',
+          accountHolderName: 'John Smith',
+          verificationStatus: 'COMPLETED',
+          accountVerificationResult: 'MATCH',
+          detailedResults: {
+            accountExists: true,
+            identityDocumentMatch: true,
+            lastNameMatch: true,
+            accountOpen: true,
+            accountOpenForMoreThanThreeMonths: true
+          },
+          verifiedAt: '2025-09-11T10:30:00Z',
+          createdAt: '2025-09-11T10:30:00Z'
+        }
+      ];
+
+      res.json({ verifications });
+    } catch (error) {
+      console.error('Error fetching verification history:', error);
+      res.status(500).json({ message: "Failed to fetch verification history" });
+    }
+  });
+
   // General Ledger Routes
   app.get("/api/general-ledger", authenticate, async (req, res) => {
     try {
