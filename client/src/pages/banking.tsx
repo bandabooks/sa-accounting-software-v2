@@ -898,7 +898,7 @@ export default function Banking() {
           </TabsContent>
 
           <TabsContent value="fees">
-            <BankFeeDashboard />
+            <BankFeeDashboard onNavigateToTab={setActiveTab} />
           </TabsContent>
 
           <TabsContent value="verification">

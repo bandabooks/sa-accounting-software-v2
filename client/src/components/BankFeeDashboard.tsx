@@ -38,7 +38,11 @@ interface BankAccount {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
-export default function BankFeeDashboard() {
+interface BankFeeDashboardProps {
+  onNavigateToTab?: (tab: string) => void;
+}
+
+export default function BankFeeDashboard({ onNavigateToTab }: BankFeeDashboardProps = {}) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedAccount, setSelectedAccount] = useState('all');
@@ -336,7 +340,7 @@ export default function BankFeeDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer hover:scale-105" onClick={() => onNavigateToTab?.('overview')} data-testid="card-this-month">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -352,7 +356,7 @@ export default function BankFeeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <Card className="bg-gradient-to-br from-red-50 to-rose-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer hover:scale-105" onClick={() => onNavigateToTab?.('details')} data-testid="card-total-fees">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -368,7 +372,7 @@ export default function BankFeeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer hover:scale-105" onClick={() => onNavigateToTab?.('overview')} data-testid="card-transactions">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
@@ -384,7 +388,7 @@ export default function BankFeeDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer hover:scale-105" onClick={() => onNavigateToTab?.('feeds')} data-testid="card-connected-banks">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
