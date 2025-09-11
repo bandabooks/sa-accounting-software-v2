@@ -45,6 +45,8 @@ import type { BankAccountWithTransactions, ChartOfAccount } from "@shared/schema
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
 import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
+import BankFeeDashboard from "@/components/BankFeeDashboard";
+import BankAccountVerification from "@/components/BankAccountVerification";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -641,13 +643,14 @@ export default function Banking() {
 
         {/* Tabbed Interface */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="feeds">Bank Feeds (Stitch)</TabsTrigger>
             <TabsTrigger value="upload">Statement Upload</TabsTrigger>
             <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
-            <TabsTrigger value="rules">Rules & Fees</TabsTrigger>
+            <TabsTrigger value="fees">Fee Analytics</TabsTrigger>
+            <TabsTrigger value="verification">Account Verification</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -893,99 +896,12 @@ export default function Banking() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="rules">
-            <Card>
-              <CardHeader>
-                <CardTitle>Rules & Fees Management</CardTitle>
-                <CardDescription>Configure auto-categorization rules and bank fee mappings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Auto-Categorization Rules */}
-                <div>
-                  <h3 className="font-semibold mb-4">Auto-Categorization Rules</h3>
-                  <div className="space-y-4">
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-medium">Salary Deposits</p>
-                          <p className="text-sm text-muted-foreground">Transactions containing "SALARY" → Income Category</p>
-                        </div>
-                        <Badge>Active</Badge>
-                      </div>
-                    </div>
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-medium">Utility Payments</p>
-                          <p className="text-sm text-muted-foreground">Transactions to utility providers → Utilities Category</p>
-                        </div>
-                        <Badge>Active</Badge>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full" onClick={handleAddNewRule}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Rule
-                    </Button>
-                  </div>
-                </div>
+          <TabsContent value="fees">
+            <BankFeeDashboard />
+          </TabsContent>
 
-                {/* Bank Fee Mappings */}
-                <div>
-                  <h3 className="font-semibold mb-4">Bank Fee Mappings</h3>
-                  <div className="space-y-4">
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-medium">Monthly Account Fee</p>
-                          <p className="text-sm text-muted-foreground">R 150.00 → Bank Charges Account</p>
-                        </div>
-                        <Badge variant="outline">Standard Bank</Badge>
-                      </div>
-                    </div>
-                    <div className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-medium">Transaction Fees</p>
-                          <p className="text-sm text-muted-foreground">Variable → Bank Transaction Fees</p>
-                        </div>
-                        <Badge variant="outline">All Banks</Badge>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full" onClick={handleConfigureFeeMappings}>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Configure Fee Mappings
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Import Settings */}
-                <div>
-                  <h3 className="font-semibold mb-4">Import Settings</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">Auto-match transactions</p>
-                          <p className="text-sm text-muted-foreground">Automatically match imported transactions</p>
-                        </div>
-                      </div>
-                      <Badge variant="default">Enabled</Badge>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Zap className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">Smart categorization</p>
-                          <p className="text-sm text-muted-foreground">Use AI to suggest categories</p>
-                        </div>
-                      </div>
-                      <Badge variant="default">Enabled</Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="verification">
+            <BankAccountVerification />
           </TabsContent>
 
           <TabsContent value="settings">

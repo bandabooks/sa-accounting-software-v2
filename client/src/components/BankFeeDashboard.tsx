@@ -45,8 +45,8 @@ export default function BankFeeDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
 
-  // Get current organization ID from context or user
-  const organizationId = 1; // This would come from your auth context
+  // Get current organization ID from context
+  const organizationId = 1; // TODO: Get from auth context - useCompany hook
 
   // Main summary data query
   const { data: summaryData, isLoading, refetch } = useQuery({
