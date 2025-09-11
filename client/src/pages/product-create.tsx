@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useVATStatus } from "@/hooks/useVATStatus";
 import { VATFieldWrapper } from "@/components/vat/VATConditionalWrapper";
+import { useCompany } from "@/contexts/CompanyContext";
 import type { ProductCategory } from "@shared/schema";
 import CategorySelect from "@/components/CategorySelect";
 import { AccountSelect } from "@/components/AccountSelect";
@@ -45,6 +46,7 @@ export default function ProductCreate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const successModal = useSuccessModal();
+  const { companyId } = useCompany();
   const queryClient = useQueryClient();
   const { shouldShowVATFields } = useVATStatus();
 
@@ -100,6 +102,7 @@ export default function ProductCreate() {
     // Convert only the fields that need to be numbers for backend
     const formattedData = {
       ...data,
+      companyId: companyId || 0,
       categoryId: data.categoryId ? parseInt(data.categoryId) : undefined,
       incomeAccountId: parseInt(data.incomeAccountId),
       expenseAccountId: parseInt(data.expenseAccountId),

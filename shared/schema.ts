@@ -1502,8 +1502,8 @@ export const products = pgTable("products", {
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  sku: text("sku").unique(),
-  barcode: text("barcode").unique(),
+  sku: text("sku"),
+  barcode: text("barcode"),
   categoryId: integer("category_id").references(() => productCategories.id),
   brand: text("brand"),
   unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
@@ -1535,6 +1535,8 @@ export const products = pgTable("products", {
   companyIdx: index("products_company_idx").on(table.companyId),
   categoryIdx: index("products_category_idx").on(table.categoryId),
   barcodeIdx: index("products_barcode_idx").on(table.barcode),
+  skuCompanyUnique: unique("products_sku_company_unique").on(table.companyId, table.sku),
+  barcodeCompanyUnique: unique("products_barcode_company_unique").on(table.companyId, table.barcode),
 }));
 
 // PayFast payment integration tables
