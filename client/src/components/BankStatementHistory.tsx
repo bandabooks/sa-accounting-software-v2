@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Clock, FileText, CheckCircle, AlertTriangle, X, Eye, Download, Search, Filter, BarChart3 } from 'lucide-react';
-import { formatDistance } from 'date-fns';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { VATTypeSelect } from '@/components/ui/vat-type-select';
+import { useToast } from '@/hooks/use-toast';
+import { Clock, FileText, CheckCircle, AlertTriangle, X, Eye, Download, Search, Filter, BarChart3, ThumbsUp, ThumbsDown, Edit, DollarSign, User, Calendar } from 'lucide-react';
+import { formatDistance, format } from 'date-fns';
 
 interface BankStatementImport {
   id: number;
@@ -63,6 +66,393 @@ const transactionStatusColors = {
   rejected: 'bg-red-100 text-red-800'
 };
 
+// ReviewQueueInterface Component
+function ReviewQueueInterface() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<number>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<string>('needs_review');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch review queue transactions
+  const { data: reviewTransactions = [], isLoading } = useQuery({
+    queryKey: ['/api/review-queue', statusFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      params.set('limit', '100');
+      
+      const response = await fetch(`/api/review-queue?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch review queue');
+      const data = await response.json();
+      return data as TransactionStatus[];
+    }
+  });
+
+  // Fetch chart of accounts for categorization
+  const { data: chartOfAccounts = [] } = useQuery({
+    queryKey: ['/api/chart-of-accounts'],
+    queryFn: async () => {
+      const response = await fetch('/api/chart-of-accounts');
+      if (!response.ok) throw new Error('Failed to fetch chart of accounts');
+      return response.json();
+    }
+  });
+
+  // Update transaction mutation
+  const updateTransactionMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Partial<TransactionStatus> }) => {
+      const response = await fetch(`/api/review-queue/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      if (!response.ok) throw new Error('Failed to update transaction');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/review-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/review-queue-summary'] });
+      toast({
+        title: "Transaction Updated",
+        description: "Transaction has been successfully updated",
+      });
+    }
+  });
+
+  // Bulk approve/reject mutations
+  const bulkActionMutation = useMutation({
+    mutationFn: async ({ ids, action }: { ids: number[]; action: 'approve' | 'reject' }) => {
+      const response = await fetch('/api/review-queue/bulk-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionIds: ids, action })
+      });
+      if (!response.ok) throw new Error('Failed to perform bulk action');
+      return response.json();
+    },
+    onSuccess: (_, { action }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/review-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/review-queue-summary'] });
+      setSelectedTransactions(new Set());
+      toast({
+        title: `Bulk ${action === 'approve' ? 'Approval' : 'Rejection'} Complete`,
+        description: `Successfully ${action}d ${selectedTransactions.size} transactions`,
+      });
+    }
+  });
+
+  const handleTransactionUpdate = useCallback((id: number, field: keyof TransactionStatus, value: any) => {
+    updateTransactionMutation.mutate({ id, updates: { [field]: value } });
+  }, [updateTransactionMutation]);
+
+  const handleBulkAction = useCallback((action: 'approve' | 'reject') => {
+    const ids = Array.from(selectedTransactions);
+    if (ids.length === 0) {
+      toast({
+        title: "No Transactions Selected",
+        description: "Please select transactions to perform bulk actions",
+        variant: "destructive",
+      });
+      return;
+    }
+    bulkActionMutation.mutate({ ids, action });
+  }, [selectedTransactions, bulkActionMutation, toast]);
+
+  const filteredTransactions = reviewTransactions.filter(transaction =>
+    transaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transaction.transactionId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'needs_review': return <AlertTriangle className="h-4 w-4 text-orange-500" />;
+      case 'in_review': return <Clock className="h-4 w-4 text-blue-500" />;
+      case 'completed': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'duplicate': return <X className="h-4 w-4 text-gray-500" />;
+      case 'rejected': return <ThumbsDown className="h-4 w-4 text-red-500" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace(/_/g, ' ').toUpperCase();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Actions */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <AlertTriangle className="h-5 w-5 mr-2 text-orange-500" />
+                Transaction Review Queue
+              </CardTitle>
+              <p className="text-muted-foreground mt-1">
+                Review and categorize transactions that require your attention
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {selectedTransactions.size > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkAction('approve')}
+                    disabled={bulkActionMutation.isPending}
+                    data-testid="bulk-approve"
+                  >
+                    <ThumbsUp className="h-4 w-4 mr-2" />
+                    Approve {selectedTransactions.size}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkAction('reject')}
+                    disabled={bulkActionMutation.isPending}
+                    data-testid="bulk-reject"
+                  >
+                    <ThumbsDown className="h-4 w-4 mr-2" />
+                    Reject {selectedTransactions.size}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="search-review-queue"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="needs_review">Needs Review</SelectItem>
+                <SelectItem value="in_review">In Review</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="duplicate">Duplicates</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Transaction List */}
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-muted-foreground">Loading review queue...</p>
+            </div>
+          ) : filteredTransactions.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Review Queue Empty</h3>
+              <p className="text-muted-foreground">
+                {statusFilter === 'needs_review' 
+                  ? "All transactions have been reviewed! Great work." 
+                  : "No transactions found matching your current filters."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Select All Checkbox */}
+              {filteredTransactions.length > 0 && (
+                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={selectedTransactions.size === filteredTransactions.length && filteredTransactions.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedTransactions(new Set(filteredTransactions.map(t => t.id)));
+                      } else {
+                        setSelectedTransactions(new Set());
+                      }
+                    }}
+                    className="h-4 w-4"
+                    data-testid="select-all-transactions"
+                  />
+                  <span className="text-sm font-medium">
+                    Select All ({filteredTransactions.length} transactions)
+                  </span>
+                  {selectedTransactions.size > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedTransactions.size} selected
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {/* Transaction Cards */}
+              {filteredTransactions.map((transaction) => (
+                <Card key={transaction.id} className={`transition-all duration-200 ${
+                  selectedTransactions.has(transaction.id) ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-md'
+                }`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      {/* Selection Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={selectedTransactions.has(transaction.id)}
+                        onChange={(e) => {
+                          const newSelected = new Set(selectedTransactions);
+                          if (e.target.checked) {
+                            newSelected.add(transaction.id);
+                          } else {
+                            newSelected.delete(transaction.id);
+                          }
+                          setSelectedTransactions(newSelected);
+                        }}
+                        className="mt-1 h-4 w-4"
+                        data-testid={`select-transaction-${transaction.id}`}
+                      />
+
+                      {/* Transaction Details */}
+                      <div className="flex-1 space-y-3">
+                        {/* Header Row */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-2">
+                            {getStatusIcon(transaction.status)}
+                            <Badge className={transactionStatusColors[transaction.status]}>
+                              {formatStatus(transaction.status)}
+                            </Badge>
+                            {transaction.confidenceScore && (
+                              <Badge variant="outline" className="text-xs">
+                                {transaction.confidenceScore}% confidence
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-muted-foreground">
+                              {format(new Date(transaction.transactionDate), 'MMM dd, yyyy')}
+                            </span>
+                            <span className="text-lg font-bold text-green-600">
+                              R{parseFloat(transaction.amount).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Transaction Description */}
+                        <div>
+                          <p className="font-medium text-gray-900">{transaction.description}</p>
+                          <p className="text-sm text-muted-foreground">ID: {transaction.transactionId}</p>
+                        </div>
+
+                        {/* Account Assignment */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Assign to Account
+                            </label>
+                            <SearchableSelect
+                              options={chartOfAccounts.map((account: any) => ({
+                                value: account.id.toString(),
+                                label: account.accountName,
+                                subtext: account.accountCode
+                              }))}
+                              value={transaction.assignedAccountName || ''}
+                              onValueChange={(value) => {
+                                const account = chartOfAccounts.find((acc: any) => acc.id.toString() === value);
+                                handleTransactionUpdate(transaction.id, 'assignedAccountName', account?.accountName);
+                              }}
+                              placeholder="Select account..."
+                              data-testid={`assign-account-${transaction.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              VAT Treatment
+                            </label>
+                            <VATTypeSelect
+                              value="1"
+                              onValueChange={(value) => {
+                                // Handle VAT assignment
+                                console.log('VAT updated:', value);
+                              }}
+                              placeholder="Select VAT..."
+                              data-testid={`assign-vat-${transaction.id}`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* AI Reasoning */}
+                        {transaction.aiReasoning && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm font-medium text-blue-900 mb-1">AI Analysis:</p>
+                            <p className="text-sm text-blue-800">{transaction.aiReasoning}</p>
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleTransactionUpdate(transaction.id, 'status', 'completed')}
+                              disabled={updateTransactionMutation.isPending}
+                              data-testid={`approve-transaction-${transaction.id}`}
+                            >
+                              <ThumbsUp className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleTransactionUpdate(transaction.id, 'status', 'rejected')}
+                              disabled={updateTransactionMutation.isPending}
+                              data-testid={`reject-transaction-${transaction.id}`}
+                            >
+                              <ThumbsDown className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleTransactionUpdate(transaction.id, 'status', 'duplicate')}
+                              disabled={updateTransactionMutation.isPending}
+                              data-testid={`mark-duplicate-${transaction.id}`}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Mark Duplicate
+                            </Button>
+                          </div>
+
+                          {transaction.reviewedBy && (
+                            <div className="text-xs text-muted-foreground flex items-center">
+                              <User className="h-3 w-3 mr-1" />
+                              Reviewed {transaction.reviewedAt && formatDistance(new Date(transaction.reviewedAt), new Date(), { addSuffix: true })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function BankStatementHistory() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,7 +468,8 @@ export default function BankStatementHistory() {
       
       const response = await fetch(`/api/bank-statement-imports?${params}`);
       if (!response.ok) throw new Error('Failed to fetch imports');
-      return response.json() as BankStatementImport[];
+      const data = await response.json();
+      return data as BankStatementImport[];
     }
   });
 
@@ -88,7 +479,8 @@ export default function BankStatementHistory() {
     queryFn: async () => {
       const response = await fetch('/api/review-queue-summary');
       if (!response.ok) throw new Error('Failed to fetch review summary');
-      return response.json() as ReviewQueueSummary;
+      const data = await response.json();
+      return data as ReviewQueueSummary;
     }
   });
 
@@ -329,21 +721,7 @@ export default function BankStatementHistory() {
         </TabsContent>
 
         <TabsContent value="review">
-          {/* Review Queue Interface */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Transaction Review Queue</CardTitle>
-              <p className="text-muted-foreground">
-                Review and categorize transactions that require your attention
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="text-center text-muted-foreground py-8">
-                Review queue interface coming soon. This will provide a powerful workflow for reviewing 
-                and approving transactions that exceed QuickBooks capabilities.
-              </p>
-            </CardContent>
-          </Card>
+          <ReviewQueueInterface />
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -407,7 +785,7 @@ export default function BankStatementHistory() {
                           <p className="font-medium text-sm">{transaction.description}</p>
                           <p className="text-xs text-muted-foreground">R{transaction.amount}</p>
                         </div>
-                        <Badge className={transactionStatusColors[transaction.status]} size="sm">
+                        <Badge className={transactionStatusColors[transaction.status]}>
                           {formatStatus(transaction.status)}
                         </Badge>
                       </div>
