@@ -80,6 +80,7 @@ export default function Banking() {
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccountWithTransactions | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { companyId } = useCompany();
@@ -590,7 +591,7 @@ export default function Banking() {
 
         {/* Compact Overview KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-md">
+          <Card className="bg-gradient-to-br from-emerald-500 to-green-600 text-white border-0 shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105" onClick={() => setActiveTab("overview")} data-testid="card-total-balance">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -604,7 +605,7 @@ export default function Banking() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-md">
+          <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-0 shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105" onClick={() => setActiveTab("accounts")} data-testid="card-bank-accounts">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -616,7 +617,7 @@ export default function Banking() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0 shadow-md">
+          <Card className="bg-gradient-to-br from-purple-500 to-violet-600 text-white border-0 shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105" onClick={() => setActiveTab("accounts")} data-testid="card-active-accounts">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -628,7 +629,7 @@ export default function Banking() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-md">
+          <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white border-0 shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-105" onClick={() => setActiveTab("overview")} data-testid="card-last-activity">
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -642,7 +643,7 @@ export default function Banking() {
         </div>
 
         {/* Tabbed Interface */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
