@@ -40,8 +40,11 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const createLinkTokenMutation = useMutation({
-    mutationFn: () => apiRequest('/api/stitch/link-token', { method: 'POST' }),
+  const createLinkTokenMutation = useMutation<{linkToken: string}, Error, void>({
+    mutationFn: async () => {
+      const response = await apiRequest('/api/stitch/link-token', 'POST');
+      return response.json();
+    },
     onSuccess: (data) => {
       // In a real implementation, this would redirect to Stitch Link
       // For demo purposes, we'll simulate the linking process
@@ -56,9 +59,11 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
     }
   });
 
-  const exchangeLinkMutation = useMutation({
-    mutationFn: (data: { userId: string; accounts: StitchAccount[] }) =>
-      apiRequest('/api/stitch/exchange', { method: 'POST', body: data }),
+  const exchangeLinkMutation = useMutation<{accounts: any[], message: string}, Error, { userId: string; accounts: StitchAccount[] }>({
+    mutationFn: async (data: { userId: string; accounts: StitchAccount[] }) => {
+      const response = await apiRequest('/api/stitch/exchange', 'POST', data);
+      return response.json();
+    },
     onSuccess: (data) => {
       toast({
         title: 'Bank Accounts Linked',
@@ -82,55 +87,95 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
     }
   });
 
+  // Enhanced sandbox bank data for South African banks
+  const getSouthAfricanBankData = (bankName: string): { bankName: string; bankId: string; mockAccounts: StitchAccount[] } => {
+    const bankConfigs = {
+      'FNB': {
+        bankName: 'First National Bank',
+        bankId: 'fnb',
+        accountNumbers: ['62123456789', '50987654321'],
+        balances: ['45750.25', '125000.00']
+      },
+      'Standard Bank': {
+        bankName: 'Standard Bank of South Africa',
+        bankId: 'standardbank',
+        accountNumbers: ['10123456789', '20987654321'],
+        balances: ['32150.75', '89500.00']
+      },
+      'ABSA': {
+        bankName: 'Absa Bank Limited',
+        bankId: 'absa',
+        accountNumbers: ['40567890123', '41234567890'],
+        balances: ['67890.50', '234567.89']
+      },
+      'Nedbank': {
+        bankName: 'Nedbank Limited',
+        bankId: 'nedbank',
+        accountNumbers: ['12345678901', '19876543210'],
+        balances: ['18750.00', '145000.25']
+      },
+      'Capitec': {
+        bankName: 'Capitec Bank Holdings Limited',
+        bankId: 'capitec',
+        accountNumbers: ['12345678912', '98765432109'],
+        balances: ['25430.80', '78900.45']
+      }
+    };
+
+    const config = bankConfigs[bankName as keyof typeof bankConfigs];
+    if (!config) return getSouthAfricanBankData('FNB');
+
+    return {
+      bankName: config.bankName,
+      bankId: config.bankId,
+      mockAccounts: [
+        {
+          id: `acc_${config.bankId}_current_${Date.now()}`,
+          name: 'Business Current Account',
+          officialName: `${config.bankName} Business Current Account`,
+          accountType: 'current',
+          accountNumber: config.accountNumbers[0],
+          currency: 'ZAR',
+          balance: {
+            currency: 'ZAR',
+            quantity: config.balances[0]
+          },
+          institution: {
+            id: config.bankId,
+            name: config.bankName,
+            logo: `https://stitch.money/images/institutions/${config.bankId}.png`
+          }
+        },
+        {
+          id: `acc_${config.bankId}_savings_${Date.now()}`,
+          name: 'Business Savings Account',
+          officialName: `${config.bankName} Business High Interest Savings Account`,
+          accountType: 'savings',
+          accountNumber: config.accountNumbers[1],
+          currency: 'ZAR',
+          balance: {
+            currency: 'ZAR',
+            quantity: config.balances[1]
+          },
+          institution: {
+            id: config.bankId,
+            name: config.bankName,
+            logo: `https://stitch.money/images/institutions/${config.bankId}.png`
+          }
+        }
+      ]
+    };
+  };
+
   const simulateStitchLink = (linkToken: string) => {
     setLinkStep('linking');
     
     // Simulate the Stitch Link redirect and callback
     // In a real implementation, this would be handled by Stitch's SDK
     setTimeout(() => {
-      // Simulate successful account selection from selected bank
-      const bankName = selectedBank || 'First National Bank';
-      const bankId = selectedBank ? selectedBank.toLowerCase().replace(/\s+/g, '') : 'fnb';
-      
-      const mockAccounts: StitchAccount[] = [
-        {
-          id: 'acc_demo_12345',
-          name: 'Business Current Account',
-          officialName: `${bankName} Business Current Account`,
-          accountType: 'current',
-          accountNumber: '1234567890',
-          currency: 'ZAR',
-          balance: {
-            currency: 'ZAR',
-            quantity: '25000.50'
-          },
-          institution: {
-            id: bankId,
-            name: bankName,
-            logo: `https://stitch.money/images/institutions/${bankId}.png`
-          }
-        },
-        {
-          id: 'acc_demo_67890',
-          name: 'Business Savings Account',
-          officialName: `${bankName} Business Savings Account`,
-          accountType: 'savings',
-          accountNumber: '0987654321',
-          currency: 'ZAR',
-          balance: {
-            currency: 'ZAR',
-            quantity: '150000.00'
-          },
-          institution: {
-            id: bankId,
-            name: bankName,
-            logo: `https://stitch.money/images/institutions/${bankId}.png`
-          }
-        }
-      ];
-
-      setAvailableAccounts(mockAccounts);
-      // Don't pre-select accounts - let user choose which bank to link
+      const bankData = getSouthAfricanBankData(selectedBank || 'FNB');
+      setAvailableAccounts(bankData.mockAccounts);
+      // Don't pre-select accounts - let user choose which accounts to link
       setSelectedAccounts(new Set());
       setLinkStep('selecting');
     }, 2000);
@@ -194,53 +239,47 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
               <p className="text-sm text-muted-foreground mb-4">
                 Select your bank to securely link your account and automatically sync transactions.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center mb-4">
-                <Button
-                  variant={selectedBank === 'FNB' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBank('FNB')}
-                  className="rounded-full"
-                >
-                  FNB
-                </Button>
-                <Button
-                  variant={selectedBank === 'Standard Bank' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBank('Standard Bank')}
-                  className="rounded-full"
-                >
-                  Standard Bank
-                </Button>
-                <Button
-                  variant={selectedBank === 'ABSA' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBank('ABSA')}
-                  className="rounded-full"
-                >
-                  ABSA
-                </Button>
-                <Button
-                  variant={selectedBank === 'Nedbank' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBank('Nedbank')}
-                  className="rounded-full"
-                >
-                  Nedbank
-                </Button>
-                <Button
-                  variant={selectedBank === 'Capitec' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedBank('Capitec')}
-                  className="rounded-full"
-                >
-                  Capitec
-                </Button>
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground text-center">
+                  🏦 Select your South African bank to connect in sandbox mode
+                </p>
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {['FNB', 'Standard Bank', 'ABSA', 'Nedbank', 'Capitec'].map((bank) => (
+                    <Button
+                      key={bank}
+                      variant={selectedBank === bank ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedBank(bank)}
+                      className="h-12 flex flex-col items-center justify-center text-xs"
+                      data-testid={`button-select-bank-${bank.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <div className="font-semibold">{bank}</div>
+                      {bank === 'FNB' && <div className="text-xs opacity-70">First National Bank</div>}
+                      {bank === 'Standard Bank' && <div className="text-xs opacity-70">Standard Bank SA</div>}
+                      {bank === 'ABSA' && <div className="text-xs opacity-70">Absa Bank</div>}
+                      {bank === 'Nedbank' && <div className="text-xs opacity-70">Nedbank Ltd</div>}
+                      {bank === 'Capitec' && <div className="text-xs opacity-70">Capitec Bank</div>}
+                    </Button>
+                  ))}
+                </div>
+                {selectedBank && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 text-blue-700 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Selected: {selectedBank}</span>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Demo accounts will be created for testing purposes
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             <Button 
               onClick={handleStartLinking} 
               disabled={isLinking || !selectedBank}
               className="w-full"
+              data-testid="button-start-linking"
             >
               {isLinking ? (
                 <>
@@ -292,6 +331,7 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
                       : 'hover:bg-gray-50'
                   }`}
                   onClick={() => handleAccountToggle(account.id)}
+                  data-testid={`card-select-account-${account.id}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -326,13 +366,14 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleTryAgain} className="flex-1">
+              <Button variant="outline" onClick={handleTryAgain} className="flex-1" data-testid="button-cancel-linking">
                 Cancel
               </Button>
               <Button 
                 onClick={handleLinkSelectedAccounts} 
                 disabled={isLinking || selectedAccounts.size === 0}
                 className="flex-1"
+                data-testid="button-link-selected-accounts"
               >
                 {isLinking ? (
                   <>
@@ -359,7 +400,7 @@ export function StitchLink({ onSuccess, onError }: StitchLinkProps) {
                 Your bank accounts have been linked and will now automatically sync transactions.
               </p>
             </div>
-            <Button onClick={handleTryAgain} variant="outline" className="w-full">
+            <Button onClick={handleTryAgain} variant="outline" className="w-full" data-testid="button-link-another-account">
               Link Another Account
             </Button>
           </div>

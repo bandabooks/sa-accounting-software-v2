@@ -4334,11 +4334,7 @@ export const posRefundItems = pgTable("pos_refund_items", {
 }));
 
 // Project Management Tables
-export const projects: PgTableWithColumns<{
-  name: "projects";
-  schema: undefined;
-  columns: any;
-}> = pgTable("projects", {
+export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   customerId: integer("customer_id").references(() => customers.id),
@@ -4394,11 +4390,7 @@ export const projects: PgTableWithColumns<{
   customerIdx: index("projects_customer_idx").on(table.customerId),
 }));
 
-export const tasks: PgTableWithColumns<{
-  name: "tasks";
-  schema: undefined;
-  columns: any;
-}> = pgTable("tasks", {
+export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   projectId: integer("project_id").references(() => projects.id), // nullable for standalone tasks
@@ -6088,11 +6080,7 @@ export type SalesLeadWithAssignedUser = SalesLead & { assignedUser?: User; conve
 export type SalesOpportunityWithStage = SalesOpportunity & { stage: SalesPipelineStage; assignedUser?: User; customer?: Customer; lead?: SalesLead };
 
 // Employee Management & Payroll Tables
-export const departments: PgTableWithColumns<{
-  name: "departments";
-  schema: undefined;
-  columns: any;
-}> = pgTable("departments", {
+export const departments = pgTable("departments", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   name: text("name").notNull(),
@@ -6108,11 +6096,7 @@ export const departments: PgTableWithColumns<{
   companyIdx: index("departments_company_idx").on(table.companyId),
 }));
 
-export const employees: PgTableWithColumns<{
-  name: "employees";
-  schema: undefined;
-  columns: any;
-}> = pgTable("employees", {
+export const employees = pgTable("employees", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
   employeeNumber: text("employee_number").notNull(),

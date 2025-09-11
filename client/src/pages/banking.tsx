@@ -47,6 +47,7 @@ import { PageLoader } from "@/components/ui/global-loader";
 import { BankFeedDashboard } from "@/components/stitch/BankFeedDashboard";
 import BankFeeDashboard from "@/components/BankFeeDashboard";
 import BankAccountVerification from "@/components/BankAccountVerification";
+import TransactionHistory from "@/components/TransactionHistory";
 
 const bankAccountSchema = z.object({
   accountName: z.string().min(1, "Account name is required"),
@@ -235,10 +236,10 @@ export default function Banking() {
       accountName: account.accountName,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
-      branchCode: account.branchCode ?? "",
+      branchCode: account.branchCode || "",
       accountType: account.accountType,
       currency: account.currency,
-      openingBalance: account.openingBalance,
+      openingBalance: account.openingBalance || "0.00",
       notes: account.notes ?? "",
       chartAccountId: account.chartAccountId ?? undefined,
     });
@@ -644,13 +645,14 @@ export default function Banking() {
 
         {/* Tabbed Interface */}
         <Tabs defaultValue="overview" className="space-y-6" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-8">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="feeds">Bank Feeds (Stitch)</TabsTrigger>
             <TabsTrigger value="upload">Statement Upload</TabsTrigger>
             <TabsTrigger value="reconcile">Reconciliation</TabsTrigger>
             <TabsTrigger value="fees">Fee Analytics</TabsTrigger>
+            <TabsTrigger value="history">Transaction History</TabsTrigger>
             <TabsTrigger value="verification">Account Verification</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
@@ -899,6 +901,15 @@ export default function Banking() {
 
           <TabsContent value="fees">
             <BankFeeDashboard onNavigateToTab={setActiveTab} />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <TransactionHistory 
+              organizationId={companyId || 1}
+              selectedYear={new Date().getFullYear().toString()}
+              selectedMonth="all"
+              selectedAccount="all"
+            />
           </TabsContent>
 
           <TabsContent value="verification">
