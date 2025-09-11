@@ -199,7 +199,8 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
   const vatCalc = calculateVAT();
   const margins = calculateMargins();
 
-  const handleSubmit = (data: ProductFormData) => {
+  const handleSubmit = (data: ProductFormData, e?: React.BaseSyntheticEvent) => {
+    e?.preventDefault();
     const formattedData = {
       ...data,
       companyId: companyId || 0,
@@ -217,7 +218,14 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit(handleSubmit)(e);
+      }} className="space-y-4" onKeyDown={(e) => {
+        if (e.key === 'Enter' && (e.target as HTMLElement)?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+        }
+      }}>
         {/* Product/Service Type & Name */}
         <div className="grid grid-cols-1 gap-4">
           <FormField
@@ -473,7 +481,7 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                       ))}
                       {/* Show message if no accounts are found */}
                       {getRevenueAccounts().length === 0 && (
-                        <SelectItem value="" disabled className="text-gray-500">
+                        <SelectItem value="no-accounts" disabled className="text-gray-500">
                           No revenue accounts found - please create accounts first
                         </SelectItem>
                       )}
@@ -506,7 +514,7 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                       ))}
                       {/* Show message if no accounts are found */}
                       {getExpenseAccounts().length === 0 && (
-                        <SelectItem value="" disabled className="text-gray-500">
+                        <SelectItem value="no-accounts" disabled className="text-gray-500">
                           No {isService ? 'service cost' : 'cost of sales'} accounts found - please create accounts first
                         </SelectItem>
                       )}
@@ -539,7 +547,7 @@ export default function ProductForm({ onSubmit, onCancel, isLoading, product }: 
                         ))}
                         {/* Show message if no accounts are found */}
                         {getInventoryAccounts().length === 0 && (
-                          <SelectItem value="" disabled className="text-gray-500">
+                          <SelectItem value="no-accounts" disabled className="text-gray-500">
                             No inventory accounts found - please create accounts first
                           </SelectItem>
                         )}
