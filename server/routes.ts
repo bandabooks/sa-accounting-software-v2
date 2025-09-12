@@ -2421,12 +2421,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      // Get current user's full info to access activeCompanyId
-      if (!req.user?.id) {
-        return res.status(400).json({ message: "User ID is required" });
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
       }
-      const user = await storage.getUser(req.user.id);
-      const companyId = user?.activeCompanyId || req.user?.companyId;
       
       console.log(`→ Fetching customers for company ${companyId}, user: ${req.user?.username}`);
       
