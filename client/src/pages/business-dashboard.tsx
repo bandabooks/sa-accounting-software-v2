@@ -571,13 +571,19 @@ export default function BusinessDashboard() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Revenue Growth</span>
                       <span className="font-medium">
-                        {dashboardData.charts.incomeVsExpenseT12M.length >= 2 ? 
-                          formatPercentage(
-                            ((dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 1].income - 
-                              dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 2].income) / 
-                              dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 2].income) * 100
-                          ) : '0%'
-                        }
+                        {(() => {
+                          if (dashboardData.charts.incomeVsExpenseT12M.length < 2) return '0%';
+                          
+                          const currentIncome = dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 1].income;
+                          const previousIncome = dashboardData.charts.incomeVsExpenseT12M[dashboardData.charts.incomeVsExpenseT12M.length - 2].income;
+                          
+                          // Handle division by zero or both zero values
+                          if (previousIncome === 0 && currentIncome === 0) return '0%';
+                          if (previousIncome === 0) return currentIncome > 0 ? '∞%' : '0%';
+                          
+                          const growthRate = ((currentIncome - previousIncome) / previousIncome) * 100;
+                          return formatPercentage(growthRate);
+                        })()}
                       </span>
                     </div>
                     <div className="flex justify-between items-center">
