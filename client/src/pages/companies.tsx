@@ -18,13 +18,14 @@ export default function Companies() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location] = useLocation();
-  const { switchCompany, isLoading: isSwitching } = useCompany();
+  const { switchCompany } = useCompany();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [selectedSubscriptionCompany, setSelectedSubscriptionCompany] = useState<Company | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>('monthly');
+  const [switchingCompanyId, setSwitchingCompanyId] = useState<number | null>(null);
 
   // Check for create=true in URL and open dialog automatically
   useEffect(() => {
@@ -215,15 +216,20 @@ export default function Companies() {
                       {activeCompany?.id !== companyUser.company.id && (
                         <Button
                           size="sm"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            switchCompany(companyUser.company.id);
+                            setSwitchingCompanyId(companyUser.company.id);
+                            try {
+                              await switchCompany(companyUser.company.id);
+                            } finally {
+                              setSwitchingCompanyId(null);
+                            }
                           }}
-                          disabled={isSwitching}
+                          disabled={switchingCompanyId === companyUser.company.id}
                           data-testid={`switch-to-company-${companyUser.company.id}`}
                         >
-                          {isSwitching ? "Switching..." : "Switch To"}
+                          {switchingCompanyId === companyUser.company.id ? "Switching..." : "Switch To"}
                         </Button>
                       )}
                       <Button
