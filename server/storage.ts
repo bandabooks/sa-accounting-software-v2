@@ -521,6 +521,33 @@ import {
   type InsertCrossBankTransactionMap,
   type ReconciliationBulkApproval,
   type InsertReconciliationBulkApproval,
+  // Real-time Monitoring System imports
+  monitoringRules,
+  transactionAlerts,
+  realTimeNotifications,
+  monitoringDashboard,
+  alertEscalationRules,
+  systemHealthMetrics,
+  // SMS and Email Queue System imports
+  smsQueue,
+  emailQueue,
+  type MonitoringRule,
+  type InsertMonitoringRule,
+  type TransactionAlert,
+  type InsertTransactionAlert,
+  type RealTimeNotification,
+  type InsertRealTimeNotification,
+  type MonitoringDashboard,
+  type InsertMonitoringDashboard,
+  type AlertEscalationRule,
+  type InsertAlertEscalationRule,
+  type SystemHealthMetric,
+  type InsertSystemHealthMetric,
+  // SMS and Email Queue System types
+  type SMSQueue,
+  type InsertSMSQueue,
+  type EmailQueue,
+  type InsertEmailQueue,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sum, count, sql, and, gte, lte, lt, or, isNull, isNotNull, inArray, gt, asc, ne, like, ilike } from "drizzle-orm";
@@ -1396,6 +1423,104 @@ export interface IStorage {
       frequency: number;
     }>;
   }>;
+
+  // Real-time Monitoring System
+  // Monitoring Rules
+  getAllMonitoringRules(companyId: number): Promise<MonitoringRule[]>;
+  getMonitoringRule(id: number): Promise<MonitoringRule | undefined>;
+  getMonitoringRuleByRuleId(companyId: number, ruleId: string): Promise<MonitoringRule | undefined>;
+  createMonitoringRule(rule: InsertMonitoringRule): Promise<MonitoringRule>;
+  updateMonitoringRule(id: number, rule: Partial<InsertMonitoringRule>): Promise<MonitoringRule | undefined>;
+  deleteMonitoringRule(id: number): Promise<boolean>;
+  getActiveMonitoringRules(companyId: number): Promise<MonitoringRule[]>;
+  updateRuleTriggerCount(id: number): Promise<void>;
+
+  // Transaction Alerts
+  getAllTransactionAlerts(companyId: number, limit?: number, offset?: number): Promise<TransactionAlert[]>;
+  getTransactionAlert(id: number): Promise<TransactionAlert | undefined>;
+  getTransactionAlertByAlertId(alertId: string): Promise<TransactionAlert | undefined>;
+  createTransactionAlert(alert: InsertTransactionAlert): Promise<TransactionAlert>;
+  updateTransactionAlert(id: number, alert: Partial<InsertTransactionAlert>): Promise<TransactionAlert | undefined>;
+  deleteTransactionAlert(id: number): Promise<boolean>;
+  acknowledgeAlert(id: number, acknowledgedBy: number, notes?: string): Promise<TransactionAlert | undefined>;
+  resolveAlert(id: number, resolvedBy: number, notes?: string): Promise<TransactionAlert | undefined>;
+  getUnacknowledgedAlerts(companyId: number): Promise<TransactionAlert[]>;
+  getActiveAlerts(companyId: number): Promise<TransactionAlert[]>;
+  getAlertsByBankAccount(bankAccountId: number): Promise<TransactionAlert[]>;
+  getAlertsBySeverity(companyId: number, severity: string): Promise<TransactionAlert[]>;
+
+  // Real-time Notifications
+  getAllNotifications(companyId: number, limit?: number, offset?: number): Promise<RealTimeNotification[]>;
+  getNotification(id: number): Promise<RealTimeNotification | undefined>;
+  createNotification(notification: InsertRealTimeNotification): Promise<RealTimeNotification>;
+  updateNotification(id: number, notification: Partial<InsertRealTimeNotification>): Promise<RealTimeNotification | undefined>;
+  deleteNotification(id: number): Promise<boolean>;
+  getPendingNotifications(): Promise<RealTimeNotification[]>;
+  getFailedNotifications(): Promise<RealTimeNotification[]>;
+  markNotificationSent(id: number, sentAt: Date, responseData?: any): Promise<void>;
+  markNotificationFailed(id: number, errorMessage: string): Promise<void>;
+  getUserNotifications(userId: number, limit?: number): Promise<RealTimeNotification[]>;
+
+  // Monitoring Dashboard
+  getAllDashboards(companyId: number): Promise<MonitoringDashboard[]>;
+  getDashboard(id: number): Promise<MonitoringDashboard | undefined>;
+  createDashboard(dashboard: InsertMonitoringDashboard): Promise<MonitoringDashboard>;
+  updateDashboard(id: number, dashboard: Partial<InsertMonitoringDashboard>): Promise<MonitoringDashboard | undefined>;
+  deleteDashboard(id: number): Promise<boolean>;
+  getDefaultDashboard(companyId: number): Promise<MonitoringDashboard | undefined>;
+  updateDashboardViewCount(id: number): Promise<void>;
+
+  // Alert Escalation Rules
+  getAllEscalationRules(companyId: number): Promise<AlertEscalationRule[]>;
+  getEscalationRule(id: number): Promise<AlertEscalationRule | undefined>;
+  createEscalationRule(rule: InsertAlertEscalationRule): Promise<AlertEscalationRule>;
+  updateEscalationRule(id: number, rule: Partial<InsertAlertEscalationRule>): Promise<AlertEscalationRule | undefined>;
+  deleteEscalationRule(id: number): Promise<boolean>;
+  getEscalationRulesByRule(ruleId: number): Promise<AlertEscalationRule[]>;
+
+  // System Health Metrics
+  getAllHealthMetrics(companyId?: number, limit?: number): Promise<SystemHealthMetric[]>;
+  getHealthMetric(id: number): Promise<SystemHealthMetric | undefined>;
+  createHealthMetric(metric: InsertSystemHealthMetric): Promise<SystemHealthMetric>;
+  getMetricsByType(metricType: string, companyId?: number): Promise<SystemHealthMetric[]>;
+  getLatestMetrics(companyId?: number): Promise<SystemHealthMetric[]>;
+  deleteOldMetrics(olderThanDays: number): Promise<number>;
+
+  // SMS Queue
+  getAllSMSQueue(companyId?: number, limit?: number): Promise<SMSQueue[]>;
+  getSMSQueueItem(id: number): Promise<SMSQueue | undefined>;
+  createSMSQueueItem(sms: InsertSMSQueue): Promise<SMSQueue>;
+  updateSMSQueueItem(id: number, sms: Partial<InsertSMSQueue>): Promise<SMSQueue | undefined>;
+  deleteSMSQueueItem(id: number): Promise<boolean>;
+  getPendingSMSQueue(limit?: number): Promise<SMSQueue[]>;
+  updateSMSQueueStatus(id: number, status: string, metadata?: any): Promise<void>;
+
+  // Email Queue
+  getAllEmailQueue(companyId?: number, limit?: number): Promise<EmailQueue[]>;
+  getEmailQueueItem(id: number): Promise<EmailQueue | undefined>;
+  createEmailQueueItem(email: InsertEmailQueue): Promise<EmailQueue>;
+  updateEmailQueueItem(id: number, email: Partial<InsertEmailQueue>): Promise<EmailQueue | undefined>;
+  deleteEmailQueueItem(id: number): Promise<boolean>;
+  getPendingEmailQueue(limit?: number): Promise<EmailQueue[]>;
+  updateEmailQueueStatus(id: number, status: string, metadata?: any): Promise<void>;
+
+  // Helper methods for monitoring
+  findSimilarTransactions(
+    companyId: number,
+    bankAccountId: number,
+    amount: string,
+    description: string,
+    timeWindow: Date
+  ): Promise<BankTransaction[]>;
+
+  // Notification preferences
+  getNotificationPreferences(companyId: number): Promise<NotificationSettings | undefined>;
+  createNotificationLog(log: {
+    companyId: number;
+    message: string;
+    type: string;
+    metadata?: any;
+  }): Promise<RealTimeNotification>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -5290,6 +5415,45 @@ export class DatabaseStorage implements IStorage {
       console.log('Updated settings result:', updated);
       return updated;
     }
+  }
+
+  // Notification preferences (alias for getNotificationSettings)
+  async getNotificationPreferences(companyId: number): Promise<NotificationSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(notificationSettings)
+      .where(eq(notificationSettings.companyId, companyId));
+    return settings || undefined;
+  }
+
+  // Create notification log
+  async createNotificationLog(log: {
+    companyId: number;
+    message: string;
+    type: string;
+    metadata?: any;
+  }): Promise<RealTimeNotification> {
+    const notificationData: InsertRealTimeNotification = {
+      companyId: log.companyId,
+      alertId: `log_${Date.now()}`,
+      ruleId: null,
+      title: log.type,
+      message: log.message,
+      severity: 'info',
+      status: 'sent',
+      metadata: log.metadata || {},
+      channels: ['email'],
+      recipientEmails: [],
+      recipientPhones: [],
+      sentAt: new Date(),
+    };
+
+    const [notification] = await db
+      .insert(realTimeNotifications)
+      .values(notificationData)
+      .returning();
+    
+    return notification;
   }
 
   async updateCompanyLogo(companyId: number, logoUrl: string): Promise<any> {
@@ -18543,6 +18707,565 @@ export class DatabaseStorage implements IStorage {
   async getBankAccount(id: number): Promise<BankAccount | undefined> {
     const result = await this.db.select().from(bankAccounts).where(eq(bankAccounts.id, id)).limit(1);
     return result[0];
+  }
+
+  // Real-time Monitoring System Implementation
+  // Monitoring Rules
+  async getAllMonitoringRules(companyId: number): Promise<MonitoringRule[]> {
+    return await db.select().from(monitoringRules)
+      .where(eq(monitoringRules.companyId, companyId))
+      .orderBy(desc(monitoringRules.priority), desc(monitoringRules.createdAt));
+  }
+
+  async getMonitoringRule(id: number): Promise<MonitoringRule | undefined> {
+    const result = await db.select().from(monitoringRules)
+      .where(eq(monitoringRules.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getMonitoringRuleByRuleId(companyId: number, ruleId: string): Promise<MonitoringRule | undefined> {
+    const result = await db.select().from(monitoringRules)
+      .where(and(
+        eq(monitoringRules.companyId, companyId),
+        eq(monitoringRules.ruleId, ruleId)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async createMonitoringRule(rule: InsertMonitoringRule): Promise<MonitoringRule> {
+    const result = await db.insert(monitoringRules).values(rule).returning();
+    return result[0];
+  }
+
+  async updateMonitoringRule(id: number, rule: Partial<InsertMonitoringRule>): Promise<MonitoringRule | undefined> {
+    const result = await db.update(monitoringRules)
+      .set({ ...rule, updatedAt: new Date() })
+      .where(eq(monitoringRules.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteMonitoringRule(id: number): Promise<boolean> {
+    const result = await db.delete(monitoringRules)
+      .where(eq(monitoringRules.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getActiveMonitoringRules(companyId: number): Promise<MonitoringRule[]> {
+    return await db.select().from(monitoringRules)
+      .where(and(
+        eq(monitoringRules.companyId, companyId),
+        eq(monitoringRules.enabled, true)
+      ))
+      .orderBy(desc(monitoringRules.priority));
+  }
+
+  async updateRuleTriggerCount(id: number): Promise<void> {
+    await db.update(monitoringRules)
+      .set({ 
+        triggerCount: sql`${monitoringRules.triggerCount} + 1`,
+        lastTriggered: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringRules.id, id));
+  }
+
+  // Transaction Alerts
+  async getAllTransactionAlerts(companyId: number, limit = 50, offset = 0): Promise<TransactionAlert[]> {
+    return await db.select().from(transactionAlerts)
+      .where(eq(transactionAlerts.companyId, companyId))
+      .orderBy(desc(transactionAlerts.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getTransactionAlert(id: number): Promise<TransactionAlert | undefined> {
+    const result = await db.select().from(transactionAlerts)
+      .where(eq(transactionAlerts.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getTransactionAlertByAlertId(alertId: string): Promise<TransactionAlert | undefined> {
+    const result = await db.select().from(transactionAlerts)
+      .where(eq(transactionAlerts.alertId, alertId))
+      .limit(1);
+    return result[0];
+  }
+
+  async createTransactionAlert(alert: InsertTransactionAlert): Promise<TransactionAlert> {
+    const result = await db.insert(transactionAlerts).values(alert).returning();
+    return result[0];
+  }
+
+  async updateTransactionAlert(id: number, alert: Partial<InsertTransactionAlert>): Promise<TransactionAlert | undefined> {
+    const result = await db.update(transactionAlerts)
+      .set({ ...alert, updatedAt: new Date() })
+      .where(eq(transactionAlerts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteTransactionAlert(id: number): Promise<boolean> {
+    const result = await db.delete(transactionAlerts)
+      .where(eq(transactionAlerts.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async acknowledgeAlert(id: number, acknowledgedBy: number, notes?: string): Promise<TransactionAlert | undefined> {
+    const result = await db.update(transactionAlerts)
+      .set({
+        acknowledged: true,
+        acknowledgedBy,
+        acknowledgedAt: new Date(),
+        resolutionNotes: notes,
+        updatedAt: new Date()
+      })
+      .where(eq(transactionAlerts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async resolveAlert(id: number, resolvedBy: number, notes?: string): Promise<TransactionAlert | undefined> {
+    const result = await db.update(transactionAlerts)
+      .set({
+        resolved: true,
+        resolvedBy,
+        resolvedAt: new Date(),
+        resolutionNotes: notes,
+        updatedAt: new Date()
+      })
+      .where(eq(transactionAlerts.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getUnacknowledgedAlerts(companyId: number): Promise<TransactionAlert[]> {
+    return await db.select().from(transactionAlerts)
+      .where(and(
+        eq(transactionAlerts.companyId, companyId),
+        eq(transactionAlerts.acknowledged, false)
+      ))
+      .orderBy(desc(transactionAlerts.createdAt));
+  }
+
+  async getActiveAlerts(companyId: number): Promise<TransactionAlert[]> {
+    return await db.select().from(transactionAlerts)
+      .where(and(
+        eq(transactionAlerts.companyId, companyId),
+        eq(transactionAlerts.resolved, false)
+      ))
+      .orderBy(desc(transactionAlerts.createdAt));
+  }
+
+  async getAlertsByBankAccount(bankAccountId: number): Promise<TransactionAlert[]> {
+    return await db.select().from(transactionAlerts)
+      .where(eq(transactionAlerts.bankAccountId, bankAccountId))
+      .orderBy(desc(transactionAlerts.createdAt));
+  }
+
+  async getAlertsBySeverity(companyId: number, severity: string): Promise<TransactionAlert[]> {
+    return await db.select().from(transactionAlerts)
+      .where(and(
+        eq(transactionAlerts.companyId, companyId),
+        eq(transactionAlerts.severity, severity)
+      ))
+      .orderBy(desc(transactionAlerts.createdAt));
+  }
+
+  // Real-time Notifications
+  async getAllNotifications(companyId: number, limit = 50, offset = 0): Promise<RealTimeNotification[]> {
+    return await db.select().from(realTimeNotifications)
+      .where(eq(realTimeNotifications.companyId, companyId))
+      .orderBy(desc(realTimeNotifications.createdAt))
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getNotification(id: number): Promise<RealTimeNotification | undefined> {
+    const result = await db.select().from(realTimeNotifications)
+      .where(eq(realTimeNotifications.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createNotification(notification: InsertRealTimeNotification): Promise<RealTimeNotification> {
+    const result = await db.insert(realTimeNotifications).values(notification).returning();
+    return result[0];
+  }
+
+  async updateNotification(id: number, notification: Partial<InsertRealTimeNotification>): Promise<RealTimeNotification | undefined> {
+    const result = await db.update(realTimeNotifications)
+      .set({ ...notification, updatedAt: new Date() })
+      .where(eq(realTimeNotifications.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteNotification(id: number): Promise<boolean> {
+    const result = await db.delete(realTimeNotifications)
+      .where(eq(realTimeNotifications.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getPendingNotifications(): Promise<RealTimeNotification[]> {
+    return await db.select().from(realTimeNotifications)
+      .where(and(
+        eq(realTimeNotifications.status, 'pending'),
+        or(
+          isNull(realTimeNotifications.scheduledAt),
+          lte(realTimeNotifications.scheduledAt, new Date())
+        )
+      ))
+      .orderBy(desc(realTimeNotifications.priority), desc(realTimeNotifications.createdAt))
+      .limit(100);
+  }
+
+  async getFailedNotifications(): Promise<RealTimeNotification[]> {
+    return await db.select().from(realTimeNotifications)
+      .where(eq(realTimeNotifications.status, 'failed'))
+      .orderBy(desc(realTimeNotifications.createdAt))
+      .limit(100);
+  }
+
+  async markNotificationSent(id: number, sentAt: Date, responseData?: any): Promise<void> {
+    await db.update(realTimeNotifications)
+      .set({
+        status: 'sent',
+        sentAt,
+        responseData,
+        updatedAt: new Date()
+      })
+      .where(eq(realTimeNotifications.id, id));
+  }
+
+  async markNotificationFailed(id: number, errorMessage: string): Promise<void> {
+    await db.update(realTimeNotifications)
+      .set({
+        status: 'failed',
+        errorMessage,
+        attempts: sql`${realTimeNotifications.attempts} + 1`,
+        lastAttemptAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(realTimeNotifications.id, id));
+  }
+
+  async getUserNotifications(userId: number, limit = 50): Promise<RealTimeNotification[]> {
+    return await db.select().from(realTimeNotifications)
+      .where(eq(realTimeNotifications.userId, userId))
+      .orderBy(desc(realTimeNotifications.createdAt))
+      .limit(limit);
+  }
+
+  // Monitoring Dashboard
+  async getAllDashboards(companyId: number): Promise<MonitoringDashboard[]> {
+    return await db.select().from(monitoringDashboard)
+      .where(eq(monitoringDashboard.companyId, companyId))
+      .orderBy(desc(monitoringDashboard.isDefault), desc(monitoringDashboard.lastViewedAt));
+  }
+
+  async getDashboard(id: number): Promise<MonitoringDashboard | undefined> {
+    const result = await db.select().from(monitoringDashboard)
+      .where(eq(monitoringDashboard.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createDashboard(dashboard: InsertMonitoringDashboard): Promise<MonitoringDashboard> {
+    const result = await db.insert(monitoringDashboard).values(dashboard).returning();
+    return result[0];
+  }
+
+  async updateDashboard(id: number, dashboard: Partial<InsertMonitoringDashboard>): Promise<MonitoringDashboard | undefined> {
+    const result = await db.update(monitoringDashboard)
+      .set({ ...dashboard, updatedAt: new Date() })
+      .where(eq(monitoringDashboard.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDashboard(id: number): Promise<boolean> {
+    const result = await db.delete(monitoringDashboard)
+      .where(eq(monitoringDashboard.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getDefaultDashboard(companyId: number): Promise<MonitoringDashboard | undefined> {
+    const result = await db.select().from(monitoringDashboard)
+      .where(and(
+        eq(monitoringDashboard.companyId, companyId),
+        eq(monitoringDashboard.isDefault, true)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateDashboardViewCount(id: number): Promise<void> {
+    await db.update(monitoringDashboard)
+      .set({
+        viewCount: sql`${monitoringDashboard.viewCount} + 1`,
+        lastViewedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(monitoringDashboard.id, id));
+  }
+
+  // Alert Escalation Rules
+  async getAllEscalationRules(companyId: number): Promise<AlertEscalationRule[]> {
+    return await db.select().from(alertEscalationRules)
+      .where(eq(alertEscalationRules.companyId, companyId))
+      .orderBy(asc(alertEscalationRules.escalationLevel));
+  }
+
+  async getEscalationRule(id: number): Promise<AlertEscalationRule | undefined> {
+    const result = await db.select().from(alertEscalationRules)
+      .where(eq(alertEscalationRules.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createEscalationRule(rule: InsertAlertEscalationRule): Promise<AlertEscalationRule> {
+    const result = await db.insert(alertEscalationRules).values(rule).returning();
+    return result[0];
+  }
+
+  async updateEscalationRule(id: number, rule: Partial<InsertAlertEscalationRule>): Promise<AlertEscalationRule | undefined> {
+    const result = await db.update(alertEscalationRules)
+      .set({ ...rule, updatedAt: new Date() })
+      .where(eq(alertEscalationRules.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEscalationRule(id: number): Promise<boolean> {
+    const result = await db.delete(alertEscalationRules)
+      .where(eq(alertEscalationRules.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getEscalationRulesByRule(ruleId: number): Promise<AlertEscalationRule[]> {
+    return await db.select().from(alertEscalationRules)
+      .where(eq(alertEscalationRules.ruleId, ruleId))
+      .orderBy(asc(alertEscalationRules.escalationLevel));
+  }
+
+  // System Health Metrics
+  async getAllHealthMetrics(companyId?: number, limit = 100): Promise<SystemHealthMetric[]> {
+    let query = db.select().from(systemHealthMetrics);
+    
+    if (companyId) {
+      query = query.where(eq(systemHealthMetrics.companyId, companyId));
+    }
+    
+    return await query
+      .orderBy(desc(systemHealthMetrics.timestamp))
+      .limit(limit);
+  }
+
+  async getHealthMetric(id: number): Promise<SystemHealthMetric | undefined> {
+    const result = await db.select().from(systemHealthMetrics)
+      .where(eq(systemHealthMetrics.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createHealthMetric(metric: InsertSystemHealthMetric): Promise<SystemHealthMetric> {
+    const result = await db.insert(systemHealthMetrics).values(metric).returning();
+    return result[0];
+  }
+
+  async getMetricsByType(metricType: string, companyId?: number): Promise<SystemHealthMetric[]> {
+    let query = db.select().from(systemHealthMetrics)
+      .where(eq(systemHealthMetrics.metricType, metricType));
+    
+    if (companyId) {
+      query = query.where(and(
+        eq(systemHealthMetrics.metricType, metricType),
+        eq(systemHealthMetrics.companyId, companyId)
+      ));
+    }
+    
+    return await query
+      .orderBy(desc(systemHealthMetrics.timestamp))
+      .limit(100);
+  }
+
+  async getLatestMetrics(companyId?: number): Promise<SystemHealthMetric[]> {
+    let query = db.select().from(systemHealthMetrics);
+    
+    if (companyId) {
+      query = query.where(eq(systemHealthMetrics.companyId, companyId));
+    }
+    
+    return await query
+      .orderBy(desc(systemHealthMetrics.timestamp))
+      .limit(50);
+  }
+
+  async deleteOldMetrics(olderThanDays: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+    
+    const result = await db.delete(systemHealthMetrics)
+      .where(lte(systemHealthMetrics.timestamp, cutoffDate))
+      .returning();
+    
+    return result.length;
+  }
+
+  // SMS Queue
+  async getAllSMSQueue(companyId?: number, limit = 100): Promise<SMSQueue[]> {
+    let query = db.select().from(smsQueue);
+    
+    if (companyId) {
+      query = query.where(eq(smsQueue.companyId, companyId));
+    }
+    
+    return await query
+      .orderBy(desc(smsQueue.createdAt))
+      .limit(limit);
+  }
+
+  async getSMSQueueItem(id: number): Promise<SMSQueue | undefined> {
+    const result = await db.select().from(smsQueue)
+      .where(eq(smsQueue.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createSMSQueueItem(sms: InsertSMSQueue): Promise<SMSQueue> {
+    const result = await db.insert(smsQueue).values(sms).returning();
+    return result[0];
+  }
+
+  async updateSMSQueueItem(id: number, sms: Partial<InsertSMSQueue>): Promise<SMSQueue | undefined> {
+    const result = await db.update(smsQueue)
+      .set(sms)
+      .where(eq(smsQueue.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteSMSQueueItem(id: number): Promise<boolean> {
+    const result = await db.delete(smsQueue)
+      .where(eq(smsQueue.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getPendingSMSQueue(limit = 10): Promise<SMSQueue[]> {
+    return await db.select().from(smsQueue)
+      .where(eq(smsQueue.status, 'pending'))
+      .orderBy(desc(smsQueue.priority), desc(smsQueue.createdAt))
+      .limit(limit);
+  }
+
+  async updateSMSQueueStatus(id: number, status: string, metadata?: any): Promise<void> {
+    const updateData: any = { status };
+    if (metadata) {
+      updateData.metadata = metadata;
+    }
+    if (status === 'sent') {
+      updateData.sentAt = new Date();
+    }
+    
+    await db.update(smsQueue)
+      .set(updateData)
+      .where(eq(smsQueue.id, id));
+  }
+
+  // Email Queue
+  async getAllEmailQueue(companyId?: number, limit = 100): Promise<EmailQueue[]> {
+    let query = db.select().from(emailQueue);
+    
+    if (companyId) {
+      query = query.where(eq(emailQueue.companyId, companyId));
+    }
+    
+    return await query
+      .orderBy(desc(emailQueue.createdAt))
+      .limit(limit);
+  }
+
+  async getEmailQueueItem(id: number): Promise<EmailQueue | undefined> {
+    const result = await db.select().from(emailQueue)
+      .where(eq(emailQueue.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createEmailQueueItem(email: InsertEmailQueue): Promise<EmailQueue> {
+    const result = await db.insert(emailQueue).values(email).returning();
+    return result[0];
+  }
+
+  async updateEmailQueueItem(id: number, email: Partial<InsertEmailQueue>): Promise<EmailQueue | undefined> {
+    const result = await db.update(emailQueue)
+      .set(email)
+      .where(eq(emailQueue.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteEmailQueueItem(id: number): Promise<boolean> {
+    const result = await db.delete(emailQueue)
+      .where(eq(emailQueue.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async getPendingEmailQueue(limit = 10): Promise<EmailQueue[]> {
+    return await db.select().from(emailQueue)
+      .where(eq(emailQueue.status, 'pending'))
+      .orderBy(desc(emailQueue.priority), desc(emailQueue.createdAt))
+      .limit(limit);
+  }
+
+  async updateEmailQueueStatus(id: number, status: string, metadata?: any): Promise<void> {
+    const updateData: any = { status };
+    if (metadata) {
+      updateData.metadata = metadata;
+    }
+    if (status === 'sent') {
+      updateData.sentAt = new Date();
+    }
+    
+    await db.update(emailQueue)
+      .set(updateData)
+      .where(eq(emailQueue.id, id));
+  }
+
+  // Helper methods for monitoring
+  async findSimilarTransactions(
+    companyId: number,
+    bankAccountId: number,
+    amount: string,
+    description: string,
+    timeWindow: Date
+  ): Promise<BankTransaction[]> {
+    const normalizedDescription = description.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    
+    return await db.select().from(bankTransactions)
+      .where(and(
+        eq(bankTransactions.companyId, companyId),
+        eq(bankTransactions.bankAccountId, bankAccountId),
+        eq(bankTransactions.amount, amount),
+        gte(bankTransactions.transactionDate, timeWindow),
+        or(
+          ilike(bankTransactions.description, `%${normalizedDescription}%`),
+          ilike(bankTransactions.normalizedDescription, `%${normalizedDescription}%`)
+        )
+      ))
+      .orderBy(desc(bankTransactions.transactionDate))
+      .limit(10);
   }
 }
 

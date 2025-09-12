@@ -6,6 +6,8 @@ import { eq, and } from 'drizzle-orm';
 export class SMSService {
   private client: any | null = null;
   private fromNumber: string | null = null;
+  private sandboxMode: boolean = false;
+  private isConfigured: boolean = false;
 
   constructor() {
     this.initializeTwilio();
@@ -15,16 +17,41 @@ export class SMSService {
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    const enableSandbox = process.env.SMS_SANDBOX_MODE === 'true' || process.env.NODE_ENV === 'development';
 
     if (accountSid && authToken && fromNumber) {
       this.client = twilio(accountSid, authToken);
       this.fromNumber = fromNumber;
+      this.isConfigured = true;
+      console.log('📱 SMS service configured with Twilio');
+    } else if (enableSandbox) {
+      this.sandboxMode = true;
+      this.isConfigured = true;
+      console.log('📱 SMS service running in sandbox mode - messages will be logged only');
+    } else {
+      console.log('📱 SMS service not configured - set Twilio environment variables to enable');
     }
   }
 
   async sendSMS(phoneNumber: string, message: string) {
+    if (!this.isConfigured) {
+      throw new Error('SMS service not configured. Please set Twilio environment variables or enable sandbox mode.');
+    }
+
+    if (this.sandboxMode) {
+      // Sandbox mode - log SMS instead of sending
+      const mockMessageId = `sandbox_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('📱 [SANDBOX] SMS would be sent:', {
+        to: phoneNumber,
+        message: message.substring(0, 100) + (message.length > 100 ? '...' : ''),
+        messageId: mockMessageId,
+        timestamp: new Date().toISOString()
+      });
+      return { success: true, messageId: mockMessageId, sandbox: true };
+    }
+
     if (!this.client || !this.fromNumber) {
-      throw new Error('SMS service not configured. Please set Twilio environment variables.');
+      throw new Error('SMS service not properly configured.');
     }
 
     try {
@@ -34,10 +61,14 @@ export class SMSService {
         to: phoneNumber,
       });
 
-      console.log('SMS sent:', result.sid);
+      console.log('📱 SMS sent successfully:', {
+        messageId: result.sid,
+        to: phoneNumber,
+        status: result.status
+      });
       return { success: true, messageId: result.sid };
     } catch (error) {
-      console.error('Failed to send SMS:', error);
+      console.error('📱 Failed to send SMS:', error);
       throw error;
     }
   }
@@ -65,9 +96,13 @@ export class SMSService {
   }
 
   async processSMSQueue() {
-    if (!this.client) {
-      console.log('SMS service not configured, skipping queue processing');
+    if (!this.isConfigured) {
+      console.log('📱 SMS service not configured, skipping queue processing');
       return;
+    }
+
+    if (this.sandboxMode) {
+      console.log('📱 [SANDBOX] Processing SMS queue in sandbox mode');
     }
 
     const pendingSMS = await db.select()
@@ -84,17 +119,21 @@ export class SMSService {
           .set({ status: 'sending' })
           .where(eq(smsQueue.id, sms.id));
 
-        await this.sendSMS(sms.phoneNumber, sms.message);
+        const result = await this.sendSMS(sms.phoneNumber, sms.message);
 
         await db.update(smsQueue)
           .set({ 
             status: 'sent', 
             sentAt: new Date(),
+            messageId: result.messageId,
+            metadata: result.sandbox ? { sandbox: true } : undefined
           })
           .where(eq(smsQueue.id, sms.id));
 
+        console.log(`📱 SMS queue processed: ${sms.id} -> ${result.messageId}`);
+
       } catch (error) {
-        const attempts = sms.attempts + 1;
+        const attempts = (sms.attempts || 0) + 1;
         const maxAttempts = 3;
         
         if (attempts >= maxAttempts) {

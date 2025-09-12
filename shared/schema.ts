@@ -7729,3 +7729,299 @@ export type InsertCrossBankTransactionMap = z.infer<typeof insertCrossBankTransa
 
 export type ReconciliationBulkApproval = typeof reconciliationBulkApprovals.$inferSelect;
 export type InsertReconciliationBulkApproval = z.infer<typeof insertReconciliationBulkApprovalSchema>;
+
+// Real-time Monitoring System Tables
+export const monitoringRules = pgTable("monitoring_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  ruleId: text("rule_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // 'threshold' | 'pattern' | 'duplicate' | 'vat' | 'compliance' | 'anomaly'
+  category: text("category").notNull(), // 'expense_monitoring' | 'income_tracking' | 'vat_compliance' | 'bank_fees' | 'fraud_detection'
+  enabled: boolean("enabled").default(true),
+  priority: integer("priority").default(5), // 1=highest, 10=lowest
+  conditions: jsonb("conditions").notNull(), // Rule conditions and thresholds
+  actions: jsonb("actions").notNull(), // Notification actions to execute
+  triggerFrequency: text("trigger_frequency").default("immediate"), // 'immediate' | 'daily' | 'weekly' | 'monthly'
+  lastTriggered: timestamp("last_triggered"),
+  triggerCount: integer("trigger_count").default(0),
+  isSystemRule: boolean("is_system_rule").default(false), // Cannot be deleted if true
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyRuleUnique: unique().on(table.companyId, table.ruleId),
+  companyIdx: index("monitoring_rules_company_idx").on(table.companyId),
+  enabledIdx: index("monitoring_rules_enabled_idx").on(table.enabled),
+  typeIdx: index("monitoring_rules_type_idx").on(table.type),
+}));
+
+export const transactionAlerts = pgTable("transaction_alerts", {
+  id: serial("id").primaryKey(),
+  alertId: text("alert_id").notNull().unique(),
+  companyId: integer("company_id").notNull(),
+  bankAccountId: integer("bank_account_id").notNull(),
+  transactionId: integer("transaction_id").notNull(),
+  ruleId: integer("rule_id").notNull(),
+  severity: text("severity").notNull(), // 'info' | 'warning' | 'error' | 'critical'
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  category: text("category").notNull(), // 'expense_alert' | 'income_alert' | 'vat_compliance' | 'bank_fees' | 'fraud_alert' | 'duplicate_payment'
+  actionable: boolean("actionable").default(false),
+  metadata: jsonb("metadata").default({}),
+  transactionData: jsonb("transaction_data"), // Snapshot of transaction details
+  acknowledged: boolean("acknowledged").default(false),
+  acknowledgedBy: integer("acknowledged_by"),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolved: boolean("resolved").default(false),
+  resolvedBy: integer("resolved_by"),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  notificationsSent: jsonb("notifications_sent").default([]), // Track what notifications were sent
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("transaction_alerts_company_idx").on(table.companyId),
+  bankAccountIdx: index("transaction_alerts_bank_account_idx").on(table.bankAccountId),
+  severityIdx: index("transaction_alerts_severity_idx").on(table.severity),
+  acknowledgedIdx: index("transaction_alerts_acknowledged_idx").on(table.acknowledged),
+  createdAtIdx: index("transaction_alerts_created_at_idx").on(table.createdAt),
+}));
+
+export const realTimeNotifications = pgTable("real_time_notifications", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  userId: integer("user_id"), // Null for company-wide notifications
+  alertId: integer("alert_id"), // Reference to transaction_alerts.id
+  type: text("type").notNull(), // 'email' | 'sms' | 'push' | 'in_app' | 'slack' | 'webhook'
+  channel: text("channel").notNull(), // email address, phone number, webhook URL, etc.
+  subject: text("subject"),
+  content: text("content").notNull(),
+  templateId: text("template_id"),
+  templateVariables: jsonb("template_variables").default({}),
+  priority: text("priority").notNull().default("medium"), // 'low' | 'medium' | 'high' | 'critical'
+  status: text("status").notNull().default("pending"), // 'pending' | 'sent' | 'delivered' | 'failed' | 'retry'
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(3),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  errorMessage: text("error_message"),
+  responseData: jsonb("response_data"), // Provider response data
+  scheduledAt: timestamp("scheduled_at"),
+  expiresAt: timestamp("expires_at"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("real_time_notifications_company_idx").on(table.companyId),
+  userIdx: index("real_time_notifications_user_idx").on(table.userId),
+  statusIdx: index("real_time_notifications_status_idx").on(table.status),
+  typeIdx: index("real_time_notifications_type_idx").on(table.type),
+  priorityIdx: index("real_time_notifications_priority_idx").on(table.priority),
+  scheduledAtIdx: index("real_time_notifications_scheduled_at_idx").on(table.scheduledAt),
+}));
+
+export const monitoringDashboard = pgTable("monitoring_dashboard", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  dashboardType: text("dashboard_type").notNull(), // 'real_time' | 'summary' | 'compliance' | 'custom'
+  configuration: jsonb("configuration").notNull(), // Dashboard layout and widget configs
+  isDefault: boolean("is_default").default(false),
+  isPublic: boolean("is_public").default(false), // For shared dashboards
+  accessLevel: text("access_level").default("company"), // 'company' | 'user' | 'role'
+  authorizedUsers: jsonb("authorized_users").default([]), // User IDs with access
+  authorizedRoles: jsonb("authorized_roles").default([]), // Role IDs with access
+  refreshInterval: integer("refresh_interval").default(300), // Seconds
+  autoRefresh: boolean("auto_refresh").default(true),
+  createdBy: integer("created_by").notNull(),
+  lastViewedAt: timestamp("last_viewed_at"),
+  viewCount: integer("view_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("monitoring_dashboard_company_idx").on(table.companyId),
+  typeIdx: index("monitoring_dashboard_type_idx").on(table.dashboardType),
+  defaultIdx: index("monitoring_dashboard_default_idx").on(table.isDefault),
+}));
+
+export const alertEscalationRules = pgTable("alert_escalation_rules", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  ruleId: integer("rule_id").notNull(), // Reference to monitoring_rules.id
+  escalationLevel: integer("escalation_level").notNull(), // 1, 2, 3, etc.
+  triggerAfterMinutes: integer("trigger_after_minutes").notNull(), // Minutes to wait before escalation
+  escalationActions: jsonb("escalation_actions").notNull(), // Additional notification actions
+  escalationRecipients: jsonb("escalation_recipients").notNull(), // Additional recipients
+  condition: text("condition").default("unacknowledged"), // 'unacknowledged' | 'unresolved' | 'custom'
+  enabled: boolean("enabled").default(true),
+  lastTriggered: timestamp("last_triggered"),
+  triggerCount: integer("trigger_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("alert_escalation_rules_company_idx").on(table.companyId),
+  ruleIdx: index("alert_escalation_rules_rule_idx").on(table.ruleId),
+  enabledIdx: index("alert_escalation_rules_enabled_idx").on(table.enabled),
+}));
+
+export const systemHealthMetrics = pgTable("system_health_metrics", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id"),
+  metricType: text("metric_type").notNull(), // 'sync_latency' | 'categorization_accuracy' | 'alert_response_time' | 'notification_delivery'
+  metricName: text("metric_name").notNull(),
+  value: decimal("value", { precision: 15, scale: 4 }).notNull(),
+  unit: text("unit"), // 'seconds', 'percentage', 'count', etc.
+  threshold: decimal("threshold", { precision: 15, scale: 4 }), // Alert threshold
+  status: text("status").notNull().default("normal"), // 'normal' | 'warning' | 'critical'
+  tags: jsonb("tags").default({}), // Additional metadata tags
+  timestamp: timestamp("timestamp").defaultNow(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("system_health_metrics_company_idx").on(table.companyId),
+  typeIdx: index("system_health_metrics_type_idx").on(table.metricType),
+  timestampIdx: index("system_health_metrics_timestamp_idx").on(table.timestamp),
+  statusIdx: index("system_health_metrics_status_idx").on(table.status),
+}));
+
+// Relations for Real-time Monitoring System
+export const monitoringRulesRelations = relations(monitoringRules, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [monitoringRules.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [monitoringRules.createdBy],
+    references: [users.id]
+  }),
+  alerts: many(transactionAlerts),
+  escalationRules: many(alertEscalationRules)
+}));
+
+export const transactionAlertsRelations = relations(transactionAlerts, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [transactionAlerts.companyId],
+    references: [companies.id]
+  }),
+  bankAccount: one(bankAccounts, {
+    fields: [transactionAlerts.bankAccountId],
+    references: [bankAccounts.id]
+  }),
+  transaction: one(bankTransactions, {
+    fields: [transactionAlerts.transactionId],
+    references: [bankTransactions.id]
+  }),
+  rule: one(monitoringRules, {
+    fields: [transactionAlerts.ruleId],
+    references: [monitoringRules.id]
+  }),
+  acknowledgedByUser: one(users, {
+    fields: [transactionAlerts.acknowledgedBy],
+    references: [users.id]
+  }),
+  resolvedByUser: one(users, {
+    fields: [transactionAlerts.resolvedBy],
+    references: [users.id]
+  }),
+  notifications: many(realTimeNotifications)
+}));
+
+export const realTimeNotificationsRelations = relations(realTimeNotifications, ({ one }) => ({
+  company: one(companies, {
+    fields: [realTimeNotifications.companyId],
+    references: [companies.id]
+  }),
+  user: one(users, {
+    fields: [realTimeNotifications.userId],
+    references: [users.id]
+  }),
+  alert: one(transactionAlerts, {
+    fields: [realTimeNotifications.alertId],
+    references: [transactionAlerts.id]
+  })
+}));
+
+export const monitoringDashboardRelations = relations(monitoringDashboard, ({ one }) => ({
+  company: one(companies, {
+    fields: [monitoringDashboard.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [monitoringDashboard.createdBy],
+    references: [users.id]
+  })
+}));
+
+export const alertEscalationRulesRelations = relations(alertEscalationRules, ({ one }) => ({
+  company: one(companies, {
+    fields: [alertEscalationRules.companyId],
+    references: [companies.id]
+  }),
+  rule: one(monitoringRules, {
+    fields: [alertEscalationRules.ruleId],
+    references: [monitoringRules.id]
+  })
+}));
+
+export const systemHealthMetricsRelations = relations(systemHealthMetrics, ({ one }) => ({
+  company: one(companies, {
+    fields: [systemHealthMetrics.companyId],
+    references: [companies.id]
+  })
+}));
+
+// Insert Schemas for Real-time Monitoring System
+export const insertMonitoringRuleSchema = createInsertSchema(monitoringRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTransactionAlertSchema = createInsertSchema(transactionAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRealTimeNotificationSchema = createInsertSchema(realTimeNotifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMonitoringDashboardSchema = createInsertSchema(monitoringDashboard).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAlertEscalationRuleSchema = createInsertSchema(alertEscalationRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSystemHealthMetricSchema = createInsertSchema(systemHealthMetrics).omit({
+  id: true,
+  recordedAt: true,
+});
+
+// Types for Real-time Monitoring System
+export type MonitoringRule = typeof monitoringRules.$inferSelect;
+export type InsertMonitoringRule = z.infer<typeof insertMonitoringRuleSchema>;
+
+export type TransactionAlert = typeof transactionAlerts.$inferSelect;
+export type InsertTransactionAlert = z.infer<typeof insertTransactionAlertSchema>;
+
+export type RealTimeNotification = typeof realTimeNotifications.$inferSelect;
+export type InsertRealTimeNotification = z.infer<typeof insertRealTimeNotificationSchema>;
+
+export type MonitoringDashboard = typeof monitoringDashboard.$inferSelect;
+export type InsertMonitoringDashboard = z.infer<typeof insertMonitoringDashboardSchema>;
+
+export type AlertEscalationRule = typeof alertEscalationRules.$inferSelect;
+export type InsertAlertEscalationRule = z.infer<typeof insertAlertEscalationRuleSchema>;
+
+export type SystemHealthMetric = typeof systemHealthMetrics.$inferSelect;
+export type InsertSystemHealthMetric = z.infer<typeof insertSystemHealthMetricSchema>;

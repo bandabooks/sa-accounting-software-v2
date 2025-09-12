@@ -32,6 +32,13 @@ interface ExchangeLinkOptions {
     enableVATInsights?: boolean;
     enableBankingOptimization?: boolean;
     enableInstantNotifications?: boolean;
+    webhookUrl?: string;
+    pollingIntervalMs?: number;
+    alertThresholds?: {
+      largeTransactionAmount?: number;
+      unusualActivityThreshold?: number;
+      cashFlowWarningLevel?: number;
+    };
   };
 }
 
@@ -79,9 +86,22 @@ export class StitchService {
     try {
       const createdAccounts: BankAccount[] = [];
 
-      // Log monitoring configuration if provided
+      // Apply real-time monitoring configuration
       if (options.monitoringConfig) {
         console.log('🔧 Applying monitoring configuration:', options.monitoringConfig);
+        
+        // Start live monitoring for the company
+        if (options.monitoringConfig.enableRealTimeMonitoring) {
+          await realTimeMonitoringService.startLiveMonitoring(options.companyId, {
+            enableRealTimeMonitoring: true,
+            enableAutoCategorization: options.monitoringConfig.enableAutoCategorization ?? true,
+            enableVATInsights: options.monitoringConfig.enableVATInsights ?? true,
+            enableBankingOptimization: options.monitoringConfig.enableBankingOptimization ?? true,
+            enableInstantNotifications: options.monitoringConfig.enableInstantNotifications ?? true,
+            webhookUrl: options.monitoringConfig.webhookUrl,
+            pollingIntervalMs: options.monitoringConfig.pollingIntervalMs ?? 30000 // 30 seconds default
+          });
+        }
       }
 
       for (const stitchAccount of options.accounts) {
@@ -645,6 +665,242 @@ export class StitchService {
    */
   updateMonitoringRule(ruleId: string, updates: any): void {
     realTimeMonitoringService.updateMonitoringRule(ruleId, updates);
+  }
+
+  /**
+   * Process webhook from Stitch with security verification
+   */
+  async processWebhook(companyId: number, webhookData: any, signature?: string): Promise<{
+    alerts: any[];
+    notifications: any[];
+    processed: boolean;
+  }> {
+    try {
+      console.log(`🔐 Processing Stitch webhook for company ${companyId}`);
+      
+      // Webhook signature verification
+      if (process.env.STITCH_WEBHOOK_SECRET && signature) {
+        const crypto = await import('crypto');
+        const expectedSignature = crypto
+          .createHmac('sha256', process.env.STITCH_WEBHOOK_SECRET)
+          .update(JSON.stringify(webhookData))
+          .digest('hex');
+        
+        if (signature !== `sha256=${expectedSignature}`) {
+          console.error('❌ Webhook signature verification failed');
+          throw new Error('Invalid webhook signature');
+        }
+        console.log('✅ Webhook signature verified');
+      }
+
+      const alerts: any[] = [];
+      const notifications: any[] = [];
+
+      // Process different webhook events
+      if (webhookData.eventType === 'transaction.created' || webhookData.eventType === 'transaction.updated') {
+        const transaction = webhookData.data.transaction;
+        
+        // Get bank account
+        const bankAccount = await this.storage.getBankAccountByProvider(
+          companyId,
+          'stitch',
+          transaction.accountId
+        );
+
+        if (!bankAccount) {
+          console.warn(`⚠️ Bank account not found for provider account ${transaction.accountId}`);
+          return { alerts, notifications, processed: false };
+        }
+
+        // Create transaction record
+        const transactionData: InsertBankTransaction = {
+          companyId,
+          bankAccountId: bankAccount.id,
+          transactionId: transaction.id,
+          amount: transaction.amount,
+          description: transaction.description || 'Stitch Transaction',
+          transactionDate: new Date(transaction.transactionDate),
+          transactionType: parseFloat(transaction.amount) >= 0 ? 'credit' : 'debit',
+          balance: transaction.runningBalance || '0',
+          reference: transaction.reference,
+          category: 'Uncategorized',
+          isReconciled: false,
+          isReviewed: false,
+          metadata: {
+            source: 'stitch_webhook',
+            stitchTransactionId: transaction.id,
+            originalData: transaction
+          }
+        };
+
+        // Store transaction
+        const storedTransaction = await this.storage.createBankTransaction(transactionData);
+        console.log(`💾 Stored transaction ${storedTransaction.id} from webhook`);
+
+        // Trigger real-time monitoring
+        const monitoringResult = await realTimeMonitoringService.processTransaction(
+          companyId,
+          storedTransaction,
+          bankAccount
+        );
+
+        alerts.push(...(monitoringResult.alerts || []));
+        notifications.push(...(monitoringResult.notifications || []));
+
+        // Auto-categorize if enabled
+        try {
+          const categoryResult = await transactionCategorizationService.categorizeTransaction(
+            storedTransaction,
+            { autoApply: true, confidence: 0.8 }
+          );
+          
+          if (categoryResult.category) {
+            await this.storage.updateBankTransaction(storedTransaction.id, {
+              category: categoryResult.category.name,
+              metadata: {
+                ...storedTransaction.metadata,
+                autoCategory: categoryResult.category,
+                confidence: categoryResult.confidence
+              }
+            });
+            console.log(`🏷️ Auto-categorized transaction as: ${categoryResult.category.name}`);
+          }
+        } catch (error) {
+          console.error('Failed to auto-categorize transaction:', error);
+        }
+
+        // Apply SA banking optimization
+        try {
+          const optimizationInsights = await saBankingOptimizationEngine.analyzeTransaction(
+            storedTransaction,
+            bankAccount
+          );
+          
+          if (optimizationInsights.recommendations.length > 0) {
+            console.log(`💡 Banking optimization recommendations:`, optimizationInsights.recommendations);
+          }
+        } catch (error) {
+          console.error('Failed to analyze banking optimization:', error);
+        }
+      }
+
+      // Handle account balance updates
+      if (webhookData.eventType === 'account.balance.updated') {
+        const accountData = webhookData.data.account;
+        
+        const bankAccount = await this.storage.getBankAccountByProvider(
+          companyId,
+          'stitch',
+          accountData.id
+        );
+
+        if (bankAccount) {
+          await this.storage.updateBankAccount(bankAccount.id, {
+            currentBalance: accountData.currentBalance,
+            lastSyncAt: new Date()
+          });
+          
+          console.log(`💰 Updated balance for account ${bankAccount.accountName}: ${accountData.currentBalance}`);
+        }
+      }
+
+      console.log(`✅ Webhook processed: ${alerts.length} alerts, ${notifications.length} notifications`);
+      
+      return {
+        alerts,
+        notifications,
+        processed: true
+      };
+
+    } catch (error) {
+      console.error('❌ Failed to process Stitch webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get live monitoring status for dashboard
+   */
+  async getLiveMonitoringStatus(companyId: number): Promise<{
+    isActive: boolean;
+    connectedAccounts: number;
+    lastSyncTime: string | null;
+    alertsToday: number;
+    systemHealth: string;
+  }> {
+    try {
+      // Get connected accounts
+      const accounts = await this.storage.getBankAccountsByCompany(companyId);
+      const stitchAccounts = accounts.filter(acc => acc.externalProvider === 'stitch');
+      
+      // Get latest sync time
+      const latestSync = stitchAccounts.reduce((latest, acc) => {
+        if (!acc.lastSyncAt) return latest;
+        const syncTime = new Date(acc.lastSyncAt);
+        return !latest || syncTime > latest ? syncTime : latest;
+      }, null as Date | null);
+
+      // Get today's alerts
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const alertsToday = await this.storage.getAlertsAfterDate(companyId, today);
+
+      // Get system health
+      const healthMetrics = await this.storage.getLatestMetrics(companyId);
+      const systemHealth = healthMetrics.some(m => m.status === 'critical') ? 'critical' :
+                          healthMetrics.some(m => m.status === 'warning') ? 'warning' : 'healthy';
+
+      return {
+        isActive: stitchAccounts.length > 0,
+        connectedAccounts: stitchAccounts.length,
+        lastSyncTime: latestSync?.toISOString() || null,
+        alertsToday: alertsToday.length,
+        systemHealth
+      };
+    } catch (error) {
+      console.error('Failed to get live monitoring status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Trigger real-time sync for specific account
+   */
+  async triggerRealTimeSync(companyId: number, bankAccountId: number): Promise<{
+    success: boolean;
+    newTransactions: number;
+    message: string;
+  }> {
+    try {
+      const bankAccount = await this.storage.getBankAccount(bankAccountId);
+      if (!bankAccount || bankAccount.companyId !== companyId) {
+        throw new Error('Bank account not found or access denied');
+      }
+
+      if (bankAccount.externalProvider !== 'stitch') {
+        throw new Error('Account is not linked via Stitch');
+      }
+
+      // Sync transactions
+      const result = await this.syncTransactions({
+        bankAccountId,
+        companyId,
+        forceFullSync: false
+      });
+
+      return {
+        success: true,
+        newTransactions: result.newTransactions,
+        message: `Successfully synced ${result.newTransactions} new transactions`
+      };
+    } catch (error) {
+      console.error('Failed to trigger real-time sync:', error);
+      return {
+        success: false,
+        newTransactions: 0,
+        message: error instanceof Error ? error.message : 'Sync failed'
+      };
+    }
   }
 }
 

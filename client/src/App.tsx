@@ -84,6 +84,7 @@ import ProjectDetail from "@/pages/project-detail";
 import Tasks from "@/pages/tasks";
 import TimeEntries from "@/pages/time-entries";
 import AlertsPage from "@/pages/alerts";
+import MonitoringDashboard from "@/pages/monitoring-dashboard";
 import TimeTracking from "@/pages/time-tracking";
 import VatManagement from "@/pages/vat-management";
 import VATSettings from "@/pages/vat-settings";
@@ -688,9 +689,9 @@ function AuthenticatedApp() {
             <AlertsPage />
           </ProtectedRoute>
         </Route>
-        <Route path="/alerts">
+        <Route path="/monitoring">
           <ProtectedRoute permission={PERMISSIONS.DASHBOARD_VIEW}>
-            <Alerts />
+            <MonitoringDashboard />
           </ProtectedRoute>
         </Route>
         <Route path="/settings">

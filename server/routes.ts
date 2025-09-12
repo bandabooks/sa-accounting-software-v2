@@ -73,6 +73,7 @@ import { registerChartManagementRoutes } from "./routes/chartManagementRoutes";
 import emailRoutes from "./routes/emailRoutes";
 import integrationsRoutes from "./routes/integrationsRoutes";
 import payrollRoutes from "./routes/payroll";
+import { registerMonitoringRoutes } from "./routes/monitoringRoutes";
 import { contractService } from "./contracts";
 import { registerEmployeeRoutes } from "./routes/employees";
 import { sarsService } from "./sarsService";
@@ -399,6 +400,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register employee routes
   registerEmployeeRoutes(app);
+  
+  // Register monitoring routes
+  registerMonitoringRoutes(app);
   
   // Register AI routes
   const aiRoutes = await import("./routes/aiRoutes");
@@ -9895,11 +9899,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signature = req.headers['x-stitch-signature'] as string;
       const payload = req.body;
 
-      // TODO: Verify webhook signature with STITCH_WEBHOOK_SECRET
-      // For now, just accept all webhooks in development
+      // Webhook signature verification with comprehensive logging
+      const webhookSecret = process.env.STITCH_WEBHOOK_SECRET;
+      if (webhookSecret && signature) {
+        console.log('🔐 Verifying webhook signature...');
+        const crypto = await import('crypto');
+        const expectedSignature = crypto
+          .createHmac('sha256', webhookSecret)
+          .update(payload)
+          .digest('hex');
+        
+        const providedSignature = signature.replace('sha256=', '');
+        
+        if (providedSignature === expectedSignature) {
+          console.log('✅ Webhook signature verification successful');
+        } else {
+          console.error('❌ Webhook signature verification failed', {
+            expected: expectedSignature.substring(0, 10) + '...',
+            provided: providedSignature.substring(0, 10) + '...',
+            signatureHeader: signature
+          });
+          return res.status(401).json({ error: 'Invalid webhook signature' });
+        }
+      } else if (webhookSecret) {
+        console.warn('⚠️ Webhook secret configured but no signature provided');
+        return res.status(401).json({ error: 'Missing webhook signature' });
+      } else {
+        console.log('🟡 Webhook signature verification skipped - no secret configured (development mode)');
+      }
       
       const webhookData = JSON.parse(payload.toString());
-      console.log('Received Stitch webhook:', webhookData);
+      console.log('📥 Received Stitch webhook:', {
+        type: webhookData.type,
+        timestamp: new Date().toISOString(),
+        signatureVerified: !!(webhookSecret && signature),
+        payload: webhookData
+      });
 
       // Handle different webhook events
       switch (webhookData.type) {
