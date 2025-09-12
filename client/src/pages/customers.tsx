@@ -19,6 +19,7 @@ import { DashboardCard } from "@/components/DashboardCard";
 import { apiRequest } from "@/lib/queryClient";
 import { useLoadingStates } from "@/hooks/useLoadingStates";
 import { PageLoader } from "@/components/ui/global-loader";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface CustomerHealthScore {
   score: number;
@@ -34,18 +35,21 @@ export default function Customers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const { companyId } = useCompany();
   
   const { data: customers, isLoading } = useQuery({
-    queryKey: ["/api/customers"],
+    queryKey: ["/api/customers", companyId],
     queryFn: customersApi.getAll,
+    enabled: !!companyId,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: true, // Refetch when component mounts
     refetchOnWindowFocus: true // Refetch when user returns to tab
   });
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ["/api/customers/stats"],
-    queryFn: () => apiRequest("/api/customers/stats", "GET").then(res => res.json())
+    queryKey: ["/api/customers/stats", companyId],
+    queryFn: () => apiRequest("/api/customers/stats", "GET").then(res => res.json()),
+    enabled: !!companyId
   });
 
   // Use loading states for comprehensive loading feedback

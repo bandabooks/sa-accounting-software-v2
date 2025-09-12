@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VATTypeSelect } from "@/components/ui/vat-type-select";
 import { useToast } from "@/hooks/use-toast";
+import { useCompany } from "@/contexts/CompanyContext";
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -181,8 +182,11 @@ const EnhancedBulkCapture = () => {
     queryKey: ['/api/suppliers'],
   });
 
+  const { companyId } = useCompany();
+
   const { data: customers = [] } = useQuery<any[]>({
-    queryKey: ['/api/customers'],
+    queryKey: ['/api/customers', companyId],
+    enabled: !!companyId
   });
 
   // Fetch bulk capture sessions

@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCompany } from "@/contexts/CompanyContext";
 import type { Customer } from "@shared/schema";
 
 interface CustomerSelectProps {
@@ -70,9 +71,11 @@ export function CustomerSelect({
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { companyId } = useCompany();
 
   const { data: customers = [], isLoading } = useQuery({
-    queryKey: ["/api/customers"],
+    queryKey: ["/api/customers", companyId],
+    enabled: !!companyId
   });
 
   const createCustomerMutation = useMutation({
@@ -85,7 +88,7 @@ export function CustomerSelect({
       return response.json();
     },
     onSuccess: (newCustomer: Customer) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/customers", companyId] });
       onValueChange(newCustomer.id);
       if (onCustomerSelect) {
         onCustomerSelect(newCustomer);
