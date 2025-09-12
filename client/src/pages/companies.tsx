@@ -12,11 +12,13 @@ import { apiRequest } from "@/lib/queryClient";
 import { Building, Plus, Users, Settings, Crown, Shield, User, UserPlus, Edit, CreditCard, ArrowUp } from "lucide-react";
 import { type Company, type CompanyUser } from "@shared/schema";
 import CompanyCreationForm from "@/components/forms/CompanyCreationForm";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export default function Companies() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location] = useLocation();
+  const { switchCompany, isLoading: isSwitching } = useCompany();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
@@ -65,28 +67,7 @@ export default function Companies() {
   console.log("Plans loading:", isLoadingPlans);
   console.log("Plans error:", plansError);
 
-  // Set active company mutation
-  const setActiveCompanyMutation = useMutation({
-    mutationFn: async (companyId: number) => {
-      return await apiRequest(`/api/companies/switch`, "POST", { companyId });
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Company Switched",
-        description: `Successfully switched to ${data?.company?.name || 'selected company'}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/companies/active"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/companies/my"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to switch company.",
-        variant: "destructive",
-      });
-    },
-  });
+  // Company switching is now handled by CompanyContext
 
   // Update subscription mutation
   const updateSubscriptionMutation = useMutation({
@@ -237,12 +218,12 @@ export default function Companies() {
                           onClick={(e) => {
                             e.stopPropagation();
                             e.preventDefault();
-                            setActiveCompanyMutation.mutate(companyUser.company.id);
+                            switchCompany(companyUser.company.id);
                           }}
-                          disabled={setActiveCompanyMutation.isPending}
+                          disabled={isSwitching}
                           data-testid={`switch-to-company-${companyUser.company.id}`}
                         >
-                          {setActiveCompanyMutation.isPending ? "Switching..." : "Switch To"}
+                          {isSwitching ? "Switching..." : "Switch To"}
                         </Button>
                       )}
                       <Button
