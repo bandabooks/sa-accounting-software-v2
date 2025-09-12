@@ -2092,12 +2092,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate actual income and expense data for the month
         const monthInvoices = allInvoices.filter(inv => 
-          inv.invoiceDate.startsWith(monthKey) && inv.status !== 'draft'
+          inv.invoiceDate && inv.invoiceDate.startsWith(monthKey) && inv.status !== 'draft'
         );
         const monthIncome = monthInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
         
         const monthExpensesData = allExpenses.filter(exp => 
-          exp.expenseDate.startsWith(monthKey)
+          exp.expenseDate && exp.expenseDate.startsWith(monthKey)
         );
         const monthExpenses = monthExpensesData.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
