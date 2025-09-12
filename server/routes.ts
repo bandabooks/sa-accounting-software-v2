@@ -1982,12 +1982,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📊 Dashboard period: ${fromDate.toISOString()} to ${toDate.toISOString()}, basis: ${basis}`);
 
-      // Get bank balance using canonical GL-first calculation
-      const totalBankBalance = await storage.getBankBalance(companyId, asOfDate);
+      // Get bank balance from actual bank accounts data (Chart of Accounts)
+      const bankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      const totalBankBalance = bankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
       
-      // Get legacy balance calculation for comparison (guardrail check)
-      const legacyBankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
-      const legacyBankBalance = legacyBankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
+      console.log(`💰 Bank balance calculation for company ${companyId}: Found ${bankAccounts.length} bank accounts, total: R${totalBankBalance.toFixed(2)}`);
+      
+      // Keep legacy method for comparison but use real bank account data as primary
+      const legacyBankBalance = await storage.getBankBalance(companyId, asOfDate);
       const balanceDifference = Math.abs(totalBankBalance - legacyBankBalance);
 
       // Get all invoices for AR calculation
@@ -1998,20 +2000,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(inv => new Date(inv.dueDate) < new Date())
         .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
 
-      // Get revenue and expenses for the period - simplified calculation from invoices
+      // Get revenue and expenses for the period using real invoice data
       const periodInvoices = allInvoices.filter(inv => {
         const invDate = new Date(inv.invoiceDate);
-        return invDate >= fromDate && invDate <= toDate;
+        return invDate >= fromDate && invDate <= toDate && inv.status !== 'draft';
       });
       const totalRevenue = periodInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+      
+      console.log(`💼 Revenue calculation for company ${companyId}: ${periodInvoices.length} invoices in period, total revenue: R${totalRevenue.toFixed(2)}`);
 
-      // Get expenses from expenses table
+      // Get expenses from expenses table using real expense data
       const allExpenses = await storage.getAllExpenses(companyId);
       const periodExpenses = allExpenses.filter(exp => {
         const expDate = new Date(exp.expenseDate);
         return expDate >= fromDate && expDate <= toDate;
       });
       const totalExpenses = periodExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+      
+      console.log(`💳 Expense calculation for company ${companyId}: ${periodExpenses.length} expenses in period, total: R${totalExpenses.toFixed(2)}`);
       
       const netProfit = totalRevenue - totalExpenses;
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -2084,14 +2090,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         date.setMonth(date.getMonth() - i);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
         
-        // Calculate actual data for the month
-        const monthIncome = periodInvoices
-          .filter(inv => inv.invoiceDate.startsWith(monthKey))
-          .reduce((sum, inv) => sum + parseFloat(inv.total), 0);
+        // Calculate actual income and expense data for the month
+        const monthInvoices = allInvoices.filter(inv => 
+          inv.invoiceDate.startsWith(monthKey) && inv.status !== 'draft'
+        );
+        const monthIncome = monthInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
         
-        const monthExpenses = periodExpenses
-          .filter(exp => exp.expenseDate.startsWith(monthKey))
-          .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const monthExpensesData = allExpenses.filter(exp => 
+          exp.expenseDate.startsWith(monthKey)
+        );
+        const monthExpenses = monthExpensesData.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
         incomeVsExpenseT12M.push({
           month: monthKey,
