@@ -78,7 +78,8 @@ import { contractService } from "./contracts";
 import { registerEmployeeRoutes } from "./routes/employees";
 import { sarsService } from "./sarsService";
 import { SAReconciliationService } from "./services/saReconciliationService";
-import { ReconciliationStorageAdapter, AiMatcherStorageAdapter } from "./storage-adapters";
+import { ReconciliationStorageAdapter } from "./storage-adapters/reconciliation-storage";
+import { AiMatcherStorageAdapter } from "./storage-adapters/ai-matcher-storage";
 
 // Create storage adapters for services 
 const reconciliationStorage = new ReconciliationStorageAdapter(storage);
