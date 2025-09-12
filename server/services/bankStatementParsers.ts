@@ -1983,10 +1983,19 @@ export class BankStatementParserService {
    */
   private async parsePDF(buffer: Buffer): Promise<any[][]> {
     try {
-      // Dynamically import pdf-parse to avoid module loading issues
-      const { default: pdfParse } = await import('pdf-parse');
+      // Import pdf-parse with proper error handling
+      let pdfParse: any;
+      try {
+        pdfParse = require('pdf-parse');
+      } catch (importError) {
+        console.error('Failed to import pdf-parse:', importError);
+        throw new Error('PDF parsing library not available');
+      }
       
-      const pdfData = await pdfParse(buffer);
+      const pdfData = await pdfParse(buffer, {
+        // Disable logging and internal file operations
+        max: 0, // Parse all pages
+      });
       const text = pdfData.text;
       
       // Try to identify bank from PDF text
