@@ -42,10 +42,7 @@ export enum SouthAfricanBanks {
   STANDARD_BANK = 'Standard Bank',
   NEDBANK = 'Nedbank',
   CAPITEC = 'Capitec',
-  DISCOVERY_BANK = 'Discovery Bank',
-  TYME_BANK = 'Tyme Bank',
-  AFRICAN_BANK = 'African Bank',
-  INVESTEC = 'Investec'
+  DISCOVERY_BANK = 'Discovery Bank'
 }
 
 export interface BankParser {
@@ -231,174 +228,74 @@ class FNBParser implements BankParser {
 /**
  * ABSA Bank Statement Parser
  * Format: Date, Transaction Details, Value Date, Debit, Credit, Balance
- * Enhanced with flexible column detection and single amount support
  */
 class ABSAParser implements BankParser {
   bankName = SouthAfricanBanks.ABSA;
 
   identify(headers: string[]): boolean {
     const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced ABSA patterns including single amount column formats
     const absaPatterns = [
-      // Traditional ABSA formats with debit/credit columns
       'date.*transaction details.*value date.*debit.*credit.*balance',
       'posting date.*description.*debit amount.*credit amount.*balance',
-      'transaction date.*narrative.*debit.*credit.*running balance',
-      // Single amount column formats
-      'date.*details.*amount.*balance',
-      'date.*transaction details.*amount.*balance',
-      'posting date.*description.*amount.*balance',
-      'date.*narrative.*amount.*running balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*transaction.*amount',
-      'posting date.*details.*amount'
+      'date.*details.*amount.*balance'
     ];
     
-    // Check for ABSA-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|narrative|transaction\s*description|details|transaction\s*details)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit|debit\s*amount|credit\s*amount)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against ABSA patterns
-    const matchesPattern = absaPatterns.some(pattern => 
+    return absaPatterns.some(pattern => 
       headerText.match(pattern.replace(/\*/g, '.*'))
     );
-    
-    // Additional ABSA indicators
-    const hasABSATerms = headerText.includes('absa') || 
-                        headerText.includes('amalgamated') ||
-                        headerText.includes('value date');
-    
-    return matchesPattern || hasABSATerms;
   }
 
   parse(data: any[][]): StandardizedTransaction[] {
     const transactions: StandardizedTransaction[] = [];
     
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'narrative', 'transaction description', 'details', 'transaction details']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    const valueDateCol = this.findColumn(headers, ['value date', 'val date']);
-    
-    console.log(`🔍 ABSA Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}, valueDate=${valueDateCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ ABSA: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ ABSA: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (!row || row.length === 0) continue;
+      if (!row || row.length < 5) continue;
 
-      const dateStr = row[dateCol];
-      const description = row[descCol];
+      const [date, details, valueDate, debit, credit, balance] = row;
       
-      if (!dateStr || !description) continue;
+      if (!date || !details) continue;
 
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
+      const debitAmount = this.parseAmount(debit);
+      const creditAmount = this.parseAmount(credit);
       
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
+      if (debitAmount === 0 && creditAmount === 0) continue;
+
+      const amount = creditAmount > 0 ? creditAmount : -debitAmount;
+      const type = amount > 0 ? 'credit' : 'debit';
 
       transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
+        date: this.parseDate(date),
+        description: this.cleanDescription(details),
+        amount: Math.abs(amount),
         type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        reference: valueDateCol !== -1 && row[valueDateCol] ? String(row[valueDateCol]) : undefined,
+        balance: this.parseAmount(balance),
+        reference: valueDate ? String(valueDate) : undefined,
         originalData: row
       });
     }
 
-    console.log(`✅ ABSA parsed ${transactions.length} transactions`);
     return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
   }
 
   private parseAmount(value: any): number {
     if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
+    const cleaned = String(value).replace(/[^\d.-]/g, '');
+    return parseFloat(cleaned) || 0;
   }
 
   private parseDate(dateStr: string): string {
-    // ABSA typically uses DD/MM/YYYY or YYYY/MM/DD
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
     
-    // Try different formats
     const parts = dateStr.split(/[\/\-]/);
     if (parts.length === 3) {
       const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
       if (p1.length === 4) {
         return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
       }
-      // Try DD/MM/YYYY
       return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
     
@@ -413,148 +310,57 @@ class ABSAParser implements BankParser {
 /**
  * Standard Bank Statement Parser
  * Format: Date, Description, Amount, Balance
- * Enhanced with flexible column detection and debit/credit support
  */
 class StandardBankParser implements BankParser {
   bankName = SouthAfricanBanks.STANDARD_BANK;
 
   identify(headers: string[]): boolean {
     const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Standard Bank patterns including debit/credit columns
     const sbPatterns = [
-      // Single amount column formats (Standard Bank common format)
       'date.*description.*amount.*balance',
       'transaction date.*narrative.*amount.*running balance',
-      'posting date.*transaction description.*transaction amount.*balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*narrative.*debit.*credit.*running balance',
-      'posting date.*description.*debit amount.*credit amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*narrative.*amount',
-      'posting date.*description.*amount'
+      'posting date.*transaction description.*transaction amount.*balance'
     ];
     
-    // Check for Standard Bank-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|narrative|transaction\s*description|details)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit|transaction\s*amount)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Standard Bank patterns
-    const matchesPattern = sbPatterns.some(pattern => 
+    return sbPatterns.some(pattern => 
       headerText.match(pattern.replace(/\*/g, '.*'))
     );
-    
-    // Additional Standard Bank indicators
-    const hasSBTerms = headerText.includes('standard') || 
-                      headerText.includes('stanbic') ||
-                      headerText.includes('standard bank');
-    
-    return matchesPattern || hasSBTerms;
   }
 
   parse(data: any[][]): StandardizedTransaction[] {
     const transactions: StandardizedTransaction[] = [];
     
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'narrative', 'transaction description', 'details']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Standard Bank Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Standard Bank: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Standard Bank: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (!row || row.length === 0) continue;
+      if (!row || row.length < 4) continue;
 
-      const dateStr = row[dateCol];
-      const description = row[descCol];
+      const [date, description, amount, balance] = row;
       
-      if (!dateStr || !description) continue;
+      if (!date || !description || !amount) continue;
 
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column (Standard Bank's common format)
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
+      const parsedAmount = this.parseAmount(amount);
+      if (parsedAmount === 0) continue;
+
+      const type = parsedAmount > 0 ? 'credit' : 'debit';
 
       transactions.push({
-        date: this.parseDate(dateStr),
+        date: this.parseDate(date),
         description: this.cleanDescription(description),
-        amount,
+        amount: Math.abs(parsedAmount),
         type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
+        balance: this.parseAmount(balance),
         originalData: row
       });
     }
 
-    console.log(`✅ Standard Bank parsed ${transactions.length} transactions`);
     return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
   }
 
   private parseAmount(value: any): number {
     if (!value || value === '') return 0;
     const str = String(value);
     
-    // Handle negative amounts in parentheses (Standard Bank format)
+    // Handle negative amounts in parentheses
     const isNegative = str.includes('(') && str.includes(')');
     const cleaned = str.replace(/[^\d.-]/g, '');
     const amount = parseFloat(cleaned) || 0;
@@ -563,21 +369,17 @@ class StandardBankParser implements BankParser {
   }
 
   private parseDate(dateStr: string): string {
-    // Standard Bank typically uses DD/MM/YYYY or YYYY/MM/DD
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
     
-    // Try different formats
     const parts = dateStr.split(/[\/\-]/);
     if (parts.length === 3) {
       const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
       if (p1.length === 4) {
         return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
       }
-      // Try DD/MM/YYYY
       return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
     
@@ -592,1066 +394,73 @@ class StandardBankParser implements BankParser {
 /**
  * Nedbank Statement Parser
  * Format: Date, Description, Debit, Credit, Balance
- * Enhanced with flexible column detection and single amount support
  */
 class NedbankParser implements BankParser {
   bankName = SouthAfricanBanks.NEDBANK;
 
   identify(headers: string[]): boolean {
     const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Nedbank patterns including single amount column formats
     const nedbankPatterns = [
-      // Traditional Nedbank formats with debit/credit columns
       'date.*description.*debit.*credit.*balance',
       'transaction date.*transaction description.*debit amount.*credit amount.*balance',
-      'posting date.*narrative.*debit.*credit.*running balance',
-      // Single amount column formats
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*running balance',
-      'posting date.*narrative.*amount.*balance',
-      'date.*details.*amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*narrative.*amount',
-      'posting date.*description.*amount'
+      'posting date.*narrative.*debit.*credit.*running balance'
     ];
     
-    // Check for Nedbank-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|narrative|transaction\s*description|details)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit|debit\s*amount|credit\s*amount)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Nedbank patterns
-    const matchesPattern = nedbankPatterns.some(pattern => 
+    return nedbankPatterns.some(pattern => 
       headerText.match(pattern.replace(/\*/g, '.*'))
     );
-    
-    // Additional Nedbank indicators
-    const hasNedbankTerms = headerText.includes('nedbank') || 
-                           headerText.includes('ned bank') ||
-                           headerText.includes('nedcor') ||
-                           headerText.includes('running balance');
-    
-    return matchesPattern || hasNedbankTerms;
   }
 
   parse(data: any[][]): StandardizedTransaction[] {
     const transactions: StandardizedTransaction[] = [];
     
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'narrative', 'transaction description', 'details']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Nedbank Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Nedbank: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Nedbank: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (!row || row.length === 0) continue;
+      if (!row || row.length < 5) continue;
 
-      const dateStr = row[dateCol];
-      const description = row[descCol];
+      const [date, description, debit, credit, balance] = row;
       
-      if (!dateStr || !description) continue;
+      if (!date || !description) continue;
 
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
+      const debitAmount = this.parseAmount(debit);
+      const creditAmount = this.parseAmount(credit);
       
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
+      if (debitAmount === 0 && creditAmount === 0) continue;
+
+      const amount = creditAmount > 0 ? creditAmount : -debitAmount;
+      const type = amount > 0 ? 'credit' : 'debit';
 
       transactions.push({
-        date: this.parseDate(dateStr),
+        date: this.parseDate(date),
         description: this.cleanDescription(description),
-        amount,
+        amount: Math.abs(amount),
         type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
+        balance: this.parseAmount(balance),
         originalData: row
       });
     }
 
-    console.log(`✅ Nedbank parsed ${transactions.length} transactions`);
     return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
   }
 
   private parseAmount(value: any): number {
     if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
+    const cleaned = String(value).replace(/[^\d.-]/g, '');
+    return parseFloat(cleaned) || 0;
   }
 
   private parseDate(dateStr: string): string {
-    // Nedbank typically uses DD/MM/YYYY or YYYY/MM/DD
     const date = new Date(dateStr);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
     }
     
-    // Try different formats
     const parts = dateStr.split(/[\/\-]/);
     if (parts.length === 3) {
       const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
       if (p1.length === 4) {
         return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
       }
-      // Try DD/MM/YYYY
-      return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
-    }
-    
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private cleanDescription(desc: string): string {
-    return String(desc).trim().replace(/\s+/g, ' ');
-  }
-}
-
-/**
- * Capitec Bank Statement Parser
- * Format: Date, Description, Amount, Balance (commonly single amount column)
- * Enhanced with flexible column detection and comprehensive pattern matching
- */
-class CapitecParser implements BankParser {
-  bankName = SouthAfricanBanks.CAPITEC;
-
-  identify(headers: string[]): boolean {
-    const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Capitec patterns
-    const capitecPatterns = [
-      // Single amount column formats (Capitec's common format)
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*available balance',
-      'date.*transaction description.*amount.*balance',
-      'posting date.*description.*amount.*running balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*description.*debit amount.*credit amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*details.*amount',
-      'posting date.*description.*amount'
-    ];
-    
-    // Check for Capitec-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|transaction\s*description|details|narrative)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Capitec patterns
-    const matchesPattern = capitecPatterns.some(pattern => 
-      headerText.match(pattern.replace(/\*/g, '.*'))
-    );
-    
-    // Additional Capitec indicators
-    const hasCapitecTerms = headerText.includes('capitec') || 
-                           headerText.includes('cap bank') ||
-                           headerText.includes('available balance');
-    
-    return matchesPattern || hasCapitecTerms;
-  }
-
-  parse(data: any[][]): StandardizedTransaction[] {
-    const transactions: StandardizedTransaction[] = [];
-    
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'transaction description', 'details', 'narrative']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'available balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Capitec Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Capitec: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Capitec: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-
-      const dateStr = row[dateCol];
-      const description = row[descCol];
-      
-      if (!dateStr || !description) continue;
-
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column (Capitec's common format)
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order') || descLower.includes('purchase'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
-
-      transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
-        type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        originalData: row
-      });
-    }
-
-    console.log(`✅ Capitec parsed ${transactions.length} transactions`);
-    return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
-  }
-
-  private parseAmount(value: any): number {
-    if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
-  }
-
-  private parseDate(dateStr: string): string {
-    // Capitec typically uses DD/MM/YYYY or YYYY/MM/DD
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Try different formats
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
-      if (p1.length === 4) {
-        return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-      }
-      // Try DD/MM/YYYY
-      return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
-    }
-    
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private cleanDescription(desc: string): string {
-    return String(desc).trim().replace(/\s+/g, ' ');
-  }
-}
-
-/**
- * Discovery Bank Statement Parser
- * Format: Date, Description, Amount, Balance
- * Enhanced with flexible column detection and comprehensive pattern matching
- */
-class DiscoveryBankParser implements BankParser {
-  bankName = SouthAfricanBanks.DISCOVERY_BANK;
-
-  identify(headers: string[]): boolean {
-    const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Discovery Bank patterns
-    const discoveryPatterns = [
-      // Single amount column formats
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*running balance',
-      'posting date.*transaction description.*amount.*balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*description.*debit amount.*credit amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*details.*amount',
-      'posting date.*description.*amount'
-    ];
-    
-    // Check for Discovery Bank-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|transaction\s*description|details|narrative)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Discovery Bank patterns
-    const matchesPattern = discoveryPatterns.some(pattern => 
-      headerText.match(pattern.replace(/\*/g, '.*'))
-    );
-    
-    // Additional Discovery Bank indicators
-    const hasDiscoveryTerms = headerText.includes('discovery') || 
-                             headerText.includes('discovery bank');
-    
-    return matchesPattern || hasDiscoveryTerms;
-  }
-
-  parse(data: any[][]): StandardizedTransaction[] {
-    const transactions: StandardizedTransaction[] = [];
-    
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'transaction description', 'details', 'narrative']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Discovery Bank Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Discovery Bank: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Discovery Bank: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-
-      const dateStr = row[dateCol];
-      const description = row[descCol];
-      
-      if (!dateStr || !description) continue;
-
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
-
-      transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
-        type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        originalData: row
-      });
-    }
-
-    console.log(`✅ Discovery Bank parsed ${transactions.length} transactions`);
-    return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
-  }
-
-  private parseAmount(value: any): number {
-    if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
-  }
-
-  private parseDate(dateStr: string): string {
-    // Discovery Bank typically uses DD/MM/YYYY or YYYY/MM/DD
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Try different formats
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
-      if (p1.length === 4) {
-        return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-      }
-      // Try DD/MM/YYYY
-      return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
-    }
-    
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private cleanDescription(desc: string): string {
-    return String(desc).trim().replace(/\s+/g, ' ');
-  }
-}
-
-/**
- * Tyme Bank Statement Parser
- * Format: Date, Description, Amount, Balance (modern digital bank format)
- * Enhanced with flexible column detection and comprehensive pattern matching
- */
-class TymeBankParser implements BankParser {
-  bankName = SouthAfricanBanks.TYME_BANK;
-
-  identify(headers: string[]): boolean {
-    const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Tyme Bank patterns
-    const tymePatterns = [
-      // Single amount column formats (Tyme's common format)
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*available balance',
-      'date.*transaction description.*amount.*balance',
-      'posting date.*description.*amount.*current balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*description.*debit amount.*credit amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*details.*amount',
-      'posting date.*description.*amount'
-    ];
-    
-    // Check for Tyme Bank-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|transaction\s*description|details|narrative)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Tyme Bank patterns
-    const matchesPattern = tymePatterns.some(pattern => 
-      headerText.match(pattern.replace(/\*/g, '.*'))
-    );
-    
-    // Additional Tyme Bank indicators
-    const hasTymeTerms = headerText.includes('tyme') || 
-                        headerText.includes('tyme bank') ||
-                        headerText.includes('current balance');
-    
-    return matchesPattern || hasTymeTerms;
-  }
-
-  parse(data: any[][]): StandardizedTransaction[] {
-    const transactions: StandardizedTransaction[] = [];
-    
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'transaction description', 'details', 'narrative']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'available balance', 'current balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Tyme Bank Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Tyme Bank: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Tyme Bank: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-
-      const dateStr = row[dateCol];
-      const description = row[descCol];
-      
-      if (!dateStr || !description) continue;
-
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column (Tyme's common format)
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order') || descLower.includes('purchase'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
-
-      transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
-        type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        originalData: row
-      });
-    }
-
-    console.log(`✅ Tyme Bank parsed ${transactions.length} transactions`);
-    return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
-  }
-
-  private parseAmount(value: any): number {
-    if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
-  }
-
-  private parseDate(dateStr: string): string {
-    // Tyme Bank typically uses DD/MM/YYYY or YYYY/MM/DD
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Try different formats
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
-      if (p1.length === 4) {
-        return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-      }
-      // Try DD/MM/YYYY
-      return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
-    }
-    
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private cleanDescription(desc: string): string {
-    return String(desc).trim().replace(/\s+/g, ' ');
-  }
-}
-
-/**
- * African Bank Statement Parser
- * Format: Date, Description, Amount, Balance
- * Enhanced with flexible column detection and comprehensive pattern matching
- */
-class AfricanBankParser implements BankParser {
-  bankName = SouthAfricanBanks.AFRICAN_BANK;
-
-  identify(headers: string[]): boolean {
-    const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced African Bank patterns
-    const africanBankPatterns = [
-      // Single amount column formats
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*running balance',
-      'posting date.*transaction description.*amount.*balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*description.*debit amount.*credit amount.*balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*details.*amount',
-      'posting date.*description.*amount'
-    ];
-    
-    // Check for African Bank-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|transaction\s*description|details|narrative)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against African Bank patterns
-    const matchesPattern = africanBankPatterns.some(pattern => 
-      headerText.match(pattern.replace(/\*/g, '.*'))
-    );
-    
-    // Additional African Bank indicators
-    const hasAfricanBankTerms = headerText.includes('african bank') || 
-                               headerText.includes('african') ||
-                               headerText.includes('abil');
-    
-    return matchesPattern || hasAfricanBankTerms;
-  }
-
-  parse(data: any[][]): StandardizedTransaction[] {
-    const transactions: StandardizedTransaction[] = [];
-    
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'transaction description', 'details', 'narrative']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 African Bank Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ African Bank: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ African Bank: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-
-      const dateStr = row[dateCol];
-      const description = row[descCol];
-      
-      if (!dateStr || !description) continue;
-
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
-
-      transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
-        type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        originalData: row
-      });
-    }
-
-    console.log(`✅ African Bank parsed ${transactions.length} transactions`);
-    return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
-  }
-
-  private parseAmount(value: any): number {
-    if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
-  }
-
-  private parseDate(dateStr: string): string {
-    // African Bank typically uses DD/MM/YYYY or YYYY/MM/DD
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Try different formats
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
-      if (p1.length === 4) {
-        return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-      }
-      // Try DD/MM/YYYY
-      return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
-    }
-    
-    return new Date().toISOString().split('T')[0];
-  }
-
-  private cleanDescription(desc: string): string {
-    return String(desc).trim().replace(/\s+/g, ' ');
-  }
-}
-
-/**
- * Investec Bank Statement Parser
- * Format: Date, Description, Amount, Balance
- * Enhanced with flexible column detection and comprehensive pattern matching
- */
-class InvestecParser implements BankParser {
-  bankName = SouthAfricanBanks.INVESTEC;
-
-  identify(headers: string[]): boolean {
-    const headerText = headers.join('|').toLowerCase();
-    
-    // Enhanced Investec patterns
-    const investecPatterns = [
-      // Single amount column formats
-      'date.*description.*amount.*balance',
-      'transaction date.*description.*amount.*running balance',
-      'posting date.*transaction description.*amount.*balance',
-      'date.*narrative.*amount.*balance',
-      // Traditional debit/credit column formats
-      'date.*description.*debit.*credit.*balance',
-      'transaction date.*description.*debit amount.*credit amount.*balance',
-      'date.*narrative.*debit.*credit.*running balance',
-      // Flexible patterns
-      'date.*description.*amount',
-      'date.*narrative.*amount',
-      'posting date.*description.*amount'
-    ];
-    
-    // Check for Investec-specific column names
-    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
-    const hasDescColumn = headers.some(h => /^(description|narrative|transaction\s*description|details)$/i.test(h.trim()));
-    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
-    
-    // Must have core transaction columns
-    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
-      return false;
-    }
-    
-    // Check against Investec patterns
-    const matchesPattern = investecPatterns.some(pattern => 
-      headerText.match(pattern.replace(/\*/g, '.*'))
-    );
-    
-    // Additional Investec indicators
-    const hasInvestecTerms = headerText.includes('investec') || 
-                            headerText.includes('inv bank') ||
-                            headerText.includes('private bank');
-    
-    return matchesPattern || hasInvestecTerms;
-  }
-
-  parse(data: any[][]): StandardizedTransaction[] {
-    const transactions: StandardizedTransaction[] = [];
-    
-    if (!data || data.length < 2) return transactions;
-    
-    const headers = data[0].map((h: string) => h.toLowerCase().trim());
-    
-    // Flexible column detection
-    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
-    const descCol = this.findColumn(headers, ['description', 'narrative', 'transaction description', 'details']);
-    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
-    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
-    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
-    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
-    
-    console.log(`🔍 Investec Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
-    
-    if (dateCol === -1 || descCol === -1) {
-      console.log('❌ Investec: Missing required columns (date or description)');
-      return transactions;
-    }
-    
-    // Must have either debit/credit columns OR amount column
-    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
-      console.log('❌ Investec: Missing amount columns (no debit/credit or amount column found)');
-      return transactions;
-    }
-    
-    // Skip header row
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
-      if (!row || row.length === 0) continue;
-
-      const dateStr = row[dateCol];
-      const description = row[descCol];
-      
-      if (!dateStr || !description) continue;
-
-      let amount = 0;
-      let type: 'credit' | 'debit' = 'debit';
-      
-      // Handle different amount column configurations
-      if (debitCol !== -1 && creditCol !== -1) {
-        // Traditional debit/credit columns
-        const debitAmount = this.parseAmount(row[debitCol]);
-        const creditAmount = this.parseAmount(row[creditCol]);
-        
-        if (debitAmount === 0 && creditAmount === 0) continue;
-        
-        amount = creditAmount > 0 ? creditAmount : debitAmount;
-        type = creditAmount > 0 ? 'credit' : 'debit';
-      } else if (amountCol !== -1) {
-        // Single amount column
-        const rawAmount = this.parseAmount(row[amountCol]);
-        if (rawAmount === 0) continue;
-        
-        amount = Math.abs(rawAmount);
-        type = rawAmount >= 0 ? 'credit' : 'debit';
-        
-        // Additional heuristics for determining debit/credit
-        const descLower = description.toLowerCase();
-        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
-          type = 'debit';
-        }
-      } else {
-        continue; // No amount data
-      }
-
-      transactions.push({
-        date: this.parseDate(dateStr),
-        description: this.cleanDescription(description),
-        amount,
-        type,
-        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
-        originalData: row
-      });
-    }
-
-    console.log(`✅ Investec parsed ${transactions.length} transactions`);
-    return transactions;
-  }
-  
-  private findColumn(headers: string[], candidates: string[]): number {
-    for (const candidate of candidates) {
-      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
-      if (index !== -1) return index;
-    }
-    return -1;
-  }
-
-  private parseAmount(value: any): number {
-    if (!value || value === '') return 0;
-    const str = String(value);
-    
-    // Handle negative amounts in parentheses
-    const isNegative = str.includes('(') && str.includes(')');
-    const cleaned = str.replace(/[^\d.-]/g, '');
-    const amount = parseFloat(cleaned) || 0;
-    
-    return isNegative ? -amount : amount;
-  }
-
-  private parseDate(dateStr: string): string {
-    // Investec typically uses DD/MM/YYYY or YYYY/MM/DD
-    const date = new Date(dateStr);
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split('T')[0];
-    }
-    
-    // Try different formats
-    const parts = dateStr.split(/[\/\-]/);
-    if (parts.length === 3) {
-      const [p1, p2, p3] = parts;
-      // Try YYYY/MM/DD first
-      if (p1.length === 4) {
-        return `${p1}-${p2.padStart(2, '0')}-${p3.padStart(2, '0')}`;
-      }
-      // Try DD/MM/YYYY
       return `${p3}-${p2.padStart(2, '0')}-${p1.padStart(2, '0')}`;
     }
     
@@ -1671,12 +480,7 @@ export class BankStatementParserService {
     new FNBParser(),
     new ABSAParser(),
     new StandardBankParser(),
-    new NedbankParser(),
-    new CapitecParser(),
-    new DiscoveryBankParser(),
-    new TymeBankParser(),
-    new AfricanBankParser(),
-    new InvestecParser()
+    new NedbankParser()
   ];
 
   /**
@@ -1843,42 +647,6 @@ export class BankStatementParserService {
       return SouthAfricanBanks.NEDBANK;
     }
     
-    // Capitec patterns
-    if (lowerFilename.includes('capitec') || 
-        lowerFilename.includes('cap_bank') ||
-        lowerFilename.includes('capbank')) {
-      return SouthAfricanBanks.CAPITEC;
-    }
-    
-    // Discovery Bank patterns
-    if (lowerFilename.includes('discovery') || 
-        lowerFilename.includes('discovery_bank') ||
-        lowerFilename.includes('discoverybank')) {
-      return SouthAfricanBanks.DISCOVERY_BANK;
-    }
-    
-    // Tyme Bank patterns
-    if (lowerFilename.includes('tyme') || 
-        lowerFilename.includes('tyme_bank') ||
-        lowerFilename.includes('tymebank')) {
-      return SouthAfricanBanks.TYME_BANK;
-    }
-    
-    // African Bank patterns
-    if (lowerFilename.includes('african_bank') || 
-        lowerFilename.includes('africanbank') ||
-        lowerFilename.includes('african') ||
-        lowerFilename.includes('abil')) {
-      return SouthAfricanBanks.AFRICAN_BANK;
-    }
-    
-    // Investec patterns
-    if (lowerFilename.includes('investec') || 
-        lowerFilename.includes('inv_bank') ||
-        lowerFilename.includes('invbank')) {
-      return SouthAfricanBanks.INVESTEC;
-    }
-    
     return null;
   }
 
@@ -1983,19 +751,10 @@ export class BankStatementParserService {
    */
   private async parsePDF(buffer: Buffer): Promise<any[][]> {
     try {
-      // Import pdf-parse with proper error handling
-      let pdfParse: any;
-      try {
-        pdfParse = require('pdf-parse');
-      } catch (importError) {
-        console.error('Failed to import pdf-parse:', importError);
-        throw new Error('PDF parsing library not available');
-      }
+      // Dynamically import pdf-parse to avoid module loading issues
+      const { default: pdfParse } = await import('pdf-parse');
       
-      const pdfData = await pdfParse(buffer, {
-        // Disable logging and internal file operations
-        max: 0, // Parse all pages
-      });
+      const pdfData = await pdfParse(buffer);
       const text = pdfData.text;
       
       // Try to identify bank from PDF text
