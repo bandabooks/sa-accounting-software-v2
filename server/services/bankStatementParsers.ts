@@ -684,6 +684,10 @@ export class BankStatementParserService {
         return this.parseExcel(buffer);
       case 'pdf':
         return await this.parsePDF(buffer);
+      case 'qif':
+        return this.parseQIF(buffer);
+      case 'ofx':
+        return this.parseOFX(buffer);
       default:
         throw new Error(`Unsupported file format: ${extension}`);
     }
@@ -1170,6 +1174,20 @@ export class BankStatementParserService {
     }
     
     return new Date().toISOString().split('T')[0];
+  }
+
+  /**
+   * Parse QIF (Quicken Interchange Format) files - Currently unsupported
+   */
+  private parseQIF(buffer: Buffer): any[][] {
+    throw new Error('QIF format is not yet supported. Please convert your file to CSV or Excel format, or contact support for QIF import assistance.');
+  }
+
+  /**
+   * Parse OFX (Open Financial Exchange) files - Currently unsupported  
+   */
+  private parseOFX(buffer: Buffer): any[][] {
+    throw new Error('OFX format is not yet supported. Please convert your file to CSV or Excel format, or contact support for OFX import assistance.');
   }
 
   /**
