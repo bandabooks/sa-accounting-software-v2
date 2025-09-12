@@ -536,10 +536,9 @@ export class BankStatementParserService {
   private async parsePDF(buffer: Buffer): Promise<any[][]> {
     try {
       // Dynamically import pdf-parse to avoid module loading issues
-      const pdfParse = await import('pdf-parse');
-      const pdfParseDefault = pdfParse.default || pdfParse;
+      const { default: pdfParse } = await import('pdf-parse');
       
-      const pdfData = await pdfParseDefault(buffer);
+      const pdfData = await pdfParse(buffer);
       const text = pdfData.text;
       
       // Try to identify bank from PDF text
