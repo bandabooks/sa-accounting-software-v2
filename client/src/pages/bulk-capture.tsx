@@ -148,7 +148,6 @@ const EnhancedBulkCapture = () => {
   // Bank import states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedBank, setSelectedBank] = useState<string>('First');
-  const [selectedFormat, setSelectedFormat] = useState<string>('auto-detect');
   const [isUploading, setIsUploading] = useState(false);
   const [bankImportBatches, setBankImportBatches] = useState<BankImportBatch[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
@@ -568,7 +567,6 @@ const EnhancedBulkCapture = () => {
       formData.append('file', selectedFile);
       formData.append('bankName', selectedBank);
       formData.append('bankAccountId', selectedBankAccount);
-      formData.append('formatType', selectedFormat);
 
       // Parse bank statement to get transactions
       const token = localStorage.getItem('authToken');
@@ -705,7 +703,7 @@ const EnhancedBulkCapture = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [selectedFile, selectedBank, selectedBankAccount, selectedFormat, toast, queryClient, quickDate, setActiveTab, setExpenseEntries, setIncomeEntries]);
+  }, [selectedFile, selectedBank, selectedBankAccount, toast, queryClient, quickDate, setActiveTab, setExpenseEntries, setIncomeEntries]);
 
   // Add more rows
   const addMoreRows = useCallback((count: number = 5) => {
@@ -1611,28 +1609,6 @@ const EnhancedBulkCapture = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="format-select" className="text-sm font-medium text-gray-700">
-                      Statement Format
-                    </Label>
-                    <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                      <SelectTrigger className="w-full" data-testid="select-format">
-                        <SelectValue placeholder="Select file format" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto-detect" data-testid="format-auto-detect">Auto-detect</SelectItem>
-                        <SelectItem value="csv" data-testid="format-csv">CSV</SelectItem>
-                        <SelectItem value="excel" data-testid="format-excel">Excel (.xlsx, .xls)</SelectItem>
-                        <SelectItem value="pdf" data-testid="format-pdf">PDF</SelectItem>
-                        <SelectItem value="qif" data-testid="format-qif">QIF</SelectItem>
-                        <SelectItem value="ofx" data-testid="format-ofx">OFX</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Choose a specific format if auto-detection fails
-                    </p>
                   </div>
 
                   <div>
