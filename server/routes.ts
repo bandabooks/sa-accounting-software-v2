@@ -1982,11 +1982,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📊 Dashboard period: ${fromDate.toISOString()} to ${toDate.toISOString()}, basis: ${basis}`);
 
-      // Get bank balance from actual bank accounts data (Chart of Accounts)
-      const bankAccounts = await storage.getBankAccountsFromChartOfAccounts(companyId);
+      // Get bank balance from actual bank accounts API (same as Banking Center)
+      const bankAccounts = await storage.getAllBankAccounts(companyId);
       const totalBankBalance = bankAccounts.reduce((sum, account) => sum + parseFloat(account.currentBalance || "0"), 0);
       
-      console.log(`💰 Bank balance calculation for company ${companyId}: Found ${bankAccounts.length} bank accounts, total: R${totalBankBalance.toFixed(2)}`);
+      console.log(`💰 Bank balance calculation for company ${companyId}: Found ${bankAccounts.length} bank accounts from Banking API, total: R${totalBankBalance.toFixed(2)}`);
       
       // Keep legacy method for comparison but use real bank account data as primary
       const legacyBankBalance = await storage.getBankBalance(companyId, asOfDate);
