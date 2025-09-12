@@ -404,7 +404,7 @@ export class BankStatementParserService {
     
     try {
       // Read file based on extension
-      const data = this.readFile(fileBuffer, filename);
+      const data = await this.readFile(fileBuffer, filename);
       
       if (!data || data.length === 0) {
         throw new Error('Empty or invalid file');
@@ -466,7 +466,7 @@ export class BankStatementParserService {
   /**
    * Read file based on extension
    */
-  private readFile(buffer: Buffer, filename: string): any[][] {
+  private async readFile(buffer: Buffer, filename: string): Promise<any[][]> {
     const extension = filename.split('.').pop()?.toLowerCase();
     
     switch (extension) {
@@ -475,6 +475,8 @@ export class BankStatementParserService {
       case 'xlsx':
       case 'xls':
         return this.parseExcel(buffer);
+      case 'pdf':
+        return await this.parsePDF(buffer);
       default:
         throw new Error(`Unsupported file format: ${extension}`);
     }
@@ -526,6 +528,326 @@ export class BankStatementParserService {
     }) as any[][];
     
     return data;
+  }
+
+  /**
+   * Parse PDF file - Extract transactions from SA bank statement PDFs
+   */
+  private async parsePDF(buffer: Buffer): Promise<any[][]> {
+    try {
+      // Dynamically import pdf-parse to avoid module loading issues
+      const pdfParse = await import('pdf-parse');
+      const pdfParseDefault = pdfParse.default || pdfParse;
+      
+      const pdfData = await pdfParseDefault(buffer);
+      const text = pdfData.text;
+      
+      // Try to identify bank from PDF text
+      const bankType = this.identifyBankFromPDFText(text);
+      
+      // Parse based on identified bank format
+      switch (bankType) {
+        case SouthAfricanBanks.FNB:
+          return this.parseFNBPDF(text);
+        case SouthAfricanBanks.ABSA:
+          return this.parseABSAPDF(text);
+        case SouthAfricanBanks.STANDARD_BANK:
+          return this.parseStandardBankPDF(text);
+        case SouthAfricanBanks.NEDBANK:
+          return this.parseNedbankPDF(text);
+        default:
+          return this.parseGenericPDF(text);
+      }
+    } catch (error) {
+      console.error('PDF parsing error:', error);
+      throw new Error(`Failed to parse PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Identify bank from PDF text content
+   */
+  private identifyBankFromPDFText(text: string): SouthAfricanBanks | null {
+    const lowerText = text.toLowerCase();
+    
+    // FNB patterns
+    if (lowerText.includes('first national bank') || 
+        lowerText.includes('fnb') || 
+        lowerText.includes('rand merchant bank')) {
+      return SouthAfricanBanks.FNB;
+    }
+    
+    // ABSA patterns
+    if (lowerText.includes('absa bank') || 
+        lowerText.includes('amalgamated banks') ||
+        lowerText.includes('absa') && lowerText.includes('statement')) {
+      return SouthAfricanBanks.ABSA;
+    }
+    
+    // Standard Bank patterns
+    if (lowerText.includes('standard bank') || 
+        lowerText.includes('stanbic') ||
+        lowerText.includes('the standard bank')) {
+      return SouthAfricanBanks.STANDARD_BANK;
+    }
+    
+    // Nedbank patterns
+    if (lowerText.includes('nedbank') || 
+        lowerText.includes('nedcor') ||
+        lowerText.includes('ned bank')) {
+      return SouthAfricanBanks.NEDBANK;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Parse FNB PDF statement format
+   */
+  private parseFNBPDF(text: string): any[][] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const transactions: any[][] = [];
+    
+    // Common FNB PDF headers
+    const headers = ['Date', 'Description', 'Debit', 'Credit', 'Balance'];
+    transactions.push(headers);
+    
+    // FNB transaction pattern: DD/MM/YYYY description amount balance
+    const fnbPattern = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([\d\s,.-]+)\s+([\d\s,.-]+)$/;
+    const fnbSimplePattern = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([\d\s,.-]+)$/;
+    
+    for (const line of lines) {
+      const match = fnbPattern.exec(line.trim()) || fnbSimplePattern.exec(line.trim());
+      
+      if (match) {
+        const [, date, description, ...amounts] = match;
+        
+        if (amounts.length >= 2) {
+          // Has separate debit/credit columns
+          const [amount1, amount2] = amounts;
+          const isDebit = this.isDebitAmount(amount1);
+          transactions.push([
+            date,
+            description.trim(),
+            isDebit ? this.cleanPDFAmount(amount1) : '',
+            isDebit ? '' : this.cleanPDFAmount(amount1),
+            this.cleanPDFAmount(amount2)
+          ]);
+        } else if (amounts.length === 1) {
+          // Single amount - determine debit/credit from sign or context
+          const amount = amounts[0];
+          const isDebit = this.isDebitAmount(amount) || description.toLowerCase().includes('payment') || 
+                          description.toLowerCase().includes('withdrawal') || description.toLowerCase().includes('debit');
+          transactions.push([
+            date,
+            description.trim(),
+            isDebit ? this.cleanPDFAmount(amount) : '',
+            isDebit ? '' : this.cleanPDFAmount(amount),
+            ''
+          ]);
+        }
+      }
+    }
+    
+    return transactions;
+  }
+
+  /**
+   * Parse ABSA PDF statement format
+   */
+  private parseABSAPDF(text: string): any[][] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const transactions: any[][] = [];
+    
+    const headers = ['Date', 'Transaction Details', 'Value Date', 'Debit', 'Credit', 'Balance'];
+    transactions.push(headers);
+    
+    // ABSA pattern: DD/MM/YYYY description value_date debit credit balance
+    const absaPattern = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+(\d{2}\/\d{2}\/\d{4})?\s*([\d\s,.-]+)\s*([\d\s,.-]+)?\s*([\d\s,.-]+)?$/;
+    
+    for (const line of lines) {
+      const match = absaPattern.exec(line.trim());
+      
+      if (match) {
+        const [, date, description, valueDate, amount1, amount2, amount3] = match;
+        
+        // ABSA typically has: date, description, [value_date], amount, balance
+        if (amount3) {
+          // Full format with separate debit/credit
+          const isDebit = this.isDebitAmount(amount1);
+          transactions.push([
+            date,
+            description.trim(),
+            valueDate || '',
+            isDebit ? this.cleanPDFAmount(amount1) : '',
+            isDebit ? '' : this.cleanPDFAmount(amount1),
+            this.cleanPDFAmount(amount3)
+          ]);
+        } else if (amount2) {
+          // Format: date, description, amount, balance
+          const isDebit = this.isDebitAmount(amount1) || description.toLowerCase().includes('debit');
+          transactions.push([
+            date,
+            description.trim(),
+            '',
+            isDebit ? this.cleanPDFAmount(amount1) : '',
+            isDebit ? '' : this.cleanPDFAmount(amount1),
+            this.cleanPDFAmount(amount2)
+          ]);
+        }
+      }
+    }
+    
+    return transactions;
+  }
+
+  /**
+   * Parse Standard Bank PDF statement format
+   */
+  private parseStandardBankPDF(text: string): any[][] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const transactions: any[][] = [];
+    
+    const headers = ['Date', 'Description', 'Amount', 'Balance'];
+    transactions.push(headers);
+    
+    // Standard Bank pattern: DD/MM/YYYY description amount balance
+    const sbPattern = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([\d\s,.-]+)\s+([\d\s,.-]+)$/;
+    
+    for (const line of lines) {
+      const match = sbPattern.exec(line.trim());
+      
+      if (match) {
+        const [, date, description, amount, balance] = match;
+        
+        transactions.push([
+          date,
+          description.trim(),
+          this.cleanPDFAmount(amount),
+          this.cleanPDFAmount(balance)
+        ]);
+      }
+    }
+    
+    return transactions;
+  }
+
+  /**
+   * Parse Nedbank PDF statement format
+   */
+  private parseNedbankPDF(text: string): any[][] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const transactions: any[][] = [];
+    
+    const headers = ['Date', 'Description', 'Debit', 'Credit', 'Balance'];
+    transactions.push(headers);
+    
+    // Nedbank pattern: DD/MM/YYYY description debit credit balance
+    const nedbankPattern = /(\d{2}\/\d{2}\/\d{4})\s+(.+?)\s+([\d\s,.-]+)?\s*([\d\s,.-]+)?\s*([\d\s,.-]+)$/;
+    
+    for (const line of lines) {
+      const match = nedbankPattern.exec(line.trim());
+      
+      if (match) {
+        const [, date, description, amount1, amount2, balance] = match;
+        
+        if (amount2 && balance) {
+          // Full format: date, description, debit, credit, balance
+          transactions.push([
+            date,
+            description.trim(),
+            this.cleanPDFAmount(amount1 || ''),
+            this.cleanPDFAmount(amount2),
+            this.cleanPDFAmount(balance)
+          ]);
+        } else if (amount1 && amount2) {
+          // Format: date, description, amount, balance
+          const isDebit = this.isDebitAmount(amount1) || description.toLowerCase().includes('debit');
+          transactions.push([
+            date,
+            description.trim(),
+            isDebit ? this.cleanPDFAmount(amount1) : '',
+            isDebit ? '' : this.cleanPDFAmount(amount1),
+            this.cleanPDFAmount(amount2)
+          ]);
+        }
+      }
+    }
+    
+    return transactions;
+  }
+
+  /**
+   * Parse generic PDF format when bank cannot be identified
+   */
+  private parseGenericPDF(text: string): any[][] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const transactions: any[][] = [];
+    
+    // Look for table headers in the text
+    const headerLine = lines.find(line => {
+      const lower = line.toLowerCase();
+      return (lower.includes('date') && lower.includes('description')) ||
+             (lower.includes('date') && lower.includes('amount')) ||
+             (lower.includes('transaction') && lower.includes('date'));
+    });
+    
+    if (headerLine) {
+      // Extract headers from found line
+      const headers = headerLine.split(/\s{2,}/).filter(h => h.trim()); // Split on 2+ spaces
+      transactions.push(headers);
+    } else {
+      // Default headers
+      transactions.push(['Date', 'Description', 'Amount', 'Balance']);
+    }
+    
+    // Generic transaction pattern: date (various formats) followed by text and numbers
+    const genericPattern = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(.+?)\s+([\d\s,.-]+)(?:\s+([\d\s,.-]+))?$/;
+    
+    for (const line of lines) {
+      const match = genericPattern.exec(line.trim());
+      
+      if (match) {
+        const [, date, description, amount1, amount2] = match;
+        
+        if (amount2) {
+          // Two amounts - likely amount and balance
+          transactions.push([date, description.trim(), this.cleanPDFAmount(amount1), this.cleanPDFAmount(amount2)]);
+        } else {
+          // Single amount
+          transactions.push([date, description.trim(), this.cleanPDFAmount(amount1), '']);
+        }
+      }
+    }
+    
+    return transactions;
+  }
+
+  /**
+   * Clean and normalize amount from PDF text
+   */
+  private cleanPDFAmount(amount: string): string {
+    if (!amount) return '';
+    
+    // Remove extra spaces and clean up formatting
+    return amount
+      .replace(/\s+/g, '') // Remove all spaces
+      .replace(/,/g, '') // Remove commas
+      .replace(/[^\d.-]/g, '') // Keep only digits, dots, and minus signs
+      .trim();
+  }
+
+  /**
+   * Determine if an amount represents a debit (negative transaction)
+   */
+  private isDebitAmount(amount: string): boolean {
+    if (!amount) return false;
+    
+    // Check for negative indicators
+    return amount.includes('-') || 
+           amount.includes('(') || 
+           amount.includes('DR') || 
+           amount.includes('db');
   }
 
   /**
