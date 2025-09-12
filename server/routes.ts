@@ -3213,10 +3213,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Payment routes
-  app.get("/api/payments", async (req, res) => {
+  // Payment routes - Company Isolated
+  app.get("/api/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const payments = await storage.getAllPayments();
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const payments = await storage.getPaymentsByCompany(companyId);
       res.json(payments);
     } catch (error) {
       console.error("Error fetching payments:", error);
@@ -3224,11 +3228,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/invoices/:id/payments", async (req, res) => {
+  app.get("/api/invoices/:id/payments", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const invoiceId = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
       const invoice = await storage.getInvoice(invoiceId);
-      if (!invoice) {
+      // Verify invoice belongs to user's company
+      if (!invoice || invoice.companyId !== companyId) {
         return res.status(404).json({ message: "Invoice not found" });
       }
       
@@ -3539,9 +3549,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/proforma-invoices/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
       const proformaInvoice = await storage.getProformaInvoice(id);
       
-      if (!proformaInvoice) {
+      // Verify proforma invoice belongs to user's company
+      if (!proformaInvoice || proformaInvoice.companyId !== companyId) {
         return res.status(404).json({ message: "Proforma invoice not found" });
       }
       
@@ -5482,11 +5498,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Purchase Order Management
-  // Suppliers with search
-  app.get("/api/suppliers", async (req, res) => {
+  // Suppliers with search - Company Isolated
+  app.get("/api/suppliers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { search } = req.query;
-      const suppliers = await storage.getAllSuppliers();
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      const allSuppliers = await storage.getAllSuppliers();
+      const suppliers = allSuppliers.filter(supplier => supplier.companyId === companyId);
       
       if (search && typeof search === 'string') {
         const filteredSuppliers = suppliers.filter(supplier => 
@@ -5504,13 +5525,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/suppliers/:id", async (req, res) => {
+  app.get("/api/suppliers/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const supplier = await storage.getSupplier(id);
-      if (!supplier) {
+      
+      // Verify supplier belongs to user's company
+      if (!supplier || supplier.companyId !== companyId) {
         return res.status(404).json({ message: "Supplier not found" });
       }
+      
       res.json(supplier);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch supplier" });
