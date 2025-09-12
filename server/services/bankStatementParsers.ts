@@ -61,48 +61,135 @@ class FNBParser implements BankParser {
 
   identify(headers: string[]): boolean {
     const headerText = headers.join('|').toLowerCase();
+    
+    // Enhanced FNB patterns including single amount column formats
     const fnbPatterns = [
+      // Traditional FNB formats with debit/credit columns
       'date.*description.*debit.*credit.*balance',
       'transaction date.*description.*amount.*balance',
-      'date.*narrative.*debit.*credit.*running balance'
+      'date.*narrative.*debit.*credit.*running balance',
+      // Single amount column formats
+      'date.*description.*amount.*balance',
+      'date.*transaction description.*amount.*balance',
+      'transaction date.*transaction description.*amount.*balance',
+      'date.*narrative.*amount.*running balance',
+      // Flexible patterns
+      'date.*description.*amount',
+      'date.*transaction.*amount',
+      'posting date.*description.*amount'
     ];
     
-    return fnbPatterns.some(pattern => 
+    // Check for FNB-specific column names
+    const hasDateColumn = headers.some(h => /^(date|transaction\s*date|posting\s*date)$/i.test(h.trim()));
+    const hasDescColumn = headers.some(h => /^(description|narrative|transaction\s*description|details)$/i.test(h.trim()));
+    const hasAmountColumn = headers.some(h => /^(amount|transaction\s*amount|debit|credit)$/i.test(h.trim()));
+    
+    // Must have core transaction columns
+    if (!hasDateColumn || !hasDescColumn || !hasAmountColumn) {
+      return false;
+    }
+    
+    // Check against FNB patterns
+    const matchesPattern = fnbPatterns.some(pattern => 
       headerText.match(pattern.replace(/\*/g, '.*'))
     );
+    
+    // Additional FNB indicators
+    const hasFNBTerms = headerText.includes('fnb') || 
+                       headerText.includes('first national') ||
+                       headerText.includes('rand merchant');
+    
+    return matchesPattern || hasFNBTerms;
   }
 
   parse(data: any[][]): StandardizedTransaction[] {
     const transactions: StandardizedTransaction[] = [];
     
+    if (!data || data.length < 2) return transactions;
+    
+    const headers = data[0].map((h: string) => h.toLowerCase().trim());
+    
+    // Flexible column detection
+    const dateCol = this.findColumn(headers, ['date', 'transaction date', 'posting date']);
+    const descCol = this.findColumn(headers, ['description', 'narrative', 'transaction description', 'details']);
+    const debitCol = this.findColumn(headers, ['debit', 'debit amount']);
+    const creditCol = this.findColumn(headers, ['credit', 'credit amount']);
+    const amountCol = this.findColumn(headers, ['amount', 'transaction amount']);
+    const balanceCol = this.findColumn(headers, ['balance', 'running balance', 'account balance']);
+    
+    console.log(`🔍 FNB Column mapping: date=${dateCol}, desc=${descCol}, debit=${debitCol}, credit=${creditCol}, amount=${amountCol}, balance=${balanceCol}`);
+    
+    if (dateCol === -1 || descCol === -1) {
+      console.log('❌ FNB: Missing required columns (date or description)');
+      return transactions;
+    }
+    
+    // Must have either debit/credit columns OR amount column
+    if (debitCol === -1 && creditCol === -1 && amountCol === -1) {
+      console.log('❌ FNB: Missing amount columns (no debit/credit or amount column found)');
+      return transactions;
+    }
+    
     // Skip header row
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (!row || row.length < 4) continue;
+      if (!row || row.length === 0) continue;
 
-      const [dateStr, description, debit, credit, balance] = row;
+      const dateStr = row[dateCol];
+      const description = row[descCol];
       
       if (!dateStr || !description) continue;
 
-      const debitAmount = this.parseAmount(debit);
-      const creditAmount = this.parseAmount(credit);
+      let amount = 0;
+      let type: 'credit' | 'debit' = 'debit';
       
-      if (debitAmount === 0 && creditAmount === 0) continue;
-
-      const amount = creditAmount > 0 ? creditAmount : -debitAmount;
-      const type = amount > 0 ? 'credit' : 'debit';
+      // Handle different amount column configurations
+      if (debitCol !== -1 && creditCol !== -1) {
+        // Traditional debit/credit columns
+        const debitAmount = this.parseAmount(row[debitCol]);
+        const creditAmount = this.parseAmount(row[creditCol]);
+        
+        if (debitAmount === 0 && creditAmount === 0) continue;
+        
+        amount = creditAmount > 0 ? creditAmount : debitAmount;
+        type = creditAmount > 0 ? 'credit' : 'debit';
+      } else if (amountCol !== -1) {
+        // Single amount column
+        const rawAmount = this.parseAmount(row[amountCol]);
+        if (rawAmount === 0) continue;
+        
+        amount = Math.abs(rawAmount);
+        type = rawAmount >= 0 ? 'credit' : 'debit';
+        
+        // Additional heuristics for determining debit/credit
+        const descLower = description.toLowerCase();
+        if (rawAmount > 0 && (descLower.includes('payment') || descLower.includes('withdrawal') || descLower.includes('debit order'))) {
+          type = 'debit';
+        }
+      } else {
+        continue; // No amount data
+      }
 
       transactions.push({
         date: this.parseDate(dateStr),
         description: this.cleanDescription(description),
-        amount: Math.abs(amount),
+        amount,
         type,
-        balance: this.parseAmount(balance),
+        balance: balanceCol !== -1 ? this.parseAmount(row[balanceCol]) : undefined,
         originalData: row
       });
     }
 
+    console.log(`✅ FNB parsed ${transactions.length} transactions`);
     return transactions;
+  }
+  
+  private findColumn(headers: string[], candidates: string[]): number {
+    for (const candidate of candidates) {
+      const index = headers.findIndex(h => h.includes(candidate.toLowerCase()));
+      if (index !== -1) return index;
+    }
+    return -1;
   }
 
   private parseAmount(value: any): number {
@@ -410,19 +497,35 @@ export class BankStatementParserService {
         throw new Error('Empty or invalid file');
       }
 
-      // Get headers for bank identification
-      const headers = data[0] || [];
-      const parser = this.identifyBank(headers, data[1]);
+      // Smart header detection - scan first 10 rows to find real headers
+      const { headerRow, headerIndex } = this.findHeaderRow(data);
+      
+      if (!headerRow) {
+        errors.push('Could not find valid header row in first 10 rows');
+        return this.parseGenericStatement(data, errors);
+      }
+
+      console.log(`📋 Found headers at row ${headerIndex}:`, headerRow);
+
+      // Normalize data to start from header row
+      const normalizedData = data.slice(headerIndex);
+      
+      // Get filename hint for bank detection
+      const filenameHint = this.getFilenameHint(filename);
+      console.log(`📁 Filename hint: ${filenameHint || 'none'}`);
+      
+      // Get headers for bank identification with filename bias
+      const parser = this.identifyBank(headerRow, normalizedData[1], filenameHint || undefined);
       
       if (!parser) {
         errors.push('Could not identify bank format. Trying generic parsing...');
-        return this.parseGenericStatement(data, errors);
+        return this.parseGenericStatement(normalizedData, errors);
       }
 
       console.log(`🏦 Detected bank: ${parser.bankName}`);
 
       // Parse transactions
-      const transactions = parser.parse(data);
+      const transactions = parser.parse(normalizedData);
       
       // Calculate metadata
       const metadata = this.calculateMetadata(transactions);
@@ -452,15 +555,119 @@ export class BankStatementParserService {
   }
 
   /**
-   * Identify bank from statement format
+   * Identify bank from statement format with filename hinting
    */
-  private identifyBank(headers: string[], firstDataRow?: any[]): BankParser | null {
+  private identifyBank(headers: string[], firstDataRow?: any[], filenameHint?: SouthAfricanBanks): BankParser | null {
+    // If we have a filename hint, try that parser first
+    if (filenameHint) {
+      const hintedParser = this.parsers.find(p => p.bankName === filenameHint);
+      if (hintedParser && hintedParser.identify(headers, firstDataRow)) {
+        console.log(`✅ Filename hint confirmed: ${filenameHint}`);
+        return hintedParser;
+      }
+      console.log(`❌ Filename hint failed for: ${filenameHint}`);
+    }
+    
+    // Try all parsers in order
     for (const parser of this.parsers) {
       if (parser.identify(headers, firstDataRow)) {
         return parser;
       }
     }
     return null;
+  }
+
+  /**
+   * Find the actual header row by scanning first 10 rows
+   */
+  private findHeaderRow(data: any[][]): { headerRow: string[], headerIndex: number } | { headerRow: null, headerIndex: -1 } {
+    for (let i = 0; i < Math.min(10, data.length); i++) {
+      const row = data[i];
+      if (!row || row.length === 0) continue;
+      
+      const normalizedRow = row.map((cell: any) => String(cell || '').toLowerCase().trim());
+      
+      // Check if this row looks like headers
+      const hasDateColumn = normalizedRow.some(cell => 
+        /^(date|transaction\s*date|posting\s*date|trans\s*date)$/.test(cell)
+      );
+      
+      const hasDescColumn = normalizedRow.some(cell => 
+        /^(description|narrative|transaction\s*description|details|trans\s*desc)$/.test(cell)
+      );
+      
+      const hasAmountColumn = normalizedRow.some(cell => 
+        /^(amount|transaction\s*amount|debit|credit|value)$/.test(cell)
+      );
+      
+      // Must have at least date and description or amount columns
+      if (hasDateColumn && (hasDescColumn || hasAmountColumn)) {
+        console.log(`🎯 Found header row at index ${i}:`, normalizedRow);
+        return { headerRow: row, headerIndex: i };
+      }
+    }
+    
+    // Fallback to first row if no clear headers found
+    console.log('⚠️ No clear header row found, using first row as fallback');
+    return data.length > 0 ? { headerRow: data[0], headerIndex: 0 } : { headerRow: null, headerIndex: -1 };
+  }
+
+  /**
+   * Extract bank hint from filename
+   */
+  private getFilenameHint(filename: string): SouthAfricanBanks | null {
+    const lowerFilename = filename.toLowerCase();
+    
+    // FNB patterns
+    if (lowerFilename.includes('fnb') || 
+        lowerFilename.includes('first_national') ||
+        lowerFilename.includes('firstnational') ||
+        lowerFilename.includes('rand_merchant') ||
+        lowerFilename.includes('randmerchant')) {
+      return SouthAfricanBanks.FNB;
+    }
+    
+    // ABSA patterns
+    if (lowerFilename.includes('absa') || 
+        lowerFilename.includes('amalgamated')) {
+      return SouthAfricanBanks.ABSA;
+    }
+    
+    // Standard Bank patterns
+    if (lowerFilename.includes('standard_bank') || 
+        lowerFilename.includes('standardbank') ||
+        lowerFilename.includes('stanbic')) {
+      return SouthAfricanBanks.STANDARD_BANK;
+    }
+    
+    // Nedbank patterns
+    if (lowerFilename.includes('nedbank') || 
+        lowerFilename.includes('ned_bank') ||
+        lowerFilename.includes('nedcor')) {
+      return SouthAfricanBanks.NEDBANK;
+    }
+    
+    return null;
+  }
+
+  /**
+   * Normalize header values by removing BOM, trimming, and cleaning
+   */
+  private normalizeHeaderValue(value: string, isHeader: boolean): string {
+    let normalized = String(value || '').trim();
+    
+    // Remove BOM character if present
+    if (normalized.charCodeAt(0) === 0xFEFF) {
+      normalized = normalized.slice(1);
+    }
+    
+    // Additional header normalization
+    if (isHeader) {
+      // Remove extra quotes and normalize spacing
+      normalized = normalized.replace(/^["']+|["']+$/g, '').replace(/\s+/g, ' ').trim();
+    }
+    
+    return normalized;
   }
 
   /**
@@ -483,13 +690,18 @@ export class BankStatementParserService {
   }
 
   /**
-   * Parse CSV file
+   * Parse CSV file with header normalization
    */
   private parseCSV(buffer: Buffer): any[][] {
-    const text = buffer.toString('utf-8');
+    // Remove BOM if present and normalize encoding
+    let text = buffer.toString('utf-8');
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1); // Remove BOM
+    }
+    
     const lines = text.split('\n').filter(line => line.trim());
     
-    return lines.map(line => {
+    return lines.map((line, index) => {
       // Handle quoted CSV values
       const values = [];
       let current = '';
@@ -501,14 +713,14 @@ export class BankStatementParserService {
         if (char === '"') {
           inQuotes = !inQuotes;
         } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
+          values.push(this.normalizeHeaderValue(current, index === 0));
           current = '';
         } else {
           current += char;
         }
       }
       
-      values.push(current.trim());
+      values.push(this.normalizeHeaderValue(current, index === 0));
       return values;
     });
   }
