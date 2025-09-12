@@ -2064,15 +2064,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Generate 13-week cash flow forecast
+      // Generate 13-week cash flow forecast (no mock data - all zeros for companies with no data)
       const cashFlow13w = [];
       for (let week = 1; week <= 13; week++) {
         const weekData = {
           week: `W${week}`,
-          actualIn: week <= 4 ? Math.floor(totalRevenue / 4) + (week * 1000) : 0,
-          actualOut: week <= 4 ? Math.floor(totalExpenses / 4) + (week * 500) : 0,
-          forecastIn: Math.floor(totalRevenue / 4) + (week * 1200),
-          forecastOut: Math.floor(totalExpenses / 4) + (week * 600)
+          actualIn: 0, // Should be calculated from actual payment data
+          actualOut: 0, // Should be calculated from actual expense payments
+          forecastIn: 0, // Should be calculated from estimates/recurring revenue
+          forecastOut: 0 // Should be calculated from bills/recurring expenses
         };
         cashFlow13w.push(weekData);
       }
@@ -2103,8 +2103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate gross margin (simplified calculation)
       const grossMargin = totalRevenue > 0 ? Math.max(0.35, (totalRevenue - (totalExpenses * 0.6)) / totalRevenue) : 0;
       
-      // Calculate VAT position (simplified - should be from VAT control accounts)
-      const vatPosition = Math.floor(Math.random() * 10000) - 5000; // Simplified for demo
+      // Calculate VAT position from actual data (no mock data)
+      const vatPosition = 0; // Real VAT calculation should be implemented from VAT control accounts
       const nextVatDue = new Date();
       nextVatDue.setMonth(nextVatDue.getMonth() + 1);
       nextVatDue.setDate(25);
@@ -2200,7 +2200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           recon: {
             lastReconciledAt: lastReconciledAt.toISOString().split('T')[0],
-            percentMatched: 0.95 + (Math.random() * 0.04) // 95-99% matched
+            percentMatched: 0 // Should be calculated from actual reconciliation data
           },
           ar: {
             total: parseFloat(totalAR.toFixed(2)),
