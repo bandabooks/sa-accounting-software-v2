@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { IStorage } from './storage';
+import type { AiMatcherStorage } from './storage-adapters/ai-matcher-storage';
 import { duplicateDetectionService, type DuplicateMatch, type TransactionForDuplicateCheck } from './services/duplicateDetectionService';
 
 /*
@@ -103,9 +103,9 @@ export class AITransactionMatcher {
   
   private userCorrections: UserCorrection[] = [];
   private historicalPatterns: HistoricalPattern[] = [];
-  private storage: IStorage;
+  private storage: AiMatcherStorage;
 
-  constructor(storage: IStorage) {
+  constructor(storage: AiMatcherStorage) {
     this.storage = storage;
   }
   

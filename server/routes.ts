@@ -78,9 +78,14 @@ import { contractService } from "./contracts";
 import { registerEmployeeRoutes } from "./routes/employees";
 import { sarsService } from "./sarsService";
 import { SAReconciliationService } from "./services/saReconciliationService";
+import { ReconciliationStorageAdapter, AiMatcherStorageAdapter } from "./storage-adapters";
 
-// Create SAReconciliationService instance with proper storage injection
-const saReconciliationService = new SAReconciliationService(storage);
+// Create storage adapters for services 
+const reconciliationStorage = new ReconciliationStorageAdapter(storage);
+const aiMatcherStorage = new AiMatcherStorageAdapter(storage);
+
+// Create SAReconciliationService instance with storage adapter
+const saReconciliationService = new SAReconciliationService(reconciliationStorage);
 
 import { 
   insertCustomerSchema, 
@@ -247,6 +252,7 @@ import {
   purchaseOrders,
   payments
 } from "@shared/schema";
+import { normalizeInvoice, normalizeEstimate, normalizeRole, safeParseDate } from "./dto-mappers";
 
 // Validation middleware
 function validateRequest(schema: { body?: z.ZodSchema }) {
@@ -362,8 +368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  // Initialize AI transaction matcher with storage dependency
-  const aiMatcher = createAiMatcher(storage);
+  // Initialize AI transaction matcher with storage adapter
+  const aiMatcher = createAiMatcher(aiMatcherStorage);
 
   // Initialize PayFast service
   let payFastService: any;
@@ -1645,7 +1651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ${permissions.map((perm: any) => `
                 <tr>
                   <td>${perm.roleId || 'N/A'}</td>
-                  <td>${roles.find((r: any) => r.id === perm.roleId)?.displayName || roles.find((r: any) => r.id === perm.roleId)?.name || 'Unknown Role'}</td>
+                  <td>${normalizeRole(roles.find((r: any) => r.id === perm.roleId) || {id: 0, name: 'Unknown Role'}).displayName}</td>
                   <td>${perm.moduleId || perm.permission?.split(':')[0] || 'General'}</td>
                   <td>${perm.permissionType || perm.permission?.split(':')[1] || 'Unknown'}</td>
                   <td><span style="color: ${perm.enabled ? 'green' : 'red'};">${perm.enabled ? '✅ Enabled' : '❌ Disabled'}</span></td>
@@ -1935,9 +1941,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
-          gte(invoices.invoiceDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+          gte(invoices.issueDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
         ))
-        .orderBy(desc(invoices.invoiceDate))
+        .orderBy(desc(invoices.issueDate))
         .limit(2);
 
       recentInvoices.forEach(invoice => {
@@ -1946,7 +1952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: 'Invoice Created',
           description: `${invoice.customer} - Invoice #${invoice.id}`,
           amount: invoice.total,
-          timeAgo: getTimeAgo(invoice.invoiceDate),
+          timeAgo: getTimeAgo(invoice.issueDate),
           link: `/invoices?search=${invoice.customer}`
         });
       });
@@ -2000,7 +2006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get revenue and expenses for the period - simplified calculation from invoices
       const periodInvoices = allInvoices.filter(inv => {
-        const invDate = new Date(inv.invoiceDate);
+        const invDate = safeParseDate(normalizeInvoice(inv).invoiceDate);
         return invDate >= fromDate && invDate <= toDate;
       });
       const totalRevenue = periodInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
@@ -2028,7 +2034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monthEnd.setHours(23, 59, 59, 999);
 
         const monthInvoices = allInvoices.filter(inv => {
-          const invDate = new Date(inv.invoiceDate);
+          const invDate = safeParseDate(normalizeInvoice(inv).invoiceDate);
           return invDate >= monthStart && invDate <= monthEnd;
         });
         
@@ -8610,14 +8616,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId || !userId) return res.status(400).json({ message: 'User authentication required' });
       if (!req.file) return res.status(400).json({ message: 'No bank statement file uploaded' });
 
-      const { bankAccountId } = req.body;
+      const { bankAccountId, formatType } = req.body;
       if (!bankAccountId) return res.status(400).json({ message: 'Bank account selection required' });
 
       filePath = req.file.path;
       const fileName = req.file.originalname;
       const fileBuffer = fs.readFileSync(filePath);
 
-      const parseResult = await bankStatementParser.parseStatement(fileBuffer, fileName);
+      // Use manual format if specified, otherwise auto-detect
+      const parserOptions = formatType && formatType !== 'auto-detect' 
+        ? { forcedFormat: formatType }
+        : {};
+
+      const parseResult = await bankStatementParser.parseStatement(fileBuffer, fileName, parserOptions);
 
       const transactions = (parseResult?.transactions ?? []).map((t: any, index: number) => ({
         id: `temp_${Date.now()}_${index}`,
@@ -8631,20 +8642,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       })).filter((t: any) => t.date && t.description && typeof t.amount === 'number');
 
       if (transactions.length === 0) {
-        console.warn('Statement parsing returned 0 transactions', { fileName, bank: parseResult?.bankName ?? 'Unknown', errors: parseResult?.errors ?? [] });
+        console.warn('Statement parsing returned 0 transactions', { fileName, bank: parseResult?.bankName ?? 'Unknown', errors: parseResult?.errors ?? [], formatType });
+        
+        // Create format-specific error messages
+        let suggestions = [];
+        let message = 'Unable to extract transactions from the uploaded statement.';
+        
+        if (formatType && formatType !== 'auto-detect') {
+          message = `Unable to extract transactions using ${formatType.toUpperCase()} format. Please verify the file format is correct.`;
+          suggestions = [
+            `Ensure the file is actually a valid ${formatType.toUpperCase()} file`,
+            'Try selecting "Auto-detect" format instead',
+            'Check if the file is corrupted or password-protected'
+          ];
+        } else {
+          suggestions = [
+            'Try selecting a specific format (CSV, Excel, PDF, QIF, or OFX) instead of auto-detect',
+            'Ensure the PDF is not password-protected',
+            'Confirm the statement includes a transaction table (not just a summary)'
+          ];
+        }
+
         return res.status(422).json({
           success: false,
           code: 'NO_TRANSACTIONS_EXTRACTED',
-          message: 'Unable to extract transactions from the uploaded statement. Please try a different file/format.',
+          message,
           details: {
             bankDetected: parseResult?.bankName ?? 'Unknown',
+            formatUsed: formatType || 'auto-detect',
             errorsFound: parseResult?.errors ?? [],
             fileName,
-            suggestions: [
-              'Try uploading a CSV instead of PDF if available',
-              'Ensure the PDF is not password-protected',
-              'Confirm the statement includes a transaction table (not just a summary)'
-            ],
+            suggestions,
           },
         });
       }
@@ -8940,7 +8968,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🧠 Enhanced AI matching with learning for ${transactions.length} transactions`);
 
-      const aiMatcher = createAiMatcher(storage);
+      const aiMatcher = createAiMatcher(aiMatcherStorage);
       const learningService = createUserCorrectionLearningService(storage);
 
       // Process each transaction with AI matching
@@ -19794,8 +19822,8 @@ Format your response as a JSON array of tip objects with "title", "description",
         case 'sales-trends': {
           const salesTrends = await db
             .select({
-              month: sql<string>`TO_CHAR(${invoices.invoiceDate}, 'Mon YYYY')`,
-              monthNumber: sql<string>`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`,
+              month: sql<string>`TO_CHAR(${invoices.issueDate}, 'Mon YYYY')`,
+              monthNumber: sql<string>`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`,
               revenue: sql<number>`SUM(${invoices.totalAmount})`,
               invoiceCount: sql<number>`COUNT(*)`,
               avgInvoiceValue: sql<number>`AVG(${invoices.totalAmount})`
@@ -19804,10 +19832,10 @@ Format your response as a JSON array of tip objects with "title", "description",
             .where(and(
               eq(invoices.companyId, companyId),
               eq(invoices.status, 'paid'),
-              gte(invoices.invoiceDate, sql`NOW() - INTERVAL '12 months'`)
+              gte(invoices.issueDate, sql`NOW() - INTERVAL '12 months'`)
             ))
-            .groupBy(sql`TO_CHAR(${invoices.invoiceDate}, 'Mon YYYY')`, sql`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`)
-            .orderBy(sql`TO_CHAR(${invoices.invoiceDate}, 'YYYY-MM')`);
+            .groupBy(sql`TO_CHAR(${invoices.issueDate}, 'Mon YYYY')`, sql`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`)
+            .orderBy(sql`TO_CHAR(${invoices.issueDate}, 'YYYY-MM')`);
 
           res.json({ data: salesTrends, reportType: 'sales-trends' });
           break;
@@ -19837,7 +19865,7 @@ Format your response as a JSON array of tip objects with "title", "description",
               totalRevenue: sql<number>`SUM(${invoices.totalAmount})`,
               invoiceCount: sql<number>`COUNT(${invoices.id})`,
               avgInvoiceValue: sql<number>`AVG(${invoices.totalAmount})`,
-              lastInvoiceDate: sql<Date>`MAX(${invoices.invoiceDate})`
+              lastInvoiceDate: sql<Date>`MAX(${invoices.issueDate})`
             })
             .from(customers)
             .innerJoin(invoices, eq(customers.id, invoices.customerId))

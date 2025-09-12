@@ -9,7 +9,7 @@
  * - EFT vs immediate payment processing differences
  */
 
-import type { IStorage } from '../storage';
+import type { ReconciliationStorage } from '../storage-adapters/reconciliation-storage';
 import { duplicateDetectionService, type DuplicateMatch, type TransactionForDuplicateCheck } from './duplicateDetectionService';
 import type { 
   ReconciliationSession, 
@@ -108,10 +108,10 @@ export interface SABankConfig {
 }
 
 export class SAReconciliationService {
-  private storage: IStorage;
+  private storage: ReconciliationStorage;
   private bankConfigurations: Map<string, SABankConfig>;
 
-  constructor(storage: IStorage) {
+  constructor(storage: ReconciliationStorage) {
     this.storage = storage;
     this.bankConfigurations = new Map();
     this.initializeBankConfigurations();
