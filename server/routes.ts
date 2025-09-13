@@ -5024,25 +5024,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/profit-loss/:from/:to", authenticate, async (req: AuthenticatedRequest, res) => {
-    try {
-      const { from, to } = req.params;
-      const companyId = req.user!.companyId;
-      
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      
-      // Get comprehensive profit & loss data integrating all transactions
-      const report = await storage.getComprehensiveProfitLoss(companyId, fromDate, toDate);
-      res.json(report);
-    } catch (error) {
-      console.error("Error generating profit & loss report:", error);
-      res.status(500).json({ error: "Failed to generate profit & loss report" });
-    }
-  });
-
-  // Detailed Profit & Loss Report with account-level breakdown
-  app.get("/api/reports/profit-loss-detailed", authenticate, async (req: AuthenticatedRequest, res) => {
+  // Detailed Profit & Loss Report with account-level breakdown (renamed to avoid route conflicts)
+  app.get("/api/reports/profit-loss/detailed", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const { period = 'all' } = req.query;
       const companyId = (req as AuthenticatedRequest).user!.companyId;
@@ -5082,6 +5065,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating detailed profit & loss:", error);
       res.status(500).json({ error: "Failed to generate detailed profit & loss" });
+    }
+  });
+
+  app.get("/api/reports/profit-loss/:from/:to", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { from, to } = req.params;
+      const companyId = req.user!.companyId;
+      
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      
+      // Get comprehensive profit & loss data integrating all transactions
+      const report = await storage.getComprehensiveProfitLoss(companyId, fromDate, toDate);
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating profit & loss report:", error);
+      res.status(500).json({ error: "Failed to generate profit & loss report" });
     }
   });
 

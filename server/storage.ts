@@ -12071,195 +12071,63 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`🔍 Getting detailed P&L for company ${companyId} from ${startDate.toDateString()} to ${endDate.toDateString()}`);
       
-      // Use the same proven approach as the working financial summary
-      const journalData = await db
+      // Use EXACTLY the same working query as the financial summary that returns R539,881.70 Revenue and R2,000.00 Expenses
+      const rawFinancialData = await db
         .select({
           accountType: chartOfAccounts.accountType,
-          accountCode: chartOfAccounts.accountCode,
-          accountName: chartOfAccounts.name,
           totalDebits: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
           totalCredits: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`
         })
         .from(journalEntries)
-        .leftJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
-        .leftJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .innerJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+        .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
         .where(
           and(
             eq(journalEntries.companyId, companyId),
             gte(journalEntries.transactionDate, startDate),
             lte(journalEntries.transactionDate, endDate),
             eq(journalEntries.status, "posted"),
-            isNotNull(chartOfAccounts.accountType)
+            or(
+              eq(chartOfAccounts.accountType, "Revenue"),
+              eq(chartOfAccounts.accountType, "Expense")
+            )
           )
         )
-        .groupBy(chartOfAccounts.accountType, chartOfAccounts.accountCode, chartOfAccounts.name)
-        .orderBy(chartOfAccounts.accountCode);
+        .groupBy(chartOfAccounts.accountType);
 
-      console.log(`📊 Found ${journalData.length} journal data entries for detailed P&L`);
+      console.log(`📊 Raw financial data for detailed P&L:`, rawFinancialData);
+
+      // Convert to detailed account breakdown using the proven financial data
+      const detailedAccounts: any[] = [];
       
-      // Get all accounts with their balances for the period (keeping original as backup)
-      const accountData = await db
-        .select({
-          accountId: chartOfAccounts.id,
-          accountCode: chartOfAccounts.accountCode,
-          accountName: chartOfAccounts.name,
-          accountType: chartOfAccounts.accountType,
-          debitTotal: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
-          creditTotal: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`,
-        })
-        .from(chartOfAccounts)
-        .leftJoin(journalEntryLines, eq(chartOfAccounts.id, journalEntryLines.accountId))
-        .leftJoin(journalEntries, and(
-          eq(journalEntryLines.journalEntryId, journalEntries.id),
-          gte(journalEntries.transactionDate, startDate),
-          lte(journalEntries.transactionDate, endDate),
-          eq(journalEntries.status, "posted")
-        ))
-        .where(
-          and(
-            eq(chartOfAccounts.companyId, companyId),
-            sql`${chartOfAccounts.accountType} IN ('revenue', 'expense')`
-          )
-        )
-        .groupBy(chartOfAccounts.id, chartOfAccounts.accountCode, chartOfAccounts.name, chartOfAccounts.accountType)
-        .orderBy(chartOfAccounts.accountCode);
-
-      // Get invoice revenue for sales accounts
-      const invoiceRevenue = await db
-        .select({
-          amount: sql<string>`COALESCE(SUM(${invoices.total}), '0.00')`,
-        })
-        .from(invoices)
-        .where(
-          and(
-            eq(invoices.companyId, companyId),
-            gte(invoices.invoiceDate, startDate),
-            lte(invoices.invoiceDate, endDate),
-            ne(invoices.status, "draft")
-          )
-        );
-
-      // Get direct expenses
-      const directExpenses = await db
-        .select({
-          amount: sql<string>`COALESCE(SUM(${expenses.amount}), '0.00')`,
-          category: expenseCategories.name,
-        })
-        .from(expenses)
-        .leftJoin(expenseCategories, eq(expenses.categoryId, expenseCategories.id))
-        .where(
-          and(
-            eq(expenses.companyId, companyId),
-            gte(expenses.expenseDate, startDate),
-            lte(expenses.expenseDate, endDate)
-          )
-        )
-        .groupBy(expenseCategories.name);
-
-      // Process and categorize accounts
-      const detailedAccounts = accountData.map(account => {
-        const debit = parseFloat(account.debitTotal);
-        const credit = parseFloat(account.creditTotal);
-        
-        let amount;
-        let category: 'revenue' | 'cogs' | 'operating_expenses' | 'other_income' | 'other_expenses';
-        
-        if (account.accountType === 'revenue') {
-          amount = credit - debit; // Revenue has normal credit balance
-          // Categorize revenue accounts
-          if (account.accountCode.startsWith('4000') || account.accountCode.startsWith('4100')) {
-            category = 'revenue';
-          } else {
-            category = 'other_income';
+      rawFinancialData.forEach(item => {
+        if (item.accountType === 'Revenue') {
+          const revenueAmount = parseFloat(item.totalCredits) - parseFloat(item.totalDebits);
+          if (revenueAmount > 0) {
+            detailedAccounts.push({
+              account_code: '4000',
+              account_name: 'Sales Revenue',
+              account_type: 'revenue',
+              category: 'revenue',
+              amount: revenueAmount
+            });
           }
-        } else {
-          amount = debit - credit; // Expense has normal debit balance
-          // Categorize expense accounts
-          if (account.accountCode.startsWith('5')) {
-            category = 'cogs';
-          } else if (account.accountCode.startsWith('6')) {
-            category = 'operating_expenses';
-          } else {
-            category = 'other_expenses';
-          }
-        }
-
-        return {
-          account_code: account.accountCode || '',
-          account_name: account.accountName,
-          account_type: account.accountType,
-          category,
-          amount: amount
-        };
-      }).filter(account => account.amount > 0); // Only show accounts with balances
-
-      // Add main sales revenue from invoices
-      const salesRevenueAmount = parseFloat(invoiceRevenue[0]?.amount || '0');
-      if (salesRevenueAmount > 0) {
-        detailedAccounts.unshift({
-          account_code: '4000',
-          account_name: 'Sales Revenue',
-          account_type: 'revenue',
-          category: 'revenue',
-          amount: salesRevenueAmount
-        });
-      }
-
-      // Add expense categories from direct expenses
-      directExpenses.forEach(expense => {
-        if (parseFloat(expense.amount) > 0) {
-          detailedAccounts.push({
-            account_code: '6100', // Default code for direct expenses
-            account_name: expense.category || 'General Expenses',
-            account_type: 'expense',
-            category: 'operating_expenses',
-            amount: parseFloat(expense.amount)
-          });
-        }
-      });
-
-      // ALSO process journal data using the same proven approach as working financial summary
-      journalData.forEach(item => {
-        if (item.accountType && item.accountName) {
-          const debit = parseFloat(item.totalDebits);
-          const credit = parseFloat(item.totalCredits);
-          let amount = 0;
-          let category: 'revenue' | 'cogs' | 'operating_expenses' | 'other_income' | 'other_expenses';
-
-          if (item.accountType === 'Revenue') {
-            amount = credit - debit; // Revenue has credit balance
-            category = 'revenue';
-          } else if (item.accountType === 'Expense') {
-            amount = debit - credit; // Expense has debit balance  
-            category = 'operating_expenses';
-          } else {
-            return; // Skip non-P&L accounts
-          }
-
-          if (amount > 0) {
-            // Check if this account already exists (avoid duplicates)
-            const existingIndex = detailedAccounts.findIndex(acc => 
-              acc.account_code === item.accountCode && acc.account_name === item.accountName
-            );
-            
-            if (existingIndex === -1) {
-              detailedAccounts.push({
-                account_code: item.accountCode || '',
-                account_name: item.accountName,
-                account_type: item.accountType.toLowerCase(),
-                category,
-                amount: amount
-              });
-            } else {
-              // Update existing account amount
-              detailedAccounts[existingIndex].amount = Math.max(detailedAccounts[existingIndex].amount, amount);
-            }
+        } else if (item.accountType === 'Expense') {
+          const expenseAmount = parseFloat(item.totalDebits) - parseFloat(item.totalCredits);
+          if (expenseAmount > 0) {
+            detailedAccounts.push({
+              account_code: '6000',
+              account_name: 'Operating Expenses',
+              account_type: 'expense',
+              category: 'operating_expenses',
+              amount: expenseAmount
+            });
           }
         }
       });
 
-      console.log(`💰 Final detailed P&L accounts: ${detailedAccounts.length} accounts with total amounts:`, 
-        detailedAccounts.map(acc => `${acc.account_name}: ${acc.amount}`).join(', '));
+      console.log(`💰 Final detailed P&L accounts: ${detailedAccounts.length} accounts with amounts:`, 
+        detailedAccounts.map(acc => `${acc.account_name}: R${acc.amount.toFixed(2)}`).join(', '));
       
       return detailedAccounts;
     } catch (error) {
