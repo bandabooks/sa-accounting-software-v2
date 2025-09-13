@@ -2513,7 +2513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for duplicate email (case-insensitive, only if email is provided)
       if (validatedData.email && validatedData.email.trim()) {
         const duplicateEmail = existingCustomers.find(c => 
-          c.email && c.email.toLowerCase().trim() === validatedData.email.toLowerCase().trim()
+          c.email && c.email.toLowerCase().trim() === validatedData.email!.toLowerCase().trim()
         );
         if (duplicateEmail) {
           return res.status(400).json({ 
@@ -2527,7 +2527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customer = await storage.createCustomer(validatedData);
       
       // Invalidate cache for customers
-      invalidateEntityCache(CacheKeys.CUSTOMERS, companyId);
+      invalidateEntityCache(CacheKeys.customers, companyId);
       
       console.log(`✓ Customer "${customer.name}" created successfully with ID ${customer.id}`);
       res.status(201).json(customer);
