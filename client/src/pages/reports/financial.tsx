@@ -70,11 +70,17 @@ export default function FinancialReportsPage() {
     enabled: !!companyId,
   });
 
+  // Ensure trialBalanceData is always an array
+  const safeTrialBalanceData = Array.isArray(trialBalanceData) ? trialBalanceData : [];
+
   // Fetch Real Financial Ratios
   const { data: financialRatios, isLoading: ratiosLoading } = useQuery({
     queryKey: ['/api/financial-ratios', companyId],
     enabled: !!companyId,
   });
+
+  // Ensure financialRatios is always an object with expected structure
+  const safeFinancialRatios = financialRatios || { profitability: {}, liquidity: {} };
 
   if (isLoading) {
     return (
@@ -855,7 +861,7 @@ export default function FinancialReportsPage() {
                     <div className="mb-3">
                       <h4 className="font-semibold text-gray-700 mb-2">Current Assets</h4>
                       <div className="ml-4 space-y-1">
-                        {(trialBalanceData || [])
+                        {safeTrialBalanceData
                           .filter((account: any) => account.account_type?.toLowerCase().includes('asset') && 
                                    parseInt(account.account_code) >= 1000 && parseInt(account.account_code) < 1500)
                           .map((account: any, index: number) => (
@@ -868,7 +874,7 @@ export default function FinancialReportsPage() {
                                 <span className="w-24 text-right font-medium">
                                   {parseFloat(account.debitTotal || 0) > 0 ? (
                                     <span className="text-green-600">
-                                      {formatCurrency(account.debitTotal.toString())}
+                                      {formatCurrency((account.debitTotal || 0).toString())}
                                     </span>
                                   ) : (
                                     <span className="text-gray-400">R 0.00</span>
@@ -877,7 +883,7 @@ export default function FinancialReportsPage() {
                                 <span className="w-24 text-right font-medium">
                                   {parseFloat(account.creditTotal || 0) > 0 ? (
                                     <span className="text-blue-600">
-                                      {formatCurrency(account.creditTotal.toString())}
+                                      {formatCurrency((account.creditTotal || 0).toString())}
                                     </span>
                                   ) : (
                                     <span className="text-gray-400">R 0.00</span>
@@ -887,7 +893,7 @@ export default function FinancialReportsPage() {
                             </div>
                           ))}
                         {/* Show default asset accounts if no data */}
-                        {(trialBalanceData || []).filter((account: any) => 
+                        {safeTrialBalanceData.filter((account: any) => 
                           account.account_type?.toLowerCase().includes('asset') && 
                           parseInt(account.account_code) >= 1000 && parseInt(account.account_code) < 1500).length === 0 && (
                           <>
@@ -936,7 +942,7 @@ export default function FinancialReportsPage() {
                     <div className="mb-3">
                       <h4 className="font-semibold text-gray-700 mb-2">Current Liabilities</h4>
                       <div className="ml-4 space-y-1">
-                        {(trialBalanceData || [])
+                        {safeTrialBalanceData
                           .filter((account: any) => account.account_type?.toLowerCase().includes('liability') && 
                                    parseInt(account.account_code) >= 2000 && parseInt(account.account_code) < 3000)
                           .map((account: any, index: number) => (
@@ -949,7 +955,7 @@ export default function FinancialReportsPage() {
                                 <span className="w-24 text-right font-medium">
                                   {parseFloat(account.debitTotal || 0) > 0 ? (
                                     <span className="text-green-600">
-                                      {formatCurrency(account.debitTotal.toString())}
+                                      {formatCurrency((account.debitTotal || 0).toString())}
                                     </span>
                                   ) : (
                                     <span className="text-gray-400">R 0.00</span>
@@ -958,7 +964,7 @@ export default function FinancialReportsPage() {
                                 <span className="w-24 text-right font-medium">
                                   {parseFloat(account.creditTotal || 0) > 0 ? (
                                     <span className="text-blue-600">
-                                      {formatCurrency(account.creditTotal.toString())}
+                                      {formatCurrency((account.creditTotal || 0).toString())}
                                     </span>
                                   ) : (
                                     <span className="text-gray-400">R 0.00</span>
@@ -968,7 +974,7 @@ export default function FinancialReportsPage() {
                             </div>
                           ))}
                         {/* Show default liability accounts if no data */}
-                        {(trialBalanceData || []).filter((account: any) => 
+                        {safeTrialBalanceData.filter((account: any) => 
                           account.account_type?.toLowerCase().includes('liability') && 
                           parseInt(account.account_code) >= 2000 && parseInt(account.account_code) < 3000).length === 0 && (
                           <>
@@ -1016,7 +1022,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.debit_amount || 0) > 0 ? (
                                 <span className="text-green-600">
-                                  {formatCurrency(account.debit_amount.toString())}
+                                  {formatCurrency((account.debit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
@@ -1025,7 +1031,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.credit_amount || 0) > 0 ? (
                                 <span className="text-blue-600">
-                                  {formatCurrency(account.credit_amount.toString())}
+                                  {formatCurrency((account.credit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
@@ -1082,7 +1088,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.debit_amount || 0) > 0 ? (
                                 <span className="text-green-600">
-                                  {formatCurrency(account.debit_amount.toString())}
+                                  {formatCurrency((account.debit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
@@ -1091,7 +1097,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.credit_amount || 0) > 0 ? (
                                 <span className="text-blue-600">
-                                  {formatCurrency(account.credit_amount.toString())}
+                                  {formatCurrency((account.credit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
@@ -1148,7 +1154,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.debit_amount || 0) > 0 ? (
                                 <span className="text-green-600">
-                                  {formatCurrency(account.debit_amount.toString())}
+                                  {formatCurrency((account.debit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
@@ -1157,7 +1163,7 @@ export default function FinancialReportsPage() {
                             <span className="w-24 text-right font-medium">
                               {parseFloat(account.credit_amount || 0) > 0 ? (
                                 <span className="text-blue-600">
-                                  {formatCurrency(account.credit_amount.toString())}
+                                  {formatCurrency((account.credit_amount || 0).toString())}
                                 </span>
                               ) : (
                                 <span className="text-gray-400">R 0.00</span>
