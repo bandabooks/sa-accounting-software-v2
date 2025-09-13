@@ -1,0 +1,69 @@
+Fix blank P&L charts and bind to real data
+
+Role: Senior TypeScript engineer in an accounting app.
+
+Goal: Make the “Profit & Loss Overview” chart on /reports/financial display monthly Revenue, Expenses, and Net Profit using the same date range as the summary cards.
+
+Stack & context: NestJS + Prisma + Postgres + Redis (cache), React (Recharts).
+Data model: accounts(category=REVENUE|EXPENSE), journal_entries(posted:boolean, entryDate:date), journal_lines(amountBase:number, accountId, entryId, tenantId). Multi-tenant via tenantId. amountBase = credit − debit (signed).
+
+Requirements
+
+API endpoint
+
+Add GET /api/reports/financial/pl-timeseries?from=YYYY-MM-DD&to=YYYY-MM-DD&interval=month.
+
+Response shape:
+
+{ "points": [ { "period": "YYYY-MM-01", "revenue": number, "expenses": number, "netProfit": number } ] }
+
+
+SQL rules (accrual, base currency):
+
+Filter: tenantId = <current tenant>, posted = TRUE, entryDate ∈ [from, to).
+
+Build a complete month series with generate_series(date_trunc('month', from), date_trunc('month', to - interval '1 day'), '1 month') and LEFT JOIN ledger lines so months with no postings return zeros.
+
+Aggregation:
+
+revenue = Σ amountBase where accounts.category = 'REVENUE'
+
+expenses = Σ (-amountBase) where accounts.category = 'EXPENSE'
+
+netProfit = revenue - expenses
+
+Order by period ascending.
+
+Optional: 5-minute Redis cache; key includes tenantId/from/to.
+
+Front-end wiring
+
+Use the same from/to values the cards use (from the page date-range selector; “All Time” should resolve to explicit dates).
+
+Fetch /api/reports/financial/pl-timeseries and bind to Recharts.
+
+Provide Bar/Line toggle; show loading skeleton, error state, and empty state when array length is 0.
+
+Currency formatting: ZAR for axes/tooltip. X-axis shows MMM 'YY.
+
+Acceptance criteria
+
+Chart renders for any range, including months with no data (shows zeros).
+
+Totals per month reconcile with manual SQL; netProfit line equals revenue−expenses for each point.
+
+Multi-tenant safe; only posted entries included.
+
+Same range as cards; switching range updates both cards and chart.
+
+Deliverables
+
+Controller + Service method for pl-timeseries (NestJS).
+
+SQL (Prisma $queryRaw) implementing the zero-filled month series.
+
+React patch on /reports/financial page wiring the fetch, state, and Recharts component.
+
+Brief note in the PR describing the query, edge cases handled, and test steps.
+
+Do not modify the existing summary/cards endpoint; only add the new time-series endpoint and bind the chart to it.

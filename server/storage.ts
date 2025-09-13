@@ -674,6 +674,16 @@ export interface IStorage {
     netCashFlow: string;
   }>;
 
+  // P&L Time Series for charts
+  getProfitLossTimeSeries(companyId: number, fromDate: Date, toDate: Date, interval: 'month' | 'quarter' | 'year'): Promise<{
+    points: Array<{
+      period: string;
+      revenue: number;
+      expenses: number;
+      netProfit: number;
+    }>;
+  }>;
+
   // Dashboard stats
   getDashboardStats(): Promise<{
     totalRevenue: string;
@@ -4710,6 +4720,77 @@ export class DatabaseStorage implements IStorage {
       netCashFlow: netCashFlow.toFixed(2),
       weeklyCashFlow: weeklyCashFlow.length > 0 ? weeklyCashFlow : undefined,
     };
+  }
+
+  // P&L Time Series for charts using journal entries
+  async getProfitLossTimeSeries(companyId: number, fromDate: Date, toDate: Date, interval: 'month' | 'quarter' | 'year' = 'month'): Promise<{
+    points: Array<{
+      period: string;
+      revenue: number;
+      expenses: number;
+      netProfit: number;
+    }>;
+  }> {
+    try {
+      // Generate complete month series to fill gaps with zeros
+      const intervalFormat = interval === 'month' ? '%Y-%m-01' : '%Y-01-01';
+      const intervalStep = interval === 'month' ? '1 month' : '1 year';
+      
+      const rawData = await db.execute(sql`
+        WITH month_series AS (
+          WITH RECURSIVE dates(month_start) AS (
+            SELECT date(${fromDate.toISOString().split('T')[0]}, 'start of month') as month_start
+            UNION ALL
+            SELECT date(month_start, '+1 month')
+            FROM dates
+            WHERE month_start < date(${toDate.toISOString().split('T')[0]}, 'start of month')
+          )
+          SELECT month_start FROM dates
+        ),
+        financial_data AS (
+          SELECT 
+            strftime('${intervalFormat}', je.entryDate) as period,
+            CASE 
+              WHEN coa.category = 'Revenue' THEN COALESCE(SUM(jel.amountBase), 0)
+              ELSE 0
+            END as revenue,
+            CASE 
+              WHEN coa.category = 'Expense' THEN COALESCE(SUM(-jel.amountBase), 0)
+              ELSE 0
+            END as expenses
+          FROM ${journalEntries} je
+          INNER JOIN ${journalEntryLines} jel ON je.id = jel.entryId
+          INNER JOIN ${chartOfAccounts} coa ON jel.accountId = coa.id
+          WHERE je.companyId = ${companyId}
+            AND je.posted = true
+            AND je.entryDate >= ${fromDate.toISOString().split('T')[0]}
+            AND je.entryDate < ${toDate.toISOString().split('T')[0]}
+            AND coa.category IN ('Revenue', 'Expense')
+          GROUP BY period, coa.category
+        )
+        SELECT 
+          strftime('${intervalFormat}', ms.month_start) as period,
+          COALESCE(SUM(fd.revenue), 0) as revenue,
+          COALESCE(SUM(fd.expenses), 0) as expenses,
+          COALESCE(SUM(fd.revenue), 0) - COALESCE(SUM(fd.expenses), 0) as netProfit
+        FROM month_series ms
+        LEFT JOIN financial_data fd ON strftime('${intervalFormat}', ms.month_start) = fd.period
+        GROUP BY strftime('${intervalFormat}', ms.month_start)
+        ORDER BY period ASC
+      `);
+
+      const points = rawData.rows.map((row: any) => ({
+        period: row.period,
+        revenue: parseFloat(row.revenue || '0'),
+        expenses: parseFloat(row.expenses || '0'),
+        netProfit: parseFloat(row.netProfit || '0')
+      }));
+
+      return { points };
+    } catch (error) {
+      console.error('Error in getProfitLossTimeSeries:', error);
+      return { points: [] };
+    }
   }
 
   // Purchase Order Management

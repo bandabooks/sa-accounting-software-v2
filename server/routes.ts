@@ -20516,6 +20516,41 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // P&L Time Series API for charts
+  app.get("/api/reports/financial/pl-timeseries", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const { from, to, interval = 'month' } = req.query;
+      
+      if (!from || !to) {
+        return res.status(400).json({ error: "from and to parameters are required" });
+      }
+      
+      const fromDate = new Date(from as string);
+      const toDate = new Date(to as string);
+      
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({ error: "Invalid date format" });
+      }
+      
+      console.log(`📊 P&L Time Series for company ${companyId}: ${fromDate.toISOString().split('T')[0]} to ${toDate.toISOString().split('T')[0]}, interval: ${interval}`);
+      
+      const timeSeriesData = await storage.getProfitLossTimeSeries(
+        companyId, 
+        fromDate, 
+        toDate, 
+        interval as 'month' | 'quarter' | 'year'
+      );
+      
+      console.log(`📊 Generated ${timeSeriesData.points.length} data points for P&L chart`);
+      
+      res.json(timeSeriesData);
+    } catch (error) {
+      console.error("Error fetching P&L time series:", error);
+      res.status(500).json({ error: "Failed to fetch P&L time series data" });
+    }
+  });
+
   // ===========================
   // CONTRACTS MODULE (ENGAGEMENT LETTERS)
   // ===========================

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -63,58 +63,75 @@ export default function FinancialReportsPage() {
     );
   }
 
-  // Enhanced: Map real chart data from dashboard API
-  const rawChartData = (dashboardStats as any)?.charts?.incomeVsExpenseT12M || [];
-  
-  // Debug: Log what we actually receive
-  console.log('📊 Debug Chart Data:', {
-    dashboardStats: !!dashboardStats,
-    hasCharts: !!(dashboardStats as any)?.charts,
-    rawChartData: rawChartData,
-    chartDataLength: rawChartData.length
-  });
-  
-  // Transform data to match ProfitLossChart expected format
-  let profitLossData = rawChartData.map((item: any) => {
-    const revenue = parseFloat(item.income || '0');
-    const expenses = parseFloat(item.expense || '0');
-    const profit = revenue - expenses;
+  // NEW: Use dedicated P&L time-series API endpoint
+  const periodParams = useMemo(() => {
+    const now = new Date();
+    let fromDate: Date;
+    let toDate = now;
     
-    // Convert date format from "2025-09" to "Sep 25" for display
-    const [year, month] = item.month.split('-');
-    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { 
-      month: 'short',
-      day: '2-digit'
-    });
+    if (period === 'YTD') {
+      fromDate = new Date(now.getFullYear(), 0, 1);
+    } else if (period === 'LY') {
+      fromDate = new Date(now.getFullYear() - 1, 0, 1);
+      toDate = new Date(now.getFullYear() - 1, 11, 31);
+    } else if (period === 'Custom' && customFrom && customTo) {
+      fromDate = new Date(customFrom);
+      toDate = new Date(customTo);
+    } else {
+      fromDate = new Date(now.getFullYear(), 0, 1);
+    }
     
     return {
-      month: monthName,
-      revenue,
-      expenses,
-      profit
+      from: fromDate.toISOString().split('T')[0],
+      to: toDate.toISOString().split('T')[0]
     };
+  }, [period, customFrom, customTo]);
+
+  const { data: plTimeSeriesData, isLoading: plChartLoading } = useQuery({
+    queryKey: ['pl-timeseries', companyId, periodParams.from, periodParams.to],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        from: periodParams.from,
+        to: periodParams.to,
+        interval: 'month'
+      });
+      
+      const response = await fetch(`/api/reports/financial/pl-timeseries?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch P&L time series data');
+      }
+      return response.json();
+    },
+    enabled: !!companyId
   });
 
-  // FALLBACK: If no monthly data but we have totals, create current month data from enhanced dashboard
-  if (profitLossData.length === 0 && dashboardStats) {
-    const kpis = (dashboardStats as any)?.kpis;
-    if (kpis && (kpis.totalRevenue > 0 || kpis.totalExpenses > 0)) {
-      const currentDate = new Date();
-      const monthName = currentDate.toLocaleDateString('en-US', { 
+  // Transform API data to match chart format
+  const profitLossData = useMemo(() => {
+    if (!plTimeSeriesData?.points) return [];
+    
+    return plTimeSeriesData.points.map((point: any) => {
+      // Convert period "2025-09-01" to "Sep 13"
+      const date = new Date(point.period);
+      const monthName = date.toLocaleDateString('en-US', { 
         month: 'short',
         day: '2-digit'
       });
       
-      profitLossData = [{
+      return {
         month: monthName,
-        revenue: parseFloat(kpis.totalRevenue || '0'),
-        expenses: parseFloat(kpis.totalExpenses || '0'),
-        profit: parseFloat(kpis.netProfit || '0')
-      }];
-      
-      console.log('📊 Using fallback chart data from KPIs:', profitLossData);
-    }
-  }
+        revenue: point.revenue || 0,
+        expenses: point.expenses || 0,
+        profit: point.netProfit || 0
+      };
+    });
+  }, [plTimeSeriesData]);
+
+  console.log('📊 P&L Chart Data:', {
+    hasData: !!plTimeSeriesData,
+    pointsCount: plTimeSeriesData?.points?.length || 0,
+    chartDataLength: profitLossData.length,
+    sampleData: profitLossData.slice(0, 2)
+  });
   const totalRevenue = parseFloat(financialSummary?.totalRevenue || '0');
   const totalExpenses = parseFloat(financialSummary?.totalExpenses || '0');
   const netProfit = parseFloat(financialSummary?.netProfit || '0');
