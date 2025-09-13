@@ -1935,9 +1935,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(customers, eq(invoices.customerId, customers.id))
         .where(and(
           eq(invoices.companyId, companyId),
-          gte(invoices.invoiceDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+          gte(invoices.issueDate, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
         ))
-        .orderBy(desc(invoices.invoiceDate))
+        .orderBy(desc(invoices.issueDate))
         .limit(2);
 
       recentInvoices.forEach(invoice => {
@@ -1946,7 +1946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: 'Invoice Created',
           description: `${invoice.customer} - Invoice #${invoice.id}`,
           amount: invoice.total,
-          timeAgo: getTimeAgo(invoice.invoiceDate),
+          timeAgo: getTimeAgo(invoice.issueDate),
           link: `/invoices?search=${invoice.customer}`
         });
       });
@@ -2002,7 +2002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get revenue and expenses for the period using real invoice data
       const periodInvoices = allInvoices.filter(inv => {
-        const invDate = new Date(inv.invoiceDate);
+        const invDate = new Date(inv.issueDate);
         return invDate >= fromDate && invDate <= toDate && inv.status !== 'draft';
       });
       const totalRevenue = periodInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
@@ -2034,7 +2034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monthEnd.setHours(23, 59, 59, 999);
 
         const monthInvoices = allInvoices.filter(inv => {
-          const invDate = new Date(inv.invoiceDate);
+          const invDate = new Date(inv.issueDate);
           return invDate >= monthStart && invDate <= monthEnd;
         });
         
@@ -2092,7 +2092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate actual income and expense data for the month
         const monthInvoices = allInvoices.filter(inv => 
-          inv.invoiceDate && inv.invoiceDate.startsWith(monthKey) && inv.status !== 'draft'
+          inv.issueDate && inv.issueDate.toISOString().startsWith(monthKey) && inv.status !== 'draft'
         );
         const monthIncome = monthInvoices.reduce((sum, inv) => sum + parseFloat(inv.total), 0);
         
