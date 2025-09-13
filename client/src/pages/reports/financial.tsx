@@ -63,8 +63,29 @@ export default function FinancialReportsPage() {
     );
   }
 
-  // Use data from the new financial summary API
-  const profitLossData = (dashboardStats as any)?.charts?.monthlyRevenue || [];
+  // Enhanced: Map real chart data from dashboard API
+  const rawChartData = (dashboardStats as any)?.charts?.incomeVsExpenseT12M || [];
+  
+  // Transform data to match ProfitLossChart expected format
+  const profitLossData = rawChartData.map((item: any) => {
+    const revenue = parseFloat(item.income || '0');
+    const expenses = parseFloat(item.expense || '0');
+    const profit = revenue - expenses;
+    
+    // Convert date format from "2025-09" to "Sep 25" for display
+    const [year, month] = item.month.split('-');
+    const monthName = new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString('en-US', { 
+      month: 'short',
+      day: '2-digit'
+    });
+    
+    return {
+      month: monthName,
+      revenue,
+      expenses,
+      profit
+    };
+  });
   const totalRevenue = parseFloat(financialSummary?.totalRevenue || '0');
   const totalExpenses = parseFloat(financialSummary?.totalExpenses || '0');
   const netProfit = parseFloat(financialSummary?.netProfit || '0');
