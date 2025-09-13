@@ -308,25 +308,6 @@ export default function ProfitLossChart({ data }: ProfitLossChartProps) {
           </div>
         )}
         
-        {/* Period Summary */}
-        {chartData.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-green-600">{formatCurrency(totalRevenue.toString())}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Total Revenue</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-red-600">{formatCurrency(totalExpenses.toString())}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Total Expenses</div>
-            </div>
-            <div className="text-center">
-              <div className={`text-lg font-semibold ${netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                {formatCurrency(netProfit.toString())}
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Net Profit</div>
-            </div>
-          </div>
-        )}
         
         <div className="h-80">
           {chartData.length > 0 ? (
