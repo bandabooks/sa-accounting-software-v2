@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -16,14 +16,47 @@ import * as XLSX from 'xlsx';
 
 export default function FinancialReportsPage() {
   const [, setLocation] = useLocation();
-  const [period, setPeriod] = useState('6months');
+  const [period, setPeriod] = useState('YTD');
   const [reportType, setReportType] = useState('profit-loss');
+  const [accountingBasis, setAccountingBasis] = useState<'accrual' | 'cash'>('accrual');
   const { companyId } = useCompany();
 
-  // Fetch the same dashboard data to ensure consistency - using the working business dashboard API
+  // Use the EXACT same period calculation logic as the working dashboard
+  const getPeriodDates = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    
+    switch (period) {
+      case 'MTD':
+        return { from: new Date(year, now.getMonth(), 1), to: now };
+      case 'QTD':
+        const quarter = Math.floor(now.getMonth() / 3);
+        return { from: new Date(year, quarter * 3, 1), to: now };
+      case 'YTD':
+        return { from: new Date(year, 0, 1), to: now };
+      case 'Last30':
+        return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000), to: now };
+      default:
+        return { from: new Date(year, 0, 1), to: now };
+    }
+  };
+
+  // Memoize period dates to prevent recalculation on every render
+  const periodDates = useMemo(() => getPeriodDates(), [period]);
+  const { from, to } = periodDates;
+
+  // Stabilize query key to prevent excessive refetching
+  const stableFromDate = useMemo(() => from.toISOString().split('T')[0], [from]);
+  const stableToDate = useMemo(() => to.toISOString().split('T')[0], [to]);
+
+  // Use the EXACT same query structure as the working dashboard
   const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/business', companyId, 'basis=accrual&period=YTD'],
+    queryKey: [`/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${stableFromDate}&to=${stableToDate}`],
     enabled: !!companyId,
+    staleTime: 60000, // 1 minute
+    retry: 2,
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
   });
 
   const { data: salesStats } = useQuery({
@@ -58,13 +91,22 @@ export default function FinancialReportsPage() {
     );
   }
 
-  // Extract data from the correct API structure
-  const profitLossData = (dashboardStats as any)?.charts?.monthlyRevenue || [];
-  const totalRevenue = parseFloat((dashboardStats as any)?.kpis?.monthlyRevenue || '0');
-  const netProfit = parseFloat((dashboardStats as any)?.kpis?.netProfit || '0');
+  // Extract data using the EXACT same approach as the working dashboard
+  const kpis = dashboardStats?.kpis;
+  const totalRevenue = kpis?.monthlyRevenue || 0;
+  const netProfit = kpis?.netProfit || 0;
   const totalExpenses = totalRevenue - netProfit; // Calculate expenses from revenue minus profit
+  const profitMarginFromAPI = kpis?.profitMargin || 0;
   
-  console.log('Financial Reports - Parsed Values:', { totalRevenue, totalExpenses, netProfit, kpis: (dashboardStats as any)?.kpis });
+  console.log('Financial Reports - Debug Data:', { 
+    hasData: !!dashboardStats,
+    kpis: kpis,
+    totalRevenue, 
+    totalExpenses, 
+    netProfit, 
+    profitMarginFromAPI,
+    queryKey: `/api/dashboard/business?basis=${accountingBasis}&period=${period}&from=${stableFromDate}&to=${stableToDate}`
+  });
 
   // Calculate Revenue Growth (month-over-month)
   const calculateRevenueGrowth = () => {
