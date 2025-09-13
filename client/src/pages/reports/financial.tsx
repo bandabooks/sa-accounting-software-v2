@@ -20,13 +20,18 @@ export default function FinancialReportsPage() {
   const [reportType, setReportType] = useState('profit-loss');
   const { companyId } = useCompany();
 
-  // Fetch the same dashboard data to ensure consistency - using the working business dashboard API
-  const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/business', companyId, 'basis=accrual&period=YTD'],
+  // Fetch financial summary from the new dedicated API endpoint
+  const currentYear = new Date().getFullYear();
+  const fromDate = `${currentYear}-01-01`;
+  const toDate = new Date().toISOString().split('T')[0];
+  
+  const { data: financialSummary, isLoading } = useQuery({
+    queryKey: [`/api/reports/financial/summary?from=${fromDate}&to=${toDate}&basis=accrual`, companyId],
     enabled: !!companyId,
   });
 
-  const { data: salesStats } = useQuery({
+  // Keep the business dashboard data for charts
+  const { data: dashboardStats } = useQuery({
     queryKey: ['/api/dashboard/business', companyId, 'basis=accrual&period=YTD'],
     enabled: !!companyId,
   });
@@ -58,10 +63,12 @@ export default function FinancialReportsPage() {
     );
   }
 
+  // Use data from the new financial summary API
   const profitLossData = (dashboardStats as any)?.charts?.monthlyRevenue || [];
-  const totalRevenue = parseFloat((dashboardStats as any)?.kpis?.totalRevenue || '0');
-  const totalExpenses = parseFloat((dashboardStats as any)?.kpis?.totalExpenses || '0');
-  const netProfit = totalRevenue - totalExpenses;
+  const totalRevenue = parseFloat(financialSummary?.totalRevenue || '0');
+  const totalExpenses = parseFloat(financialSummary?.totalExpenses || '0');
+  const netProfit = parseFloat(financialSummary?.netProfit || '0');
+  const profitMarginValue = parseFloat(financialSummary?.profitMargin || '0');
 
   // Calculate Revenue Growth (month-over-month)
   const calculateRevenueGrowth = () => {

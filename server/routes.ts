@@ -2188,6 +2188,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // ENHANCED: Calculate financial summary from journal entries for accurate reporting
+      let journalBasedRevenue = 0;
+      let journalBasedExpenses = 0;
+      
+      try {
+        console.log(`📊 Enhanced Financial Summary: Calculating from journal entries for company ${companyId}`);
+        
+        // Get revenue and expenses from journal entries (more accurate than invoice-based)
+        const financialData = await db
+          .select({
+            accountType: chartOfAccounts.accountType,
+            totalDebits: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+            totalCredits: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`,
+          })
+          .from(journalEntryLines)
+          .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+          .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+          .where(and(
+            eq(journalEntries.companyId, companyId),
+            eq(journalEntries.isPosted, true),
+            gte(journalEntries.transactionDate, fromDate),
+            lte(journalEntries.transactionDate, toDate),
+            or(
+              eq(chartOfAccounts.accountType, 'Revenue'),
+              eq(chartOfAccounts.accountType, 'Expense')
+            )
+          ))
+          .groupBy(chartOfAccounts.accountType);
+
+        // Calculate totals based on accounting principles  
+        financialData.forEach(row => {
+          const debits = parseFloat(row.totalDebits || '0');
+          const credits = parseFloat(row.totalCredits || '0');
+
+          if (row.accountType === 'Revenue') {
+            // Revenue accounts: Credits increase revenue (normal credit balance)
+            journalBasedRevenue += Math.max(0, credits - debits);
+          } else if (row.accountType === 'Expense') {
+            // Expense accounts: Debits increase expenses (normal debit balance) 
+            journalBasedExpenses += Math.max(0, debits - credits);
+          }
+        });
+
+        console.log(`💰 Journal Entry Summary: Revenue: R${journalBasedRevenue.toFixed(2)}, Expenses: R${journalBasedExpenses.toFixed(2)}`);
+      } catch (error) {
+        console.error("❌ Error calculating journal-based financials, falling back to invoice-based:", error);
+      }
+
+      // Use journal-based data if available, otherwise fall back to invoice-based
+      const finalRevenue = journalBasedRevenue > 0 ? journalBasedRevenue : totalRevenue;
+      const finalExpenses = journalBasedExpenses > 0 ? journalBasedExpenses : totalExpenses;
+      const finalNetProfit = finalRevenue - finalExpenses;
+      const finalProfitMargin = finalRevenue > 0 ? (finalNetProfit / finalRevenue) * 100 : 0;
+
       // Compile all dashboard data in the specified format
       const dashboardData = {
         asOf: asOfDate.toISOString().split('T')[0],
@@ -2220,10 +2274,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             total: 0, // Simplified for now
             overdue: 0
           },
-          monthlyRevenue: parseFloat(totalRevenue.toFixed(2)),
+          monthlyRevenue: parseFloat(finalRevenue.toFixed(2)),
+          totalRevenue: parseFloat(finalRevenue.toFixed(2)),
+          totalExpenses: parseFloat(finalExpenses.toFixed(2)),
           grossMargin: parseFloat(grossMargin.toFixed(3)),
-          netProfit: parseFloat(netProfit.toFixed(2)),
-          profitMargin: parseFloat((profitMargin / 100).toFixed(3)),
+          netProfit: parseFloat(finalNetProfit.toFixed(2)),
+          profitMargin: parseFloat((finalProfitMargin / 100).toFixed(3)),
           vat: {
             position: vatPosition,
             dueDate: nextVatDue.toISOString().split('T')[0],
