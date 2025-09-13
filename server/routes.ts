@@ -2486,11 +2486,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/customers", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+
       const validatedData = insertCustomerSchema.parse({
         ...req.body,
-        companyId: req.user?.companyId // Use user's active company ID
+        companyId // Use user's active company ID
       });
+
+      // Check for duplicate names and emails within the same company
+      const existingCustomers = await storage.getAllCustomers(companyId);
+      
+      // Check for duplicate name (case-insensitive)
+      const duplicateName = existingCustomers.find(c => 
+        c.name.toLowerCase().trim() === validatedData.name.toLowerCase().trim()
+      );
+      if (duplicateName) {
+        return res.status(400).json({ 
+          message: "Duplicate customer name", 
+          error: `A customer with the name "${validatedData.name}" already exists.` 
+        });
+      }
+
+      // Check for duplicate email (case-insensitive, only if email is provided)
+      if (validatedData.email && validatedData.email.trim()) {
+        const duplicateEmail = existingCustomers.find(c => 
+          c.email && c.email.toLowerCase().trim() === validatedData.email.toLowerCase().trim()
+        );
+        if (duplicateEmail) {
+          return res.status(400).json({ 
+            message: "Duplicate customer email", 
+            error: `A customer with the email "${validatedData.email}" already exists.` 
+          });
+        }
+      }
+
+      console.log(`→ Creating customer "${validatedData.name}" for company ${companyId}`);
       const customer = await storage.createCustomer(validatedData);
+      
+      // Invalidate cache for customers
+      invalidateEntityCache(CacheKeys.CUSTOMERS, companyId);
+      
+      console.log(`✓ Customer "${customer.name}" created successfully with ID ${customer.id}`);
       res.status(201).json(customer);
     } catch (error) {
       console.error("Customer creation error:", error);

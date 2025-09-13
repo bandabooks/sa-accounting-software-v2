@@ -34,8 +34,8 @@ export default function CustomerCreate() {
   const createMutation = useMutation({
     mutationFn: customersApi.create,
     onSuccess: async (customer) => {
-      // Wait for cache invalidation to complete before navigating
-      await queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      // Force an immediate refetch to ensure the new customer appears
+      await queryClient.refetchQueries({ queryKey: ["/api/customers"] });
       
       showSuccess(
         "Customer Created Successfully",
@@ -43,12 +43,29 @@ export default function CustomerCreate() {
       );
       setLocation("/customers");
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to create customer. Please try again.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error("Customer creation error:", error);
+      
+      // Handle specific duplicate errors from the backend
+      if (error?.message?.includes("Duplicate customer name")) {
+        toast({
+          title: "Duplicate Customer Name",
+          description: error.error || "A customer with this name already exists.",
+          variant: "destructive",
+        });
+      } else if (error?.message?.includes("Duplicate customer email")) {
+        toast({
+          title: "Duplicate Email Address",
+          description: error.error || "A customer with this email already exists.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create customer. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
