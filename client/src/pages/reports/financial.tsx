@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Download, Eye, TrendingUp, TrendingDown, DollarSign, FileText } from "lucide-react";
 import { useLocation } from "wouter";
-import ProfitLossChart from "@/components/dashboard/profit-loss-chart";
+import SimpleProfitLossChart from "@/components/reports/SimpleProfitLossChart";
 import { formatCurrency } from "@/lib/utils-invoice";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -64,20 +64,7 @@ export default function FinancialReportsPage() {
   }, []);
 
   const { data: plTimeSeriesData, isLoading: plChartLoading } = useQuery({
-    queryKey: ['pl-timeseries', companyId, periodParams.from, periodParams.to],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        from: periodParams.from,
-        to: periodParams.to,
-        interval: 'month'
-      });
-      
-      const response = await fetch(`/api/reports/financial/pl-timeseries?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch P&L time series data');
-      }
-      return response.json();
-    },
+    queryKey: [`/api/reports/financial/pl-timeseries?from=${periodParams.from}&to=${periodParams.to}&interval=month`, companyId],
     enabled: !!companyId
   });
 
@@ -645,7 +632,12 @@ export default function FinancialReportsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <ProfitLossChart data={profitLossData} />
+              <SimpleProfitLossChart 
+                totalRevenue={totalRevenue}
+                totalExpenses={totalExpenses}
+                netProfit={netProfit}
+                loading={isLoading}
+              />
             </CardContent>
           </Card>
 
@@ -1436,7 +1428,7 @@ export default function FinancialReportsPage() {
                     <CardTitle className="text-lg">Revenue & Profit Trend Analysis</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ProfitLossChart data={profitLossData} />
+                    <SimpleProfitLossChart data={profitLossData} />
                   </CardContent>
                 </Card>
 
