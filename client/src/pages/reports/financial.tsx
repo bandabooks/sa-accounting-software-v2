@@ -48,22 +48,7 @@ export default function FinancialReportsPage() {
     enabled: !!companyId,
   });
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // NEW: Use dedicated P&L time-series API endpoint
+  // NEW: Use dedicated P&L time-series API endpoint - MOVED BEFORE EARLY RETURN
   const periodParams = useMemo(() => {
     const now = new Date();
     let fromDate: Date;
