@@ -333,6 +333,35 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
   try {
     const authHeader = req.headers.authorization;
     const sessionToken = req.headers['x-session-token'] as string;
+    const sessionCookie = (req as any).session;
+    
+    // Check if user is authenticated via session cookie (Express session)
+    if (sessionCookie && sessionCookie.userId) {
+      const user = await storage.getUser(sessionCookie.userId);
+      if (user && user.isActive) {
+        // Get user's active company
+        let activeCompany;
+        try {
+          activeCompany = await storage.getUserActiveCompany(user.id);
+        } catch (error) {
+          console.error('Error getting user active company, using fallback:', error);
+          activeCompany = { id: 1, name: 'Default Company' };
+        }
+        
+        // Set user data on request
+        req.user = {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions || [],
+          companyId: activeCompany?.id || 1,
+        };
+        
+        return next();
+      }
+    }
     
     if (!authHeader && !sessionToken) {
       return res.status(401).json({ message: 'No authentication token provided' });
