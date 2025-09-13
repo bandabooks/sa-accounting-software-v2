@@ -237,6 +237,8 @@ import { db } from "./db";
 import { sql, eq, and, like, isNotNull, desc, gte, lte, gt, lt, or, isNull } from "drizzle-orm";
 import { 
   journalEntries, 
+  journalEntryLines,
+  chartOfAccounts,
   invoices, 
   invoiceItems,
   expenses, 
@@ -20299,7 +20301,93 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  // Financial Ratios Calculation Endpoint
+  // Financial Reports Summary - Real ledger data endpoint
+  app.get("/api/reports/financial/summary", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const companyId = req.user!.companyId;
+      const { from, to, basis = 'accrual' } = req.query;
+      
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID required" });
+      }
+
+      // Parse date parameters
+      const fromDate = from ? new Date(from as string) : new Date(new Date().getFullYear(), 0, 1); // Start of current year
+      const toDate = to ? new Date(to as string) : new Date(); // Current date
+      
+      console.log(`📊 Financial Summary for company ${companyId}: ${fromDate.toISOString()} to ${toDate.toISOString()}, basis: ${basis}`);
+
+      // SQL query to get revenue and expenses from journal entries
+      const financialData = await db
+        .select({
+          accountType: chartOfAccounts.accountType,
+          totalDebits: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), 0)`,
+          totalCredits: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), 0)`,
+        })
+        .from(journalEntryLines)
+        .innerJoin(journalEntries, eq(journalEntryLines.journalEntryId, journalEntries.id))
+        .innerJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .where(and(
+          eq(journalEntries.companyId, companyId),
+          eq(journalEntries.isPosted, true),
+          gte(journalEntries.transactionDate, fromDate),
+          lte(journalEntries.transactionDate, toDate),
+          or(
+            eq(chartOfAccounts.accountType, 'Revenue'),
+            eq(chartOfAccounts.accountType, 'Expense')
+          )
+        ))
+        .groupBy(chartOfAccounts.accountType);
+
+      console.log(`📊 Raw financial data:`, financialData);
+
+      // Calculate totals based on accounting principles
+      let totalRevenue = 0;
+      let totalExpenses = 0;
+
+      financialData.forEach(row => {
+        const debits = parseFloat(row.totalDebits || '0');
+        const credits = parseFloat(row.totalCredits || '0');
+        const netAmount = credits - debits; // Credit - Debit for net effect
+
+        if (row.accountType === 'Revenue') {
+          // Revenue accounts: Credits increase revenue (normal credit balance)
+          totalRevenue += netAmount;
+        } else if (row.accountType === 'Expense') {
+          // Expense accounts: Debits increase expenses (normal debit balance)
+          totalExpenses += (debits - credits); // Debits - Credits for expense total
+        }
+      });
+
+      // Ensure positive values
+      totalRevenue = Math.max(0, totalRevenue);
+      totalExpenses = Math.max(0, totalExpenses);
+      
+      const netProfit = totalRevenue - totalExpenses;
+      const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+      console.log(`💰 Calculated: Revenue: R${totalRevenue}, Expenses: R${totalExpenses}, Net Profit: R${netProfit}, Margin: ${profitMargin.toFixed(2)}%`);
+
+      const summary = {
+        totalRevenue: totalRevenue.toFixed(2),
+        totalExpenses: totalExpenses.toFixed(2), 
+        netProfit: netProfit.toFixed(2),
+        profitMargin: profitMargin.toFixed(2),
+        period: {
+          from: fromDate.toISOString().split('T')[0],
+          to: toDate.toISOString().split('T')[0]
+        },
+        basis
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching financial summary:", error);
+      res.status(500).json({ message: "Failed to fetch financial summary" });
+    }
+  });
+
+  // Financial Ratios Calculation Endpoint  
   app.get("/api/financial-ratios", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const companyId = req.user!.companyId;
