@@ -23,14 +23,9 @@ export default function ProfitLossDetailedPage() {
   const [, setLocation] = useLocation();
   const [period, setPeriod] = useState("all");
 
-  // Get detailed P&L data from the API
-  const { data: detailedPLData, isLoading } = useQuery({
-    queryKey: ['/api/reports/profit-loss-detailed', period],
-    queryFn: async () => {
-      const response = await fetch(`/api/reports/profit-loss-detailed?period=${period}`);
-      if (!response.ok) throw new Error('Failed to fetch detailed P&L data');
-      return response.json();
-    }
+  // Get detailed P&L data from the API (using authenticated default fetcher)
+  const { data: detailedPLData, isLoading, isError } = useQuery({
+    queryKey: ['/api/reports/profit-loss-detailed', period]
   });
 
   // Use only real API data - no hardcoded fallback to ensure proper company data isolation

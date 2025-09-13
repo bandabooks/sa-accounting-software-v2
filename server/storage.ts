@@ -12069,7 +12069,35 @@ export class DatabaseStorage implements IStorage {
 
   async getDetailedProfitLoss(companyId: number, startDate: Date, endDate: Date) {
     try {
-      // Get all accounts with their balances for the period
+      console.log(`🔍 Getting detailed P&L for company ${companyId} from ${startDate.toDateString()} to ${endDate.toDateString()}`);
+      
+      // Use the same proven approach as the working financial summary
+      const journalData = await db
+        .select({
+          accountType: chartOfAccounts.accountType,
+          accountCode: chartOfAccounts.accountCode,
+          accountName: chartOfAccounts.name,
+          totalDebits: sql<string>`COALESCE(SUM(${journalEntryLines.debitAmount}), '0.00')`,
+          totalCredits: sql<string>`COALESCE(SUM(${journalEntryLines.creditAmount}), '0.00')`
+        })
+        .from(journalEntries)
+        .leftJoin(journalEntryLines, eq(journalEntries.id, journalEntryLines.journalEntryId))
+        .leftJoin(chartOfAccounts, eq(journalEntryLines.accountId, chartOfAccounts.id))
+        .where(
+          and(
+            eq(journalEntries.companyId, companyId),
+            gte(journalEntries.transactionDate, startDate),
+            lte(journalEntries.transactionDate, endDate),
+            eq(journalEntries.status, "posted"),
+            isNotNull(chartOfAccounts.accountType)
+          )
+        )
+        .groupBy(chartOfAccounts.accountType, chartOfAccounts.accountCode, chartOfAccounts.name)
+        .orderBy(chartOfAccounts.accountCode);
+
+      console.log(`📊 Found ${journalData.length} journal data entries for detailed P&L`);
+      
+      // Get all accounts with their balances for the period (keeping original as backup)
       const accountData = await db
         .select({
           accountId: chartOfAccounts.id,
@@ -12190,6 +12218,49 @@ export class DatabaseStorage implements IStorage {
         }
       });
 
+      // ALSO process journal data using the same proven approach as working financial summary
+      journalData.forEach(item => {
+        if (item.accountType && item.accountName) {
+          const debit = parseFloat(item.totalDebits);
+          const credit = parseFloat(item.totalCredits);
+          let amount = 0;
+          let category: 'revenue' | 'cogs' | 'operating_expenses' | 'other_income' | 'other_expenses';
+
+          if (item.accountType === 'Revenue') {
+            amount = credit - debit; // Revenue has credit balance
+            category = 'revenue';
+          } else if (item.accountType === 'Expense') {
+            amount = debit - credit; // Expense has debit balance  
+            category = 'operating_expenses';
+          } else {
+            return; // Skip non-P&L accounts
+          }
+
+          if (amount > 0) {
+            // Check if this account already exists (avoid duplicates)
+            const existingIndex = detailedAccounts.findIndex(acc => 
+              acc.account_code === item.accountCode && acc.account_name === item.accountName
+            );
+            
+            if (existingIndex === -1) {
+              detailedAccounts.push({
+                account_code: item.accountCode || '',
+                account_name: item.accountName,
+                account_type: item.accountType.toLowerCase(),
+                category,
+                amount: amount
+              });
+            } else {
+              // Update existing account amount
+              detailedAccounts[existingIndex].amount = Math.max(detailedAccounts[existingIndex].amount, amount);
+            }
+          }
+        }
+      });
+
+      console.log(`💰 Final detailed P&L accounts: ${detailedAccounts.length} accounts with total amounts:`, 
+        detailedAccounts.map(acc => `${acc.account_name}: ${acc.amount}`).join(', '));
+      
       return detailedAccounts;
     } catch (error) {
       console.error("Error generating detailed profit & loss:", error);

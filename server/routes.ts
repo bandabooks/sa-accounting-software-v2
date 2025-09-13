@@ -5075,7 +5075,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get detailed account breakdown for P&L
+      console.log(`📊 Detailed P&L for company ${companyId}: ${fromDate.toDateString()} to ${toDate.toDateString()}, period: ${period}`);
       const detailed = await storage.getDetailedProfitLoss(companyId, fromDate, toDate);
+      console.log(`💰 Detailed P&L Data:`, JSON.stringify(detailed, null, 2));
       res.json(detailed);
     } catch (error) {
       console.error("Error generating detailed profit & loss:", error);
