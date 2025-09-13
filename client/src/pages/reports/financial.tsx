@@ -58,10 +58,13 @@ export default function FinancialReportsPage() {
     );
   }
 
+  // Extract data from the correct API structure
   const profitLossData = (dashboardStats as any)?.charts?.monthlyRevenue || [];
-  const totalRevenue = parseFloat((dashboardStats as any)?.kpis?.totalRevenue || '0');
-  const totalExpenses = parseFloat((dashboardStats as any)?.kpis?.totalExpenses || '0');
-  const netProfit = totalRevenue - totalExpenses;
+  const totalRevenue = parseFloat((dashboardStats as any)?.kpis?.monthlyRevenue || '0');
+  const netProfit = parseFloat((dashboardStats as any)?.kpis?.netProfit || '0');
+  const totalExpenses = totalRevenue - netProfit; // Calculate expenses from revenue minus profit
+  
+  console.log('Financial Reports - Parsed Values:', { totalRevenue, totalExpenses, netProfit, kpis: (dashboardStats as any)?.kpis });
 
   // Calculate Revenue Growth (month-over-month)
   const calculateRevenueGrowth = () => {
