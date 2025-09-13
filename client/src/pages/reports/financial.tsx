@@ -97,6 +97,7 @@ export default function FinancialReportsPage() {
   const netProfit = kpis?.netProfit || 0;
   const totalExpenses = totalRevenue - netProfit; // Calculate expenses from revenue minus profit
   const profitMarginFromAPI = kpis?.profitMargin || 0;
+  const profitLossData = dashboardStats?.charts?.incomeVsExpenseT12M || [];
   
   console.log('Financial Reports - Debug Data:', { 
     hasData: !!dashboardStats,
