@@ -66,8 +66,16 @@ export default function FinancialReportsPage() {
   // Enhanced: Map real chart data from dashboard API
   const rawChartData = (dashboardStats as any)?.charts?.incomeVsExpenseT12M || [];
   
+  // Debug: Log what we actually receive
+  console.log('📊 Debug Chart Data:', {
+    dashboardStats: !!dashboardStats,
+    hasCharts: !!(dashboardStats as any)?.charts,
+    rawChartData: rawChartData,
+    chartDataLength: rawChartData.length
+  });
+  
   // Transform data to match ProfitLossChart expected format
-  const profitLossData = rawChartData.map((item: any) => {
+  let profitLossData = rawChartData.map((item: any) => {
     const revenue = parseFloat(item.income || '0');
     const expenses = parseFloat(item.expense || '0');
     const profit = revenue - expenses;
@@ -86,6 +94,27 @@ export default function FinancialReportsPage() {
       profit
     };
   });
+
+  // FALLBACK: If no monthly data but we have totals, create current month data from enhanced dashboard
+  if (profitLossData.length === 0 && dashboardStats) {
+    const kpis = (dashboardStats as any)?.kpis;
+    if (kpis && (kpis.totalRevenue > 0 || kpis.totalExpenses > 0)) {
+      const currentDate = new Date();
+      const monthName = currentDate.toLocaleDateString('en-US', { 
+        month: 'short',
+        day: '2-digit'
+      });
+      
+      profitLossData = [{
+        month: monthName,
+        revenue: parseFloat(kpis.totalRevenue || '0'),
+        expenses: parseFloat(kpis.totalExpenses || '0'),
+        profit: parseFloat(kpis.netProfit || '0')
+      }];
+      
+      console.log('📊 Using fallback chart data from KPIs:', profitLossData);
+    }
+  }
   const totalRevenue = parseFloat(financialSummary?.totalRevenue || '0');
   const totalExpenses = parseFloat(financialSummary?.totalExpenses || '0');
   const netProfit = parseFloat(financialSummary?.netProfit || '0');
