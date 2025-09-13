@@ -20,14 +20,14 @@ export default function FinancialReportsPage() {
   const [reportType, setReportType] = useState('profit-loss');
   const { companyId } = useCompany();
 
-  // Fetch the same dashboard data to ensure consistency
+  // Fetch the same dashboard data to ensure consistency - using the working business dashboard API
   const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ['/api/dashboard/stats', companyId],
+    queryKey: ['/api/dashboard/business', companyId, 'basis=accrual&period=YTD'],
     enabled: !!companyId,
   });
 
   const { data: salesStats } = useQuery({
-    queryKey: ['/api/sales/stats', companyId],
+    queryKey: ['/api/dashboard/business', companyId, 'basis=accrual&period=YTD'],
     enabled: !!companyId,
   });
 
@@ -58,9 +58,9 @@ export default function FinancialReportsPage() {
     );
   }
 
-  const profitLossData = (dashboardStats as any)?.profitLossData || [];
-  const totalRevenue = parseFloat((dashboardStats as any)?.totalRevenue || '0');
-  const totalExpenses = parseFloat((dashboardStats as any)?.totalExpenses || '0');
+  const profitLossData = (dashboardStats as any)?.charts?.monthlyRevenue || [];
+  const totalRevenue = parseFloat((dashboardStats as any)?.kpis?.totalRevenue || '0');
+  const totalExpenses = parseFloat((dashboardStats as any)?.kpis?.totalExpenses || '0');
   const netProfit = totalRevenue - totalExpenses;
 
   // Calculate Revenue Growth (month-over-month)
