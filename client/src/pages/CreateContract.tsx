@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { apiRequest } from "@/lib/queryClient";
-import { useCompany } from "@/contexts/CompanyContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 
@@ -63,13 +62,10 @@ export default function CreateContract() {
   });
 
 
-  const { companyId } = useCompany();
-
   // Fetch customers  
   const { data: customersData, isLoading: isLoadingCustomers, error: customersError } = useQuery({
-    queryKey: ["/api/customers", companyId],
+    queryKey: ["/api/customers"],
     retry: 1,
-    enabled: !!companyId
   });
 
   // Ensure data is array

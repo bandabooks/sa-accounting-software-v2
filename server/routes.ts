@@ -7063,7 +7063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all payments for stats calculation
       const payments = await storage.getPaymentsByCompany(companyId);
-      const invoices = await storage.getAllInvoices(companyId);
+      const invoices = await storage.getAllInvoices();
       
       // Calculate total payments
       const totalPayments = payments.length;
