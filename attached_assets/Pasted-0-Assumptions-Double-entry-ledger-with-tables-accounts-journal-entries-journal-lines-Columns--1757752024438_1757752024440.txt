@@ -1,0 +1,259 @@
+0) Assumptions
+
+Double-entry ledger with tables: accounts, journal_entries, journal_lines.
+
+Columns:
+
+accounts(id, tenantId, code, name, category) where category ∈ { ASSET, LIABILITY, EQUITY, REVENUE, EXPENSE }.
+
+journal_entries(id, tenantId, posted, entryDate, currency, fxRateToBase)
+
+journal_lines(id, tenantId, entryId, accountId, debit, credit, amountBase) (amount in base currency; amountBase = credit − debit with sign).
+
+Only posted = true entries are reportable.
+
+Multi-tenant enforced via tenantId.
+
+Base currency reporting (add FX later if needed).
+
+If your columns differ, keep the pattern but rename fields accordingly.
+
+1) Create a single SQL that returns the 4 card numbers for a period
+-- migration: report_summary.sql (Postgres)
+-- Accrual-basis in base currency
+WITH lines AS (
+  SELECT
+    jl.tenantId,
+    a.category,
+    jl.amountBase,        -- credit - debit (signed)
+    je.entryDate
+  FROM journal_lines jl
+  JOIN journal_entries je ON je.id = jl.entryId AND je.posted = TRUE
+  JOIN accounts a ON a.id = jl.accountId
+  WHERE jl.tenantId = $1            -- tenantId
+    AND je.entryDate >= $2::date    -- from
+    AND je.entryDate <  $3::date    -- to (exclusive)
+)
+SELECT
+  COALESCE(SUM(CASE WHEN category = 'REVENUE' THEN amountBase ELSE 0 END), 0)     AS revenue_raw,
+  COALESCE(SUM(CASE WHEN category = 'EXPENSE' THEN -amountBase ELSE 0 END), 0)    AS expenses_raw
+;
+
+
+Why:
+
+For revenue accounts, credits are positive; sum amountBase.
+
+For expense accounts, debits increase balance; since amountBase = credit - debit, we negate to get a positive expense sum.
+
+2) Expose an API
+
+Route: GET /api/reports/financial/summary?from=YYYY-MM-DD&to=YYYY-MM-DD&basis=accrual
+Returns { totalRevenue, totalExpenses, netProfit, profitMargin } for the current tenant.
+
+// src/modules/reports/reports.controller.ts (NestJS)
+import { Controller, Get, Query, Req } from '@nestjs/common';
+import { z } from 'zod';
+import { ReportsService } from './reports.service';
+
+const SummaryQuery = z.object({
+  from: z.string().date().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  to:   z.string().date().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  basis: z.enum(['accrual']).default('accrual'), // extend later for cash
+});
+
+@Controller('api/reports/financial')
+export class ReportsController {
+  constructor(private svc: ReportsService) {}
+
+  @Get('summary')
+  async summary(@Query() q: any, @Req() req: any) {
+    const { from, to } = SummaryQuery.parse(q);
+    const tenantId = req.auth.tenantId; // from auth middleware
+    return this.svc.getFinancialSummary({ tenantId, from, to });
+  }
+}
+
+// src/modules/reports/reports.service.ts
+import { Injectable } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+import { createHash } from 'crypto';
+import Redis from 'ioredis';
+
+type Params = { tenantId: string; from: string; to: string };
+
+@Injectable()
+export class ReportsService {
+  constructor(
+    private prisma: PrismaClient,
+    private cache: Redis, // inject a shared Redis
+  ) {}
+
+  private cacheKey(p: Params) {
+    const h = createHash('sha1').update(JSON.stringify(p)).digest('hex');
+    return `rep:summary:v1:${h}`;
+  }
+
+  async getFinancialSummary(p: Params) {
+    const key = this.cacheKey(p);
+    const cached = await this.cache.get(key);
+    if (cached) return JSON.parse(cached);
+
+    const { tenantId, from, to } = p;
+
+    const result = await this.prisma.$queryRawUnsafe<{
+      revenue_raw: string | number;
+      expenses_raw: string | number;
+    }[]>(
+      `
+      WITH lines AS (
+        SELECT jl."tenantId", a."category", jl."amountBase", je."entryDate"
+        FROM "journal_lines" jl
+        JOIN "journal_entries" je ON je."id" = jl."entryId" AND je."posted" = TRUE
+        JOIN "accounts" a ON a."id" = jl."accountId"
+        WHERE jl."tenantId" = $1
+          AND je."entryDate" >= $2::date
+          AND je."entryDate" <  $3::date
+      )
+      SELECT
+        COALESCE(SUM(CASE WHEN category = 'REVENUE' THEN amountBase ELSE 0 END), 0)  AS revenue_raw,
+        COALESCE(SUM(CASE WHEN category = 'EXPENSE' THEN -amountBase ELSE 0 END), 0) AS expenses_raw
+      ;
+      `,
+      tenantId,
+      from,
+      to,
+    );
+
+    const row = result[0] ?? { revenue_raw: 0, expenses_raw: 0 };
+    const totalRevenue = Number(row.revenue_raw) || 0;
+    const totalExpenses = Number(row.expenses_raw) || 0;
+    const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue === 0 ? 0 : +(netProfit / totalRevenue).toFixed(4);
+
+    const payload = { totalRevenue, totalExpenses, netProfit, profitMargin };
+    await this.cache.setex(key, 300, JSON.stringify(payload)); // 5 min cache
+
+    return payload;
+  }
+}
+
+
+Invalidate cache when: posting/unposting an entry, editing a line, or closing a period. Just DEL rep:summary:* or more selective keys.
+
+3) Front-end: fetch + bind to cards
+// src/pages/reports/FinancialReports.tsx (React)
+import { useEffect, useState } from 'react';
+
+type Summary = {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: number; // 0..1
+};
+
+export default function FinancialReportsPage() {
+  const [data, setData] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  // use the same date range selector the page already has
+  const { from, to } = useDateRangeFromUI(); // implement/hook you already use
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/reports/financial/summary?from=${from}&to=${to}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(setData)
+      .catch(e => setErr(e.message))
+      .finally(() => setLoading(false));
+  }, [from, to]);
+
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      <Card title="Total Revenue" value={fmtCurrency(data?.totalRevenue)} loading={loading} error={err}/>
+      <Card title="Total Expenses" value={fmtCurrency(data?.totalExpenses)} loading={loading} error={err}/>
+      <Card title="Net Profit" value={fmtCurrency(data?.netProfit)} loading={loading} error={err}/>
+      <Card title="Profit Margin" value={fmtPercent(data?.profitMargin)} loading={loading} error={err}/>
+    </div>
+  );
+}
+
+const fmtCurrency = (n?: number) => n == null ? '—' : new Intl.NumberFormat('en-ZA', { style:'currency', currency:'ZAR' }).format(n);
+const fmtPercent  = (n?: number) => n == null ? '—' : `${(n*100).toFixed(1)}%`;
+
+
+Make sure your date range picker feeds the same from/to into both charts and cards. In your screenshot it says “All Time”; if the API default is month-to-date you’ll see zeros. Align them.
+
+4) Common gotchas that cause “0.00” on cards
+
+Wrong basis: UI asks for “Last 6 Months (All Time)” but API defaults to current month. Fix by passing explicit from/to.
+
+Tenant leak: missing tenantId in WHERE clause → API returns nothing (or someone else’s data).
+
+Unposted entries: your journals are saved but not “posted”. Ensure the report filters posted=true.
+
+Category mapping: revenue/expense accounts not tagged correctly → sums are zero. Run a one-off script to backfill accounts.category.
+
+Currency: summing raw debit/credit in mixed currencies without normalizing to base. Use amountBase.
+
+5) Minimal test (Vitest + Testcontainers sketch)
+import { describe, it, expect } from 'vitest';
+import { getFinancialSummary } from '../src/modules/reports/reports.service';
+
+describe('financial summary', () => {
+  it('sums revenue, expenses, profit, margin', async () => {
+    // seed: revenue 1000, expense 400
+    const res = await svc.getFinancialSummary({ tenantId: TENANT, from:'2025-01-01', to:'2025-02-01' });
+    expect(res.totalRevenue).toBe(1000);
+    expect(res.totalExpenses).toBe(400);
+    expect(res.netProfit).toBe(600);
+    expect(res.profitMargin).toBeCloseTo(0.6, 5);
+  });
+});
+
+Professional prompt (use with your team or an AI code assistant)
+
+Role: Senior Node/TypeScript engineer working on an accounting app.
+Goal: Wire the “Financial Reports” cards (Total Revenue, Total Expenses, Net Profit, Profit Margin) to real ledger data.
+Stack: NestJS, Prisma, Postgres, Redis, React front-end.
+Data model: accounts(category=REVENUE|EXPENSE), journal_entries(posted, entryDate), journal_lines(debit, credit, amountBase, accountId), multi-tenant via tenantId.
+Scope & tasks:
+
+Implement GET /api/reports/financial/summary?from&to&basis=accrual returning { totalRevenue, totalExpenses, netProfit, profitMargin }.
+
+SQL rules (accrual, base currency):
+
+amountBase = credit - debit.
+
+totalRevenue = Σ amountBase where accounts.category = 'REVENUE'.
+
+totalExpenses = Σ (-amountBase) where accounts.category = 'EXPENSE'.
+
+netProfit = totalRevenue - totalExpenses.
+
+profitMargin = netProfit / totalRevenue (0 if revenue = 0).
+
+Scope by tenantId, posted = true, entryDate ∈ [from, to).
+
+Add 5-minute Redis cache; key includes tenantId/from/to. Invalidate on posting/unposting entries.
+
+Front-end: bind the page date-range selector to the API and render numbers on the four cards with a loading skeleton and error state.
+Acceptance criteria:
+
+Changing date range updates the card values within <300ms (from cache).
+
+Values match a manual SQL reconciliation for at least two seeded scenarios (positive profit and loss).
+
+Multi-tenant safe (verified by unit test querying two tenants).
+
+Zero-division handled; displays “0.0%” when revenue = 0.
+
+Code includes unit tests and clear TODOs for cash-basis and FX.
+Non-goals (for now): cash-basis, FX remeasurement, consolidation across entities.
+Deliverables: controller, service, SQL (or Prisma raw), tests, and a small React patch showing the numbers on the cards.
+
+If you paste the API/service and the tiny React patch above, your cards will pull real numbers immediately. If your schema differs, tell me your column names and I’ll adapt the exact query.
