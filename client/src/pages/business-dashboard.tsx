@@ -213,16 +213,12 @@ export default function BusinessDashboard() {
     setLocation('/vat-returns');
   };
 
-  const navigateToARReports = () => {
-    setLocation('/reports/accounts-receivable');
-  };
-
   const navigateToSalesReports = () => {
-    setLocation('/sales-reports');
+    setLocation('/invoices');
   };
 
   const navigateToFinancialReports = () => {
-    setLocation('/financial-reports');
+    setLocation('/reports/financial');
   };
 
   const navigateToPayables = () => {
@@ -234,7 +230,7 @@ export default function BusinessDashboard() {
   };
 
   const navigateToAgingReports = () => {
-    setLocation('/aging-reports');
+    setLocation('/reports/accounts-receivable');
   };
 
   const handleRefresh = () => {
@@ -372,7 +368,7 @@ export default function BusinessDashboard() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Bank Balance */}
-              <div onClick={navigateToBankTransactions} className="cursor-pointer">
+              <div onClick={navigateToBankTransactions} className="cursor-pointer" data-testid="card-bank-balance">
                 <TooltipProvider>
                   <div className="relative">
                     <InfoKPIStat
@@ -435,7 +431,7 @@ export default function BusinessDashboard() {
               </div>
 
               {/* VAT Position */}
-              <div onClick={navigateToVATReturns} className="cursor-pointer">
+              <div onClick={navigateToVATReturns} className="cursor-pointer" data-testid="card-vat-position">
                 <WarningKPIStat
                   title="VAT Position"
                   value={Math.abs(dashboardData.kpis.vat.position)}
@@ -452,7 +448,7 @@ export default function BusinessDashboard() {
             {/* Additional KPI Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Accounts Receivable */}
-              <div onClick={() => navigateToInvoices('sent')} className="cursor-pointer">
+              <div onClick={() => navigateToInvoices('sent')} className="cursor-pointer" data-testid="card-receivables-ar">
                 <SuccessKPIStat
                   title="Receivables (AR)"
                   value={dashboardData.kpis.ar.total}
