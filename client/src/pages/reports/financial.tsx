@@ -495,7 +495,7 @@ export default function FinancialReportsPage() {
             <div className="text-2xl font-bold text-green-800">{formatCurrency(totalRevenue.toString())}</div>
             <div className="flex items-center text-xs text-green-600 mt-1">
               <TrendingUp className="h-3 w-3 mr-1" />
-              <span>+{(salesStats as any)?.salesGrowth || 0}% from last month</span>
+              <span>+{revenueGrowth.toFixed(1)}% from last month</span>
             </div>
           </CardContent>
         </Card>
