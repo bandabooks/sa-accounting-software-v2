@@ -1,0 +1,185 @@
+Tenant-scope the Customers feature
+
+Role: You are a senior Node.js/TypeScript engineer. This repo is a multi-company accounting app. A bug shows the same customers across all companies. Fix all tenant scoping for customers end-to-end.
+
+Constraints & conventions
+
+Language: TypeScript/Node.
+
+Client uses React Query in src/.
+
+Backend is under server/ (Express/Fastify/whatever is present).
+
+Tenant identifier is companyId.
+
+Transport: prefer request header x-company-id (fallback: ?companyId=).
+
+Never return cross-tenant data. If companyId is missing, return HTTP 400.
+
+1) Find the customer list API and scope it by tenant
+
+Search targets
+
+server/** for routes/handlers containing: customer, customers, findMany, select().from(customers), GET /api/customers.
+
+DB adapters: server/prisma.ts, server/db.ts, server/drizzle.ts, server/knex.ts.
+
+Change
+
+Read companyId from req.headers['x-company-id'] (string) OR req.query.companyId.
+
+If absent: return res.status(400).json({ error: 'Missing companyId' }).
+
+Filter query: WHERE company_id = :companyId (Prisma: { where: { companyId } }).
+
+Also scope stats endpoint /api/customers/stats by companyId.
+
+Example (Prisma)
+
+const companyId = (req.headers['x-company-id'] as string) ?? (req.query.companyId as string);
+if (!companyId) return res.status(400).json({ error: 'Missing companyId' });
+
+const customers = await prisma.customer.findMany({
+  where: { companyId, deletedAt: null },
+  orderBy: { name: 'asc' },
+});
+return res.json(customers);
+
+
+Example (SQL/Drizzle/Knex)
+
+const rows = await db.select().from(customers)
+  .where(eq(customers.companyId, companyId)) // drizzle
+  // or knex: .where({ company_id: companyId })
+
+2) Ensure the data model enforces tenant ownership
+
+Search targets
+
+migrations/** creating customers.
+
+Prisma/Drizzle schema files declaring Customer / customers.
+
+Change
+
+company_id (or companyId) must be NOT NULL and FK to companies(id).
+
+If missing, add migration to:
+
+Add column if needed
+
+Set NOT NULL
+
+Add FK
+
+Postgres migration sketch
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_id uuid;
+ALTER TABLE customers ALTER COLUMN company_id SET NOT NULL;
+ALTER TABLE customers
+  ADD CONSTRAINT customers_company_fk
+  FOREIGN KEY (company_id) REFERENCES companies(id);
+
+
+(Do not drop data. If rows exist without company_id, set them to the correct company or block the deployment.)
+
+3) Fix the client to send companyId and isolate the cache
+
+Search targets
+
+src/lib/api.ts (contains customersApi.getAll).
+
+Any calls to /api/customers and /api/customers/stats.
+
+React Query keys like queryKey: ["/api/customers"].
+
+Change
+
+customersApi.getAll(companyId: string) must send x-company-id header (or ?companyId=).
+
+React Query keys must include companyId: ['/api/customers', companyId].
+
+Queries must be enabled: !!companyId.
+
+api.ts example
+
+export const customersApi = {
+  getAll: async (companyId: string) => {
+    const res = await apiRequest('/api/customers', 'GET', undefined, {
+      headers: { 'x-company-id': companyId },
+    });
+    if (!res.ok) throw new Error('Failed to load customers');
+    return res.json();
+  },
+};
+
+
+Component/hook example
+
+const companyId = getCompanyIdFromAuthOrContext(); // existing source
+const { data: customers } = useQuery({
+  queryKey: ['/api/customers', companyId],
+  queryFn: () => customersApi.getAll(companyId!),
+  enabled: !!companyId,
+});
+
+
+Stats
+
+const { data: stats } = useQuery({
+  queryKey: ['/api/customers/stats', companyId],
+  queryFn: () => apiRequest('/api/customers/stats', 'GET', undefined, {
+    headers: { 'x-company-id': companyId! },
+  }).then(r => r.json()),
+  enabled: !!companyId,
+});
+
+4) Caching and state
+
+If Redis/in-memory caching exists server-side, include companyId in cache keys, e.g. customerList:${companyId}.
+
+Client React Query keys already include it (step 3).
+
+5) Safeguards (optional but recommended)
+
+If using Postgres, enable RLS on customers with a company_id filter. (Only if the app can SET app.current_company per request.)
+
+Add an integration test to prove isolation.
+
+Supertest example
+
+it('isolates customers by company', async () => {
+  await request(app).get('/api/customers')
+    .set('x-company-id', companyA).expect(200)
+    .expect(res => {
+      expect(res.body.every((c: any) => c.companyId === companyA)).toBe(true);
+    });
+
+  await request(app).get('/api/customers')
+    .set('x-company-id', companyB).expect(200)
+    .expect(res => {
+      expect(res.body.every((c: any) => c.companyId === companyB)).toBe(true);
+    });
+});
+
+Acceptance criteria (must all be true)
+
+/api/customers and /api/customers/stats require companyId and filter by it.
+
+Client requests send x-company-id, and React Query keys include companyId.
+
+Switching company (via auth/context) results in a different customer list without page reload conflicts.
+
+Schema prevents customers without a companyId (NOT NULL + FK).
+
+No shared cache returns cross-tenant data.
+
+Deliverables
+
+Modified server routes/handlers.
+
+Updated client API and React Query usage.
+
+(If needed) new migration adding NOT NULL + FK for companyId.
+
+Optional: a minimal test proving isolation.

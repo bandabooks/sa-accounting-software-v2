@@ -2488,7 +2488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertCustomerSchema.parse({
         ...req.body,
-        companyId: req.user?.companyId || 1 // Use user's active company ID
+        companyId: req.user?.companyId // Use user's active company ID
       });
       const customer = await storage.createCustomer(validatedData);
       res.status(201).json(customer);
@@ -2501,10 +2501,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/customers/:id", async (req, res) => {
+  app.put("/api/customers/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertCustomerSchema.partial().parse(req.body);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // First verify customer belongs to user's company
+      const existingCustomer = await storage.getCustomer(id);
+      if (!existingCustomer || existingCustomer.companyId !== companyId) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
+      // Strip companyId from update payload to prevent cross-tenant reassignment
+      const validatedData = insertCustomerSchema.partial().omit({ companyId: true }).parse(req.body);
       const customer = await storage.updateCustomer(id, validatedData);
       if (!customer) {
         return res.status(404).json({ message: "Customer not found" });
@@ -2518,9 +2530,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/customers/:id/portal", async (req, res) => {
+  app.post("/api/customers/:id/portal", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // First verify customer belongs to user's company
+      const existingCustomer = await storage.getCustomer(id);
+      if (!existingCustomer || existingCustomer.companyId !== companyId) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
       const { portalAccess, portalPassword } = req.body;
       const customer = await storage.setupCustomerPortal(id, { portalAccess, portalPassword });
       if (!customer) {
@@ -2532,9 +2555,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/customers/:id", async (req, res) => {
+  app.delete("/api/customers/:id", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
       const id = parseInt(req.params.id);
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
+      
+      // First verify customer belongs to user's company
+      const existingCustomer = await storage.getCustomer(id);
+      if (!existingCustomer || existingCustomer.companyId !== companyId) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+      
       const deleted = await storage.deleteCustomer(id);
       if (!deleted) {
         return res.status(404).json({ message: "Customer not found" });
@@ -2618,7 +2652,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = createInvoiceSchema.parse(req.body);
       
       // Auto-generate invoice number if not provided
-      const companyId = req.user?.companyId || 1;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       let invoiceNumber = validatedData.invoice.invoiceNumber;
       if (!invoiceNumber || invoiceNumber.trim() === '') {
         invoiceNumber = await storage.getNextDocumentNumber(companyId, 'invoice');
@@ -2791,7 +2828,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = createEstimateSchema.parse(req.body);
       
       // Auto-generate estimate number if not provided
-      const companyId = req.user?.companyId || 1;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       let estimateNumber = validatedData.estimate.estimateNumber;
       if (!estimateNumber || estimateNumber.trim() === '') {
         estimateNumber = await storage.getNextDocumentNumber(companyId, 'estimate');
@@ -4995,7 +5035,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Lifecycle Management
   app.get("/api/customers/lifecycle", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const customers = await storage.getCustomersWithLifecycle(companyId);
       res.json(customers);
     } catch (error) {
@@ -5006,7 +5049,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/customers/lifecycle/stats", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getCustomerLifecycleStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -5018,7 +5064,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/customers/:id/lifecycle-events", authenticate, async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const events = await storage.getCustomerLifecycleEvents(customerId, companyId);
       res.json(events);
     } catch (error) {
@@ -5030,7 +5079,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/customers/:id/lifecycle-stage", authenticate, async (req, res) => {
     try {
       const customerId = parseInt(req.params.id);
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { stage } = req.body;
       
       const updated = await storage.updateCustomerLifecycleStage(customerId, stage, companyId, req.user?.id);
@@ -5044,7 +5096,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Communication Center
   app.get("/api/communications", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const communications = await storage.getAllCommunications(companyId);
       res.json(communications);
     } catch (error) {
@@ -5055,7 +5110,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/communications/stats", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const stats = await storage.getCommunicationStats(companyId);
       res.json(stats);
     } catch (error) {
@@ -5066,7 +5124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/communications", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const communication = await storage.createCommunication({ ...req.body, companyId, sentBy: req.user?.id });
       res.status(201).json(communication);
     } catch (error) {
@@ -5078,7 +5139,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Communication Templates
   app.get("/api/communication-templates", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const templates = await storage.getCommunicationTemplates(companyId);
       res.json(templates);
     } catch (error) {
@@ -5089,7 +5153,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/communication-templates", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const template = await storage.createCommunicationTemplate({ ...req.body, companyId, createdBy: req.user?.id });
       res.status(201).json(template);
     } catch (error) {
@@ -5101,7 +5168,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer Segments
   app.get("/api/customer-segments", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const segments = await storage.getCustomerSegments(companyId);
       res.json(segments);
     } catch (error) {
@@ -5112,7 +5182,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/customer-segments", authenticate, async (req, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const segment = await storage.createCustomerSegment({ ...req.body, companyId, createdBy: req.user?.id });
       res.status(201).json(segment);
     } catch (error) {
@@ -10450,7 +10523,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // VAT Stats endpoint for quick summary
   app.get("/api/vat/stats", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const companyId = req.user?.companyId || 2;
+      const companyId = req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ message: "Company ID is required" });
+      }
       const { startDate, endDate } = req.query;
       
       // Calculate VAT stats from actual invoices and expenses
@@ -15579,7 +15655,6 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
-  const httpServer = createServer(app);
   // ===========================
   // COMPLIANCE MANAGEMENT ROUTES
   // ===========================
@@ -17064,13 +17139,7 @@ Format your response as a JSON array of tip objects with "title", "description",
   // END OF RBAC API ROUTES
   // =============================================
 
-  // Initialize collaboration WebSocket server
-  try {
-    const { collaborationManager } = await import("./collaboration");
-    collaborationManager.initialize(httpServer);
-  } catch (error) {
-    console.warn("Failed to initialize collaboration system:", error);
-  }
+  // Note: WebSocket initialization will be handled in app.ts with the correct server instance
   
   // ========================================
   // GENERAL REPORTS MODULE API ENDPOINTS
@@ -20728,5 +20797,4 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   console.log("All routes registered successfully, including SARS eFiling integration, Professional ID system, AI Transaction Matching, Real-time Alerts, Business Reports Analytics, Company Email Settings, Financial Ratios, and Contracts Module!");
-  return httpServer;
 }

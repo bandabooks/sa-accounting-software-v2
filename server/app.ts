@@ -57,6 +57,15 @@ export async function setupApp() {
   // Register all routes and middleware
   await registerRoutes(app);
   
+  // Initialize collaboration WebSocket server with the correct server instance
+  try {
+    const { collaborationManager } = await import("./collaboration");
+    collaborationManager.initialize(server);
+    console.log("Collaboration WebSocket server initialized");
+  } catch (error) {
+    console.warn("Failed to initialize collaboration system:", error);
+  }
+  
   // Template seeding will be handled in background after server starts
   // (removed blocking call to avoid startup delays)
   
