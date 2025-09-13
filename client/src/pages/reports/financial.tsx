@@ -69,23 +69,14 @@ export default function FinancialReportsPage() {
     let fromDate: Date;
     let toDate = now;
     
-    if (period === 'YTD') {
-      fromDate = new Date(now.getFullYear(), 0, 1);
-    } else if (period === 'LY') {
-      fromDate = new Date(now.getFullYear() - 1, 0, 1);
-      toDate = new Date(now.getFullYear() - 1, 11, 31);
-    } else if (period === 'Custom' && customFrom && customTo) {
-      fromDate = new Date(customFrom);
-      toDate = new Date(customTo);
-    } else {
-      fromDate = new Date(now.getFullYear(), 0, 1);
-    }
+    // For now, use Year-to-Date period (same as financial summary)
+    fromDate = new Date(now.getFullYear(), 0, 1);
     
     return {
       from: fromDate.toISOString().split('T')[0],
       to: toDate.toISOString().split('T')[0]
     };
-  }, [period, customFrom, customTo]);
+  }, []);
 
   const { data: plTimeSeriesData, isLoading: plChartLoading } = useQuery({
     queryKey: ['pl-timeseries', companyId, periodParams.from, periodParams.to],
