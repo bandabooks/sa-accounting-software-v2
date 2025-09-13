@@ -217,6 +217,26 @@ export default function BusinessDashboard() {
     setLocation('/reports/accounts-receivable');
   };
 
+  const navigateToSalesReports = () => {
+    setLocation('/sales-reports');
+  };
+
+  const navigateToFinancialReports = () => {
+    setLocation('/financial-reports');
+  };
+
+  const navigateToPayables = () => {
+    setLocation('/bills');
+  };
+
+  const navigateToCashFlowForecasting = () => {
+    setLocation('/cash-flow-forecasting');
+  };
+
+  const navigateToAgingReports = () => {
+    setLocation('/aging-reports');
+  };
+
   const handleRefresh = () => {
     refetch();
     toast({
@@ -390,25 +410,29 @@ export default function BusinessDashboard() {
               </div>
 
               {/* Monthly Revenue */}
-              <SuccessKPIStat
-                title="Monthly Revenue"
-                value={dashboardData.kpis.monthlyRevenue}
-                icon={TrendingUp}
-                subtitle={`${formatPercentage(dashboardData.kpis.grossMargin * 100)} gross margin • ${dashboardData.basis} basis`}
-              />
+              <div onClick={navigateToSalesReports} className="cursor-pointer" data-testid="card-monthly-revenue">
+                <SuccessKPIStat
+                  title="Monthly Revenue"
+                  value={dashboardData.kpis.monthlyRevenue}
+                  icon={TrendingUp}
+                  subtitle={`${formatPercentage(dashboardData.kpis.grossMargin * 100)} gross margin • ${dashboardData.basis} basis`}
+                />
+              </div>
 
               {/* Net Profit */}
-              <KPIStat
-                title="Net Profit"
-                value={dashboardData.kpis.netProfit}
-                icon={Target}
-                variant={dashboardData.kpis.netProfit >= 0 ? 'success' : 'danger'}
-                change={{
-                  value: dashboardData.kpis.profitMargin * 100,
-                  period: 'margin',
-                  type: dashboardData.kpis.profitMargin >= 0 ? 'increase' : 'decrease'
-                }}
-              />
+              <div onClick={navigateToFinancialReports} className="cursor-pointer" data-testid="card-net-profit">
+                <KPIStat
+                  title="Net Profit"
+                  value={dashboardData.kpis.netProfit}
+                  icon={Target}
+                  variant={dashboardData.kpis.netProfit >= 0 ? 'success' : 'danger'}
+                  change={{
+                    value: dashboardData.kpis.profitMargin * 100,
+                    period: 'margin',
+                    type: dashboardData.kpis.profitMargin >= 0 ? 'increase' : 'decrease'
+                  }}
+                />
+              </div>
 
               {/* VAT Position */}
               <div onClick={navigateToVATReturns} className="cursor-pointer">
@@ -442,39 +466,45 @@ export default function BusinessDashboard() {
               </div>
 
               {/* Accounts Payable */}
-              <DangerKPIStat
-                title="Payables (AP)"
-                value={dashboardData.kpis.ap.total}
-                icon={Users}
-                subtitle={`${formatCurrency(dashboardData.kpis.ap.overdue)} overdue`}
-              />
+              <div onClick={navigateToPayables} className="cursor-pointer" data-testid="card-payables-ap">
+                <DangerKPIStat
+                  title="Payables (AP)"
+                  value={dashboardData.kpis.ap.total}
+                  icon={Users}
+                  subtitle={`${formatCurrency(dashboardData.kpis.ap.overdue)} overdue`}
+                />
+              </div>
 
               {/* Cash Flow (Weekly Avg) */}
-              <PurpleKPIStat
-                title="Weekly Cash Flow"
-                value={dashboardData.charts.cashFlow13w.length > 0 ? 
-                  dashboardData.charts.cashFlow13w
-                    .slice(0, 4)
-                    .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
-                  : 0}
-                icon={TrendingUp}
-                subtitle="4-week average net flow"
-              />
+              <div onClick={navigateToCashFlowForecasting} className="cursor-pointer" data-testid="card-weekly-cash-flow">
+                <PurpleKPIStat
+                  title="Weekly Cash Flow"
+                  value={dashboardData.charts.cashFlow13w.length > 0 ? 
+                    dashboardData.charts.cashFlow13w
+                      .slice(0, 4)
+                      .reduce((sum, week) => sum + (week.actualIn - week.actualOut), 0) / 4
+                    : 0}
+                  icon={TrendingUp}
+                  subtitle="4-week average net flow"
+                />
+              </div>
 
               {/* AR Aging Summary */}
-              <WarningKPIStat
-                title="AR Aging"
-                value={dashboardData.charts.aging.ar["90_plus"]}
-                icon={Calendar}
-                subtitle="90+ days overdue"
-                badge={dashboardData.charts.aging.ar["90_plus"] > 0 ? {
-                  text: 'Action Needed',
-                  variant: 'destructive'
-                } : {
-                  text: 'Good',
-                  variant: 'outline'
-                }}
-              />
+              <div onClick={navigateToAgingReports} className="cursor-pointer" data-testid="card-ar-aging">
+                <WarningKPIStat
+                  title="AR Aging"
+                  value={dashboardData.charts.aging.ar["90_plus"]}
+                  icon={Calendar}
+                  subtitle="90+ days overdue"
+                  badge={dashboardData.charts.aging.ar["90_plus"] > 0 ? {
+                    text: 'Action Needed',
+                    variant: 'destructive'
+                  } : {
+                    text: 'Good',
+                    variant: 'outline'
+                  }}
+                />
+              </div>
             </div>
 
             {/* Charts Section */}
