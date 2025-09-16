@@ -131,6 +131,7 @@ import CustomerSegments from "@/pages/customer-segments";
 import CustomerInsights from "@/pages/customer-insights";
 import AgingReports from "@/pages/aging-reports";
 import Contracts from "@/pages/ContractsNew";
+import ContractsV2 from "@/pages/ContractsV2";
 import CreateContract from "@/pages/CreateContract";
 import ContractTemplates from "@/pages/ContractTemplates";
 import ContractDetail from "@/pages/ContractDetail";
@@ -839,6 +840,11 @@ function AuthenticatedApp() {
         <Route path="/contracts">
           <ProtectedRoute permission={PERMISSIONS.CONTRACTS_VIEW}>
             <Contracts />
+          </ProtectedRoute>
+        </Route>
+        <Route path="/contracts-v2">
+          <ProtectedRoute permission={PERMISSIONS.CONTRACTS_VIEW}>
+            <ContractsV2 />
           </ProtectedRoute>
         </Route>
         <Route path="/banking/:accountId">
