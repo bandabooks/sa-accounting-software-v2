@@ -15,7 +15,20 @@ import {
   Filter,
   MoreHorizontal,
   Settings,
-  ChevronLeft
+  ChevronLeft,
+  Award,
+  Shield,
+  BookOpen,
+  Calculator,
+  Building2,
+  Users,
+  TrendingUp,
+  FileCheck,
+  Scale,
+  Briefcase,
+  Globe,
+  Star,
+  CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,9 +47,12 @@ import { useLocation } from "wouter";
 
 const templateSchema = z.object({
   name: z.string().min(1, "Template name is required"),
-  servicePackage: z.string().min(1, "Service package is required"),
+  servicePackage: z.string().min(1, "Professional category is required"),
   bodyMd: z.string().min(50, "Template content must be at least 50 characters"),
   fields: z.string().optional(),
+  category: z.string().optional(),
+  compliance: z.array(z.string()).optional(),
+  tags: z.string().optional(),
 });
 
 type TemplateForm = z.infer<typeof templateSchema>;
@@ -52,18 +68,85 @@ interface ContractTemplate {
   updatedAt: string;
 }
 
-const servicePackages = [
-  { value: "basic", label: "Basic Services", description: "Essential bookkeeping and compliance" },
-  { value: "standard", label: "Standard Services", description: "Comprehensive accounting and tax" },
-  { value: "premium", label: "Premium Services", description: "Full professional advisory" },
-  { value: "enterprise", label: "Enterprise Services", description: "Custom enterprise solutions" }
+// Professional Service Categories for South African Accounting & Business Services
+// Categories aligned with backend servicePackage values from contractTemplatesSeeder.ts
+const professionalCategories = [
+  { 
+    value: "tax_compliance", 
+    label: "Tax Compliance", 
+    description: "Income tax, VAT, and PAYE services", 
+    icon: Calculator,
+    compliance: ["SAIT", "SAIPA"]
+  },
+  { 
+    value: "vat_compliance", 
+    label: "VAT Compliance", 
+    description: "VAT201 returns and VAT compliance services", 
+    icon: FileText,
+    compliance: ["SAIT", "SAIPA"]
+  },
+  { 
+    value: "audit_services", 
+    label: "Audit Services", 
+    description: "Independent audit and assurance services", 
+    icon: Shield,
+    compliance: ["SAICA", "IRBA"]
+  },
+  { 
+    value: "review_services", 
+    label: "Review Services", 
+    description: "Independent review engagements", 
+    icon: Eye,
+    compliance: ["SAICA", "IRBA"]
+  },
+  { 
+    value: "bookkeeping", 
+    label: "Bookkeeping Services", 
+    description: "Transaction recording and financial reporting", 
+    icon: BookOpen,
+    compliance: ["SAIPA", "IAC"]
+  },
+  { 
+    value: "payroll", 
+    label: "Payroll Services", 
+    description: "Salary administration and statutory compliance", 
+    icon: Users,
+    compliance: ["SAIPA"]
+  },
+  { 
+    value: "compliance", 
+    label: "CIPC Compliance", 
+    description: "Company registration and annual return services", 
+    icon: Building2,
+    compliance: ["SAICA", "SAIPA"]
+  },
+  { 
+    value: "advisory", 
+    label: "Business Advisory", 
+    description: "Strategic planning and business consulting", 
+    icon: TrendingUp,
+    compliance: ["SAICA", "SAIPA"]
+  }
 ];
 
-const packageColors = {
-  basic: "bg-blue-100 text-blue-800 border-blue-200",
-  standard: "bg-green-100 text-green-800 border-green-200",
-  premium: "bg-purple-100 text-purple-800 border-purple-200",
-  enterprise: "bg-orange-100 text-orange-800 border-orange-200"
+const categoryColors = {
+  tax_compliance: "bg-blue-50 text-blue-700 border-blue-200",
+  vat_compliance: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  audit_services: "bg-red-50 text-red-700 border-red-200",
+  review_services: "bg-orange-50 text-orange-700 border-orange-200",
+  bookkeeping: "bg-green-50 text-green-700 border-green-200",
+  payroll: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  compliance: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  advisory: "bg-purple-50 text-purple-700 border-purple-200"
+};
+
+const complianceColors = {
+  "SAICA": "bg-blue-600 text-white",
+  "SAIPA": "bg-green-600 text-white", 
+  "SAIT": "bg-purple-600 text-white",
+  "IRBA": "bg-red-600 text-white",
+  "IAC": "bg-orange-600 text-white",
+  "FPI": "bg-pink-600 text-white"
 };
 
 export default function ContractTemplates() {
@@ -71,11 +154,13 @@ export default function ContractTemplates() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPackage, setSelectedPackage] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCompliance, setSelectedCompliance] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<ContractTemplate | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [activeView, setActiveView] = useState<"grid" | "table">("grid");
 
   const form = useForm<TemplateForm>({
     resolver: zodResolver(templateSchema),
@@ -84,6 +169,9 @@ export default function ContractTemplates() {
       servicePackage: "",
       bodyMd: "",
       fields: "",
+      category: "",
+      compliance: [],
+      tags: "",
     },
   });
 
@@ -150,8 +238,15 @@ export default function ContractTemplates() {
   // Filter templates
   const filteredTemplates = templates.filter((template: ContractTemplate) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPackage = selectedPackage === "all" || template.servicePackage === selectedPackage;
-    return matchesSearch && matchesPackage;
+    const matchesCategory = selectedCategory === "all" || template.servicePackage === selectedCategory;
+    
+    // Real compliance filtering logic
+    const matchesCompliance = selectedCompliance === "all" || (() => {
+      const categoryData = professionalCategories.find(cat => cat.value === template.servicePackage);
+      return categoryData?.compliance.includes(selectedCompliance) || false;
+    })();
+    
+    return matchesSearch && matchesCategory && matchesCompliance;
   });
 
   const onSubmit = (data: TemplateForm) => {
@@ -190,35 +285,63 @@ export default function ContractTemplates() {
     setIsViewDialogOpen(true);
   };
 
+  // Dynamic statistics calculated from actual templates
   const statistics = {
     total: templates.length,
-    basic: templates.filter((t: ContractTemplate) => t.servicePackage === "basic").length,
-    standard: templates.filter((t: ContractTemplate) => t.servicePackage === "standard").length,
-    premium: templates.filter((t: ContractTemplate) => t.servicePackage === "premium").length,
-    enterprise: templates.filter((t: ContractTemplate) => t.servicePackage === "enterprise").length,
+    tax_compliance: templates.filter((t: ContractTemplate) => t.servicePackage === "tax_compliance").length,
+    vat_compliance: templates.filter((t: ContractTemplate) => t.servicePackage === "vat_compliance").length,
+    audit_services: templates.filter((t: ContractTemplate) => t.servicePackage === "audit_services").length,
+    review_services: templates.filter((t: ContractTemplate) => t.servicePackage === "review_services").length,
+    bookkeeping: templates.filter((t: ContractTemplate) => t.servicePackage === "bookkeeping").length,
+    payroll: templates.filter((t: ContractTemplate) => t.servicePackage === "payroll").length,
+    compliance: templates.filter((t: ContractTemplate) => t.servicePackage === "compliance").length,
+    advisory: templates.filter((t: ContractTemplate) => t.servicePackage === "advisory").length,
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Enhanced Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button 
           variant="ghost" 
           onClick={() => navigate("/contracts")}
           className="p-2"
+          data-testid="button-back-contracts"
         >
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contract Templates</h1>
-          <p className="text-gray-600 mt-1">
-            Manage professional engagement letter templates
-          </p>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <FileCheck className="w-8 h-8 text-blue-600" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Professional Templates</h1>
+              <p className="text-gray-600 mt-1 flex items-center gap-2">
+                <Award className="w-4 h-4" />
+                SAICA & SAIPA Compliant Engagement Letters
+                <Badge variant="outline" className="ml-2">
+                  68 Templates Available
+                </Badge>
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="ml-auto flex gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg border">
+            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-medium text-green-700">Professional Standards</span>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => seedTemplatesMutation.mutate()}
+            disabled={seedTemplatesMutation.isPending}
+            data-testid="button-seed-templates"
+          >
+            <Star className="w-4 h-4 mr-2" />
+            {seedTemplatesMutation.isPending ? "Adding..." : "Add SA Templates"}
+          </Button>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
+              <Button className="bg-blue-600 hover:bg-blue-700" data-testid="button-create-template">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template
               </Button>
@@ -253,19 +376,32 @@ export default function ContractTemplates() {
                       name="servicePackage"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Service Package</FormLabel>
+                          <FormLabel>Professional Category</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select package level" />
+                                <SelectValue placeholder="Select professional category" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {servicePackages.map((pkg) => (
-                                <SelectItem key={pkg.value} value={pkg.value}>
-                                  <div className="flex flex-col">
-                                    <span>{pkg.label}</span>
-                                    <span className="text-xs text-gray-500">{pkg.description}</span>
+                              {professionalCategories.map((category) => (
+                                <SelectItem key={category.value} value={category.value}>
+                                  <div className="flex items-start gap-3">
+                                    <category.icon className="w-4 h-4 mt-1 text-gray-500" />
+                                    <div className="flex-1">
+                                      <div className="font-medium">{category.label}</div>
+                                      <div className="text-xs text-gray-500">{category.description}</div>
+                                      <div className="flex gap-1 mt-1">
+                                        {category.compliance.map((comp) => (
+                                          <Badge 
+                                            key={comp} 
+                                            className={`text-xs px-1 py-0 ${complianceColors[comp as keyof typeof complianceColors]}`}
+                                          >
+                                            {comp}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </div>
                                   </div>
                                 </SelectItem>
                               ))}
@@ -349,62 +485,184 @@ We are pleased to confirm our engagement to provide professional services..."
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
+      {/* Professional Categories Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <Card className="col-span-1 md:col-span-2 lg:col-span-1">
+          <CardContent className="p-6">
             <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">{statistics.total}</p>
-              <p className="text-sm text-gray-600">Total Templates</p>
+              <p className="text-3xl font-bold text-blue-600">{statistics.total}</p>
+              <p className="text-sm font-medium text-gray-900">Total Templates</p>
+              <div className="flex items-center justify-center mt-2 gap-1">
+                <FileText className="w-4 h-4 text-gray-500" />
+                <span className="text-xs text-gray-500">Professional Grade</span>
+              </div>
             </div>
           </CardContent>
         </Card>
-        {servicePackages.map((pkg) => (
-          <Card key={pkg.value}>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">
-                  {statistics[pkg.value as keyof typeof statistics]}
-                </p>
-                <p className="text-sm text-gray-600">{pkg.label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {professionalCategories.slice(0, 4).map((category) => {
+          const IconComponent = category.icon;
+          return (
+            <Card key={category.value} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="text-center space-y-2">
+                  <div className="flex items-center justify-center">
+                    <div className="p-2 rounded-lg bg-gray-50">
+                      <IconComponent className="w-5 h-5 text-gray-600" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">
+                      {statistics[category.value as keyof typeof statistics] || 0}
+                    </p>
+                    <p className="text-xs font-medium text-gray-700">{category.label}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {category.compliance.slice(0, 2).map((comp) => (
+                      <Badge 
+                        key={comp} 
+                        className={`text-xs px-1.5 py-0.5 ${complianceColors[comp as keyof typeof complianceColors]}`}
+                      >
+                        {comp}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Filters and Search */}
+      {/* All Categories Grid */}
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Professional Service Categories
+          </CardTitle>
+          <CardDescription>
+            Comprehensive engagement letter templates for South African professional services
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {professionalCategories.map((category) => {
+              const IconComponent = category.icon;
+              return (
+                <div 
+                  key={category.value}
+                  className={`p-4 rounded-lg border-2 hover:shadow-md transition-all cursor-pointer ${
+                    selectedCategory === category.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedCategory(selectedCategory === category.value ? "all" : category.value)}
+                  data-testid={`category-${category.value}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-white border">
+                      <IconComponent className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-sm">{category.label}</h3>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{category.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {statistics[category.value as keyof typeof statistics] || category.count} templates
+                        </span>
+                        <div className="flex gap-1">
+                          {category.compliance.map((comp) => (
+                            <Badge 
+                              key={comp} 
+                              className={`text-xs px-1.5 py-0.5 ${complianceColors[comp as keyof typeof complianceColors]}`}
+                            >
+                              {comp}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Enhanced Search and Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="Search templates..."
+                  placeholder="Search professional templates..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 max-w-sm"
+                  className="pl-10 max-w-md"
+                  data-testid="input-search-templates"
                 />
               </div>
             </div>
-            <div className="flex gap-3">
-              <Select value={selectedPackage} onValueChange={setSelectedPackage}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
+            <div className="flex flex-wrap gap-3">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-52" data-testid="select-category">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Packages</SelectItem>
-                  {servicePackages.map((pkg) => (
-                    <SelectItem key={pkg.value} value={pkg.value}>
-                      {pkg.label}
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {professionalCategories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      <div className="flex items-center gap-2">
+                        <category.icon className="w-4 h-4" />
+                        {category.label}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline">
+              
+              <Select value={selectedCompliance} onValueChange={setSelectedCompliance}>
+                <SelectTrigger className="w-48" data-testid="select-compliance">
+                  <Award className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by Compliance" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Standards</SelectItem>
+                  <SelectItem value="SAICA">SAICA Compliant</SelectItem>
+                  <SelectItem value="SAIPA">SAIPA Compliant</SelectItem>
+                  <SelectItem value="SAIT">SAIT Compliant</SelectItem>
+                  <SelectItem value="IRBA">IRBA Compliant</SelectItem>
+                  <SelectItem value="IAC">IAC Compliant</SelectItem>
+                  <SelectItem value="FPI">FPI Compliant</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex gap-2">
+                <Button 
+                  variant={activeView === "grid" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setActiveView("grid")}
+                  data-testid="button-view-grid"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Grid
+                </Button>
+                <Button 
+                  variant={activeView === "table" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setActiveView("table")}
+                  data-testid="button-view-table"
+                >
+                  <Settings className="w-4 h-4 mr-1" />
+                  Table
+                </Button>
+              </div>
+
+              <Button variant="outline" data-testid="button-export-templates">
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                Export All
               </Button>
             </div>
           </div>
@@ -445,8 +703,8 @@ We are pleased to confirm our engagement to provide professional services..."
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={packageColors[template.servicePackage as keyof typeof packageColors]}>
-                          {servicePackages.find(p => p.value === template.servicePackage)?.label || template.servicePackage}
+                        <Badge className={categoryColors[template.servicePackage as keyof typeof categoryColors]}>
+                          {professionalCategories.find(p => p.value === template.servicePackage)?.label || template.servicePackage}
                         </Badge>
                       </TableCell>
                       <TableCell>
