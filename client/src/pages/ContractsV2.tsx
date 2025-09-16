@@ -1,387 +1,1045 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical, BarChart3, CheckCircle2, Award, Briefcase, Calculator, Building, BookOpen, Shield, Globe, TrendingUp, Settings, DollarSign, Activity, Calendar, TrendingDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { useLocation } from "wouter";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format } from 'date-fns';
+import { 
+  Plus, 
+  Search, 
+  FileText,
+  Calendar,
+  DollarSign,
+  User,
+  Building,
+  Edit,
+  Eye,
+  Trash2,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Circle,
+  Zap,
+  PenTool,
+  Activity,
+  TrendingUp,
+  Settings,
+  Mail,
+  Send,
+  Printer,
+  FileSignature,
+  RefreshCw,
+  BarChart3
+} from "lucide-react";
 
-interface ContractTemplate {
+// Contract form schemas
+const contractFormSchema = z.object({
+  contractName: z.string().min(1, "Contract name is required"),
+  contractType: z.enum(["service", "maintenance", "consulting", "development", "engagement", "other"]).default("service"),
+  clientId: z.number({ required_error: "Client is required" }),
+  projectId: z.number().optional(),
+  startDate: z.date(),
+  endDate: z.date(),
+  value: z.number().min(0, "Contract value must be positive"),
+  currency: z.string().default("ZAR"),
+  status: z.enum(["draft", "active", "completed", "cancelled", "expired"]).default("draft"),
+  description: z.string().optional(),
+  terms: z.string().optional(),
+  scope: z.string().optional(),
+  deliverables: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  invoiceSchedule: z.string().optional(),
+  autoRenewal: z.boolean().default(false),
+  reminderDays: z.number().min(1).max(365).default(30),
+});
+
+// Enhanced engagement letter template schema
+const engagementLetterTemplateSchema = z.object({
+  name: z.string().min(1, 'Template name is required'),
+  serviceType: z.string().min(1, 'Service type is required'),
+  description: z.string().optional(),
+  content: z.string().min(1, 'Template content is required'),
+  defaultTerms: z.string().optional(),
+  feeStructure: z.string().optional(),
+  scope: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+type ContractFormData = z.infer<typeof contractFormSchema>;
+
+interface EngagementLetterTemplate {
   id: number;
   name: string;
-  category: string;
-  description: string;
-  servicePackage: string;
-  bodyMd: string;
-  fields: string[];
+  serviceType: string;
+  description?: string;
+  content: string;
+  defaultTerms?: string;
+  feeStructure?: string;
+  scope?: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-interface Contract {
+// E-Signature interfaces
+interface SignatureProvider {
   id: number;
-  templateId?: number;
-  customerId: number;
-  customerName?: string;
-  customerEmail?: string;
-  templateName?: string;
-  projectId?: number;
-  status: string;
-  value?: number;
+  organizationId: number;
+  name: string;
+  providerType: 'builtin' | 'docusign' | 'adobe_sign' | 'hellosign' | 'pandadoc' | 'signnow' | 'other';
+  apiKey: string;
+  isActive: boolean;
+  isDefault: boolean;
+  settings: any;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
-  expiresAt?: string;
 }
 
-const statusColors = {
-  draft: "bg-gray-100 text-gray-800",
-  issued: "bg-blue-100 text-blue-800", 
-  signed: "bg-yellow-100 text-yellow-800",
-  active: "bg-green-100 text-green-800",
-  completed: "bg-purple-100 text-purple-800",
-  cancelled: "bg-red-100 text-red-800"
-};
+interface SignatureWorkflow {
+  id: number;
+  organizationId: number;
+  contractId?: number;
+  workflowName: string;
+  documentTitle: string;
+  providerId: number;
+  status: 'draft' | 'active' | 'completed' | 'cancelled' | 'expired';
+  signingOrder: 'sequential' | 'parallel';
+  expiresAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
+interface SignatureRequest {
+  id: number;
+  workflowId: number;
+  signerName: string;
+  signerEmail: string;
+  signerRole: string;
+  signingOrder: number;
+  status: 'pending' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired';
+  secureSigningLink: string;
+  documentTitle: string;
+  expiresAt: string;
+  sentAt?: string;
+  viewedAt?: string;
+  signedAt?: string;
+  declinedAt?: string;
+  declineReason?: string;
+  reminderCount: number;
+  reminderSentAt?: string;
+  signatureData?: string;
+  signedIpAddress?: string;
+  signedUserAgent?: string;
+  signedLocation?: string;
+  viewedIpAddress?: string;
+  viewedUserAgent?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface DashboardStats {
+  totalContracts: string;
+  activeContracts: string;
+  expiredContracts: string;
+  totalValue: string;
+}
+
+// =================== BUILT-IN SIGNATURE CANVAS COMPONENT ===================
+interface SignatureCanvasProps {
+  onSignatureChange: (signature: string) => void;
+  width?: number;
+  height?: number;
+}
+
+function SignatureCanvas({ onSignatureChange, width = 400, height = 200 }: SignatureCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(true);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set up canvas
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Set white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+  }, [width, height]);
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsDrawing(true);
+    setIsEmpty(false);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Convert to base64 and notify parent
+    const signature = canvas.toDataURL('image/png');
+    onSignatureChange(signature);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    setIsEmpty(true);
+    onSignatureChange('');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+        <canvas
+          ref={canvasRef}
+          width={width}
+          height={height}
+          className="border border-gray-200 rounded cursor-crosshair"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+        />
+      </div>
+      
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {isEmpty ? 'Sign above using your mouse or touchpad' : 'Signature captured'}
+        </p>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm" 
+          onClick={clearSignature}
+          disabled={isEmpty}
+        >
+          Clear Signature
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Main Contracts Component
 export default function ContractsV2() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [location, setLocation] = useLocation();
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [showContractDialog, setShowContractDialog] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // Fetch contracts
   const { data: contractsResponse = [], isLoading: contractsLoading } = useQuery({
-    queryKey: ["/api/contracts", selectedStatus === "all" ? undefined : selectedStatus],
-    queryFn: () => apiRequest(`/api/contracts${selectedStatus !== "all" ? `?status=${selectedStatus}` : ""}`),
+    queryKey: ["/api/contracts", statusFilter === "all" ? undefined : statusFilter],
+    queryFn: async () => apiRequest(`/api/contracts${statusFilter !== "all" ? `?status=${statusFilter}` : ""}`),
   });
 
   const contracts = Array.isArray(contractsResponse) ? contractsResponse : [];
 
-  // Fetch contract templates
+  // Fetch engagement letter templates
   const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ["/api/contract-templates"],
-    queryFn: () => apiRequest("/api/contract-templates"),
+    queryKey: ["/api/engagement-letter-templates"],
+    queryFn: async () => apiRequest("/api/engagement-letter-templates"),
   });
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
-  // Calculate dashboard statistics
-  const totalContracts = contracts.length;
-  const activeContracts = contracts.filter((c: Contract) => c.status === 'active').length;
-  const expiringContracts = contracts.filter((c: Contract) => {
-    if (!c.expiresAt) return false;
-    const expiryDate = new Date(c.expiresAt);
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-    return expiryDate <= thirtyDaysFromNow;
-  }).length;
-  const totalValue = contracts.reduce((sum: number, contract: Contract) => sum + (contract.value || 0), 0);
+  // Fetch signature workflows
+  const { data: workflowsResponse = [], isLoading: workflowsLoading } = useQuery({
+    queryKey: ["/api/signature-workflows"],
+    queryFn: async () => apiRequest("/api/signature-workflows"),
+  });
 
-  const quickActions = [
-    {
-      title: "Create Contract",
-      description: "Create a new professional contract",
-      icon: FileText,
-      action: () => setLocation("/contracts/create"),
-      color: "bg-blue-50 border-blue-200 hover:bg-blue-100"
+  const workflows = Array.isArray(workflowsResponse) ? workflowsResponse : [];
+
+  // Fetch signature providers
+  const { data: providersResponse = [], isLoading: providersLoading } = useQuery({
+    queryKey: ["/api/signature-providers"],
+    queryFn: async () => apiRequest("/api/signature-providers"),
+  });
+
+  const providers = Array.isArray(providersResponse) ? providersResponse : [];
+
+  // Dashboard statistics
+  const dashboardStats = {
+    totalContracts: contracts.length,
+    activeContracts: contracts.filter((c: any) => c.status === 'active').length,
+    expiredContracts: contracts.filter((c: any) => c.status === 'expired').length,
+    totalValue: contracts.reduce((sum: number, contract: any) => sum + (contract.value || 0), 0),
+  };
+
+  // Contract form
+  const contractForm = useForm<ContractFormData>({
+    resolver: zodResolver(contractFormSchema),
+    defaultValues: {
+      contractType: "service",
+      currency: "ZAR",
+      status: "draft",
+      autoRenewal: false,
+      reminderDays: 30,
     },
-    {
-      title: "Generate Engagement Letter",
-      description: "Create professional engagement letters",
-      icon: Mail,
-      action: () => setLocation("/contracts/templates"),
-      color: "bg-green-50 border-green-200 hover:bg-green-100"
+  });
+
+  // Create contract mutation
+  const createContractMutation = useMutation({
+    mutationFn: async (contractData: ContractFormData) => {
+      return apiRequest('/api/contracts', 'POST', contractData);
     },
-    {
-      title: "Create Template",
-      description: "Design custom contract templates",
-      icon: Plus,
-      action: () => setLocation("/contracts/templates"),
-      color: "bg-purple-50 border-purple-200 hover:bg-purple-100"
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      setShowContractDialog(false);
+      contractForm.reset();
+      toast({
+        title: 'Contract Created',
+        description: 'Contract has been created successfully.',
+      });
     },
-    {
-      title: "View Analytics",
-      description: "Contract performance insights",
-      icon: BarChart3,
-      action: () => toast({ title: "Analytics", description: "Analytics dashboard coming soon!" }),
-      color: "bg-orange-50 border-orange-200 hover:bg-orange-100"
+    onError: (error: any) => {
+      toast({
+        title: 'Error Creating Contract',
+        description: error.message || 'Failed to create contract',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreateContract = (data: ContractFormData) => {
+    createContractMutation.mutate(data);
+  };
+
+  const statusColors = {
+    draft: "bg-gray-100 text-gray-800",
+    active: "bg-green-100 text-green-800",
+    completed: "bg-blue-100 text-blue-800",
+    cancelled: "bg-red-100 text-red-800",
+    expired: "bg-orange-100 text-orange-800"
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'draft': return Circle;
+      case 'active': return CheckCircle;
+      case 'completed': return CheckCircle;
+      case 'cancelled': return AlertTriangle;
+      case 'expired': return Clock;
+      default: return Circle;
     }
-  ];
+  };
 
   return (
-    <div className="space-y-6" data-testid="contracts-v2-page">
+    <div className="space-y-6" data-testid="contracts-module">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="page-title">
-            Contracts Module
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1" data-testid="page-description">
+          <h1 className="text-3xl font-bold tracking-tight">Contracts Module</h1>
+          <p className="text-muted-foreground">
             Professional contract management with engagement letter automation and e-signature integration
           </p>
         </div>
         <div className="flex gap-3">
-          <Button 
-            onClick={() => setLocation("/contracts/create")}
-            className="bg-blue-600 hover:bg-blue-700" 
-            data-testid="button-start-work"
-          >
-            <Plus className="w-4 h-4 mr-2" />
+          <Button onClick={() => setActiveTab("dashboard")} variant="outline" data-testid="button-start-work">
+            <Activity className="h-4 w-4 mr-2" />
             Start Work
           </Button>
-          <Button 
-            onClick={() => setLocation("/contracts/create")}
-            data-testid="button-create-contract"
-          >
-            <FileText className="w-4 h-4 mr-2" />
+          <Button onClick={() => setShowContractDialog(true)} data-testid="button-create-contract">
+            <Plus className="h-4 w-4 mr-2" />
             Create Contract
           </Button>
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-blue-500" data-testid="card-total-contracts">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dashboard</p>
-                <p className="text-sm text-gray-500 mt-1">Total Contracts</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2" data-testid="text-total-contracts">
-                  {totalContracts}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">All time contracts</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Navigation Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Contracts
+          </TabsTrigger>
+          <TabsTrigger value="engagement-letters" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Engagement Letters
+          </TabsTrigger>
+          <TabsTrigger value="e-signatures" className="flex items-center gap-2">
+            <FileSignature className="h-4 w-4" />
+            E-Signatures
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="border-l-4 border-l-green-500" data-testid="card-active-contracts">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Contracts</p>
-                <p className="text-sm text-gray-500 mt-1">Active Contracts</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2" data-testid="text-active-contracts">
-                  {activeContracts}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Currently active</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500" data-testid="card-expiring-soon">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Engagement Letters</p>
-                <p className="text-sm text-gray-500 mt-1">Expiring Soon</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2" data-testid="text-expiring-soon">
-                  {expiringContracts}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Next 30 days</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-lg">
-                <Clock className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500" data-testid="card-total-value">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">E-Signatures</p>
-                <p className="text-sm text-gray-500 mt-1">Total Value</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2" data-testid="text-total-value">
-                  R {totalValue.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Active contracts</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <DollarSign className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions */}
-      <Card data-testid="card-quick-actions">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Quick Actions
-          </CardTitle>
-          <CardDescription>
-            Streamline your contract management workflow
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action, index) => (
-              <Card 
-                key={index}
-                className={`cursor-pointer transition-all duration-200 ${action.color}`}
-                onClick={action.action}
-                data-testid={`quick-action-${action.title.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-white rounded-lg shadow-sm">
-                      <action.icon className="w-6 h-6" />
-                    </div>
+        {/* Dashboard Tab */}
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* Dashboard Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card data-testid="card-total-contracts">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Contracts</p>
+                    <p className="text-3xl font-bold" data-testid="text-total-contracts">
+                      {dashboardStats.totalContracts}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">All time contracts</p>
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    {action.title}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {action.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <FileText className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Recent Contracts Table */}
-      <Card data-testid="card-recent-contracts">
-        <CardHeader>
+            <Card data-testid="card-active-contracts">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Active Contracts</p>
+                    <p className="text-3xl font-bold" data-testid="text-active-contracts">
+                      {dashboardStats.activeContracts}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Currently active</p>
+                  </div>
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-expiring-soon">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Expiring Soon</p>
+                    <p className="text-3xl font-bold" data-testid="text-expiring-soon">
+                      {dashboardStats.expiredContracts}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Next 30 days</p>
+                  </div>
+                  <div className="p-3 bg-orange-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card data-testid="card-total-value">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Value</p>
+                    <p className="text-3xl font-bold" data-testid="text-total-value">
+                      R {dashboardStats.totalValue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Active contracts</p>
+                  </div>
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <DollarSign className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Streamline your contract management workflow</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowContractDialog(true)}>
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-blue-100 rounded-lg w-fit mx-auto mb-3">
+                      <Plus className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Create Contract</h3>
+                    <p className="text-sm text-muted-foreground">Start a new contract</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("engagement-letters")}>
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-green-100 rounded-lg w-fit mx-auto mb-3">
+                      <Mail className="h-6 w-6 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Generate Engagement Letter</h3>
+                    <p className="text-sm text-muted-foreground">Professional engagement letters</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowTemplateDialog(true)}>
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-purple-100 rounded-lg w-fit mx-auto mb-3">
+                      <FileText className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <h3 className="font-semibold mb-2">Create Template</h3>
+                    <p className="text-sm text-muted-foreground">Design custom templates</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("e-signatures")}>
+                  <CardContent className="p-6 text-center">
+                    <div className="p-3 bg-orange-100 rounded-lg w-fit mx-auto mb-3">
+                      <BarChart3 className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <h3 className="font-semibold mb-2">View Analytics</h3>
+                    <p className="text-sm text-muted-foreground">Contract insights</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contracts Tab */}
+        <TabsContent value="contracts" className="space-y-6">
           <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Recent Contracts</CardTitle>
-              <CardDescription>Latest contract activity and status updates</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger className="w-40" data-testid="select-status-filter">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Contracts</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="issued">Issued</SelectItem>
-                  <SelectItem value="signed">Signed</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex gap-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search contracts..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-64"
-                  data-testid="input-search-contracts"
                 />
               </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Contracts</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            <Button onClick={() => setShowContractDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Contract
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          {contractsLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : contracts.length === 0 ? (
-            <div className="text-center py-8" data-testid="empty-state">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No contracts found</h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Get started by creating your first professional contract or engagement letter.
-              </p>
-              <Button onClick={() => setLocation("/contracts/create")} data-testid="button-create-first-contract">
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Contract
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {contracts
-                .filter((contract: Contract) => 
-                  contract.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  contract.templateName?.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-                .slice(0, 10)
-                .map((contract: Contract) => (
-                  <div 
-                    key={contract.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                    onClick={() => setLocation(`/contracts/${contract.id}`)}
-                    data-testid={`contract-row-${contract.id}`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <FileText className="w-5 h-5 text-blue-600" />
+
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Contract Name</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>Value</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contractsLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </TableCell>
+                  </TableRow>
+                ) : contracts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No contracts found</h3>
+                        <p className="text-muted-foreground mb-4">Get started by creating your first contract.</p>
+                        <Button onClick={() => setShowContractDialog(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create First Contract
+                        </Button>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900 dark:text-white" data-testid={`contract-name-${contract.id}`}>
-                          {contract.templateName || `Contract #${contract.id}`}
-                        </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400" data-testid={`contract-customer-${contract.id}`}>
-                          {contract.customerName} • {format(new Date(contract.createdAt), "MMM dd, yyyy")}
-                        </p>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  contracts
+                    .filter((contract: any) => 
+                      contract.contractName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      contract.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((contract: any) => {
+                      const StatusIcon = getStatusIcon(contract.status);
+                      return (
+                        <TableRow key={contract.id}>
+                          <TableCell className="font-medium">{contract.contractName}</TableCell>
+                          <TableCell>{contract.clientName || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge className={statusColors[contract.status as keyof typeof statusColors]}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {contract.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {contract.startDate ? format(new Date(contract.startDate), 'MMM dd, yyyy') : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {contract.value ? `R ${contract.value.toLocaleString()}` : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setSelectedContract(contract)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Engagement Letters Tab */}
+        <TabsContent value="engagement-letters" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">Engagement Letters</h2>
+              <p className="text-muted-foreground">Professional engagement letter templates and automation</p>
+            </div>
+            <Button onClick={() => setShowTemplateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Template
+            </Button>
+          </div>
+
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Template Name</TableHead>
+                  <TableHead>Service Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Modified</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {templatesLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    </TableCell>
+                  </TableRow>
+                ) : templates.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8">
+                      <div className="text-center">
+                        <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-medium mb-2">No templates found</h3>
+                        <p className="text-muted-foreground mb-4">Create your first engagement letter template.</p>
+                        <Button onClick={() => setShowTemplateDialog(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Create Template
+                        </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      {contract.value && (
-                        <span className="text-sm font-medium text-gray-900 dark:text-white" data-testid={`contract-value-${contract.id}`}>
-                          R {contract.value.toLocaleString()}
-                        </span>
-                      )}
-                      <Badge className={statusColors[contract.status as keyof typeof statusColors]} data-testid={`contract-status-${contract.id}`}>
-                        {contract.status}
-                      </Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" data-testid={`contract-menu-${contract.id}`}>
-                            <MoreVertical className="w-4 h-4" />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  templates.map((template: EngagementLetterTemplate) => (
+                    <TableRow key={template.id}>
+                      <TableCell className="font-medium">{template.name}</TableCell>
+                      <TableCell>{template.serviceType}</TableCell>
+                      <TableCell>
+                        <Badge variant={template.isActive ? "default" : "secondary"}>
+                          {template.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(template.updatedAt), 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setLocation(`/contracts/${contract.id}`)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit3 className="w-4 h-4 mr-2" />
-                            Edit Contract
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Send className="w-4 h-4 mr-2" />
-                            Send to Client
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            Download PDF
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* E-Signatures Tab */}
+        <TabsContent value="e-signatures" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold">E-Signature Management</h2>
+              <p className="text-muted-foreground">Professional digital signature workflows with full compliance and audit trails</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button onClick={() => setShowSignatureDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Signature Workflow
+            </Button>
+          </div>
+
+          {/* E-Signature Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Active Workflows</p>
+                    <p className="text-3xl font-bold">
+                      {workflows.filter((w: any) => w.status === 'active').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Currently in progress</p>
+                  </div>
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <Activity className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Completed This Month</p>
+                    <p className="text-3xl font-bold">
+                      {workflows.filter((w: any) => w.status === 'completed').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Successfully signed</p>
+                  </div>
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-green-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pending Signatures</p>
+                    <p className="text-3xl font-bold">
+                      {workflows.filter((w: any) => w.status === 'draft').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Awaiting action</p>
+                  </div>
+                  <div className="p-3 bg-orange-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-orange-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Active Providers</p>
+                    <p className="text-3xl font-bold">
+                      {providers.filter((p: any) => p.isActive).length}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Configured services</p>
+                  </div>
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <Settings className="h-6 w-6 text-purple-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Signature Workflows */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Signature Workflows</CardTitle>
+              <CardDescription>Latest e-signature activities</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {workflowsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                </div>
+              ) : workflows.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileSignature className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No signature workflows</h3>
+                  <p className="text-muted-foreground mb-4">Start your first digital signature workflow.</p>
+                  <Button onClick={() => setShowSignatureDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Workflow
+                  </Button>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Workflow Name</TableHead>
+                      <TableHead>Document Title</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workflows.slice(0, 10).map((workflow: SignatureWorkflow) => (
+                      <TableRow key={workflow.id}>
+                        <TableCell className="font-medium">{workflow.workflowName}</TableCell>
+                        <TableCell>{workflow.documentTitle}</TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[workflow.status as keyof typeof statusColors]}>
+                            {workflow.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(workflow.createdAt), 'MMM dd, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Send className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Contract Dialog */}
+      <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create New Contract</DialogTitle>
+            <DialogDescription>
+              Enter the contract details to get started
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...contractForm}>
+            <form onSubmit={contractForm.handleSubmit(handleCreateContract)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="contractName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter contract name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={contractForm.control}
+                  name="contractType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select contract type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="service">Service Contract</SelectItem>
+                          <SelectItem value="maintenance">Maintenance Contract</SelectItem>
+                          <SelectItem value="consulting">Consulting Agreement</SelectItem>
+                          <SelectItem value="development">Development Contract</SelectItem>
+                          <SelectItem value="engagement">Engagement Letter</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Value</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={contractForm.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ZAR">ZAR (South African Rand)</SelectItem>
+                          <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                          <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                          <SelectItem value="GBP">GBP (British Pound)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={contractForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Enter contract description"
+                        rows={3}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowContractDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createContractMutation.isPending}>
+                  {createContractMutation.isPending ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Contract
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

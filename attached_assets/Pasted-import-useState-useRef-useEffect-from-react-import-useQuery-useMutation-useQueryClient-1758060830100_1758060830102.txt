@@ -1,0 +1,2582 @@
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import StartWorkingButton from "@/components/StartWorkingButton";
+import AITooltip, { FieldHelp, ModuleHelp } from '@/components/AITooltip';
+import AITemplatePreview from '@/components/AITemplatePreview';
+import { format } from 'date-fns';
+import { 
+  Plus, 
+  Search, 
+  FileText,
+  Calendar,
+  DollarSign,
+  User,
+  Building,
+  Edit,
+  Eye,
+  Trash2,
+  Filter,
+  Download,
+  MoreHorizontal,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Circle,
+  Zap,
+  PenTool,
+  Activity,
+  TrendingUp,
+  Settings,
+  Mail,
+  Send,
+  Printer,
+  FileSignature,
+  RefreshCw
+} from "lucide-react";
+
+// Contract form schemas
+const contractFormSchema = z.object({
+  contractName: z.string().min(1, "Contract name is required"),
+  contractType: z.enum(["service", "maintenance", "consulting", "development", "engagement", "other"]).default("service"),
+  clientId: z.number({ required_error: "Client is required" }),
+  projectId: z.number().optional(),
+  startDate: z.date(),
+  endDate: z.date(),
+  value: z.number().min(0, "Contract value must be positive"),
+  currency: z.string().default("ZAR"),
+  status: z.enum(["draft", "active", "completed", "cancelled", "expired"]).default("draft"),
+  description: z.string().optional(),
+  terms: z.string().optional(),
+  scope: z.string().optional(),
+  deliverables: z.string().optional(),
+  paymentTerms: z.string().optional(),
+  invoiceSchedule: z.string().optional(),
+  autoRenewal: z.boolean().default(false),
+  reminderDays: z.number().min(1).max(365).default(30),
+});
+
+// Enhanced engagement letter template schema
+const engagementLetterTemplateSchema = z.object({
+  name: z.string().min(1, 'Template name is required'),
+  serviceType: z.string().min(1, 'Service type is required'),
+  description: z.string().optional(),
+  content: z.string().min(1, 'Template content is required'),
+  defaultTerms: z.string().optional(),
+  feeStructure: z.string().optional(),
+  scope: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+type ContractFormData = z.infer<typeof contractFormSchema>;
+
+interface EngagementLetterTemplate {
+  id: number;
+  name: string;
+  serviceType: string;
+  description?: string;
+  content: string;
+  defaultTerms?: string;
+  feeStructure?: string;
+  scope?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// E-Signature interfaces
+interface SignatureProvider {
+  id: number;
+  organizationId: number;
+  name: string;
+  providerType: 'builtin' | 'docusign' | 'adobe_sign' | 'hellosign' | 'pandadoc' | 'signnow' | 'other';
+  apiKey: string;
+  isActive: boolean;
+  isDefault: boolean;
+  settings: any;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SignatureWorkflow {
+  id: number;
+  organizationId: number;
+  contractId?: number;
+  workflowName: string;
+  documentTitle: string;
+  providerId: number;
+  status: 'draft' | 'active' | 'completed' | 'cancelled' | 'expired';
+  signingOrder: 'sequential' | 'parallel';
+  expiresAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelReason?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SignatureRequest {
+  id: number;
+  workflowId: number;
+  signerName: string;
+  signerEmail: string;
+  signerRole: string;
+  signingOrder: number;
+  status: 'pending' | 'sent' | 'viewed' | 'signed' | 'declined' | 'expired';
+  secureSigningLink: string;
+  documentTitle: string;
+  expiresAt: string;
+  sentAt?: string;
+  viewedAt?: string;
+  signedAt?: string;
+  declinedAt?: string;
+  declineReason?: string;
+  reminderCount: number;
+  reminderSentAt?: string;
+  signatureData?: string;
+  signedIpAddress?: string;
+  signedUserAgent?: string;
+  signedLocation?: string;
+  viewedIpAddress?: string;
+  viewedUserAgent?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface DashboardStats {
+  totalContracts: string;
+  activeContracts: string;
+  expiredContracts: string;
+  totalValue: string;
+}
+
+// =================== BUILT-IN SIGNATURE CANVAS COMPONENT ===================
+interface SignatureCanvasProps {
+  onSignatureChange: (signature: string) => void;
+  width?: number;
+  height?: number;
+}
+
+function SignatureCanvas({ onSignatureChange, width = 400, height = 200 }: SignatureCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [isEmpty, setIsEmpty] = useState(true);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set up canvas
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Set white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+  }, [width, height]);
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    setIsDrawing(true);
+    setIsEmpty(false);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Convert to base64 and notify parent
+    const signature = canvas.toDataURL('image/png');
+    onSignatureChange(signature);
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    setIsEmpty(true);
+    onSignatureChange('');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+        <canvas
+          ref={canvasRef}
+          width={width}
+          height={height}
+          className="border border-gray-200 rounded cursor-crosshair"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+        />
+      </div>
+      
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {isEmpty ? 'Sign above using your mouse or touchpad' : 'Signature captured'}
+        </p>
+        <Button 
+          type="button" 
+          variant="outline" 
+          size="sm" 
+          onClick={clearSignature}
+          disabled={isEmpty}
+        >
+          Clear Signature
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// =================== BUILT-IN SIGNATURE WORKFLOW COMPONENT ===================
+interface BuiltInSignatureWorkflowProps {
+  workflowId: number;
+  documentTitle: string;
+  signers: Array<{
+    name: string;
+    email: string;
+    role: string;
+  }>;
+  onComplete: (signatures: Array<{ signerEmail: string; signature: string; timestamp: string }>) => void;
+}
+
+function BuiltInSignatureWorkflow({ workflowId, documentTitle, signers, onComplete }: BuiltInSignatureWorkflowProps) {
+  const [currentSignerIndex, setCurrentSignerIndex] = useState(0);
+  const [signatures, setSignatures] = useState<Array<{ signerEmail: string; signature: string; timestamp: string }>>([]);
+  const [currentSignature, setCurrentSignature] = useState('');
+  const { toast } = useToast();
+
+  const currentSigner = signers[currentSignerIndex];
+  const isLastSigner = currentSignerIndex === signers.length - 1;
+
+  const handleSignatureSubmit = () => {
+    if (!currentSignature) {
+      toast({
+        title: 'Signature Required',
+        description: 'Please provide your signature before proceeding.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newSignature = {
+      signerEmail: currentSigner.email,
+      signature: currentSignature,
+      timestamp: new Date().toISOString(),
+    };
+
+    const updatedSignatures = [...signatures, newSignature];
+    setSignatures(updatedSignatures);
+
+    if (isLastSigner) {
+      // All signatures collected
+      onComplete(updatedSignatures);
+    } else {
+      // Move to next signer
+      setCurrentSignerIndex(currentSignerIndex + 1);
+      setCurrentSignature('');
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-2xl font-bold">{documentTitle}</h3>
+        <p className="text-muted-foreground mt-2">
+          Signature {currentSignerIndex + 1} of {signers.length}
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Signer Information</CardTitle>
+          <CardDescription>
+            Please review your information and provide your signature below
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium">Full Name</label>
+              <p className="text-lg">{currentSigner.name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email Address</label>
+              <p className="text-lg">{currentSigner.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Role</label>
+              <p className="text-lg">{currentSigner.role}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Digital Signature</CardTitle>
+          <CardDescription>
+            Please sign below to acknowledge and agree to the document terms
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SignatureCanvas onSignatureChange={setCurrentSignature} />
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Signatures collected: {signatures.length} of {signers.length}
+        </div>
+        
+        <div className="flex gap-4">
+          {currentSignerIndex > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentSignerIndex(currentSignerIndex - 1)}
+            >
+              Previous Signer
+            </Button>
+          )}
+          
+          <Button onClick={handleSignatureSubmit} disabled={!currentSignature}>
+            {isLastSigner ? 'Complete Document' : 'Next Signer'}
+          </Button>
+        </div>
+      </div>
+
+      {signatures.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Signature Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {signers.map((signer, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full ${
+                    signatures.find(s => s.signerEmail === signer.email) 
+                      ? 'bg-green-500' 
+                      : index === currentSignerIndex 
+                        ? 'bg-blue-500' 
+                        : 'bg-gray-300'
+                  }`} />
+                  <span className="text-sm">
+                    {signer.name} ({signer.email})
+                  </span>
+                  {signatures.find(s => s.signerEmail === signer.email) && (
+                    <Badge variant="secondary">Signed</Badge>
+                  )}
+                  {index === currentSignerIndex && !signatures.find(s => s.signerEmail === signer.email) && (
+                    <Badge variant="outline">Current</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// =================== E-SIGNATURE MODULE COMPONENT ===================
+function ESignatureModule() {
+  const [activeView, setActiveView] = useState<'dashboard' | 'providers' | 'workflows' | 'audit'>('dashboard');
+  const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
+  const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<SignatureProvider | null>(null);
+  const [editingWorkflow, setEditingWorkflow] = useState<SignatureWorkflow | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch signature providers
+  const { data: signatureProviders = [], isLoading: providersLoading } = useQuery({
+    queryKey: ['/api/signature-providers'],
+    queryFn: () => apiRequest('/api/signature-providers'),
+  });
+
+  // Fetch signature workflows
+  const { data: signatureWorkflows = [], isLoading: workflowsLoading } = useQuery({
+    queryKey: ['/api/signature-workflows'],
+    queryFn: () => apiRequest('/api/signature-workflows'),
+  });
+
+  // Provider form schema
+  const providerFormSchema = z.object({
+    name: z.string().min(1, 'Provider name is required'),
+    providerType: z.enum(['builtin', 'docusign', 'adobe_sign', 'hellosign', 'pandadoc', 'signnow', 'other']),
+    apiKey: z.string().optional(),
+    isActive: z.boolean().default(true),
+    isDefault: z.boolean().default(false),
+    settings: z.any().optional(),
+  });
+
+  // Workflow form schema
+  const workflowFormSchema = z.object({
+    workflowName: z.string().min(1, 'Workflow name is required'),
+    documentTitle: z.string().min(1, 'Document title is required'),
+    providerId: z.number({ required_error: 'Provider is required' }),
+    signingOrder: z.enum(['sequential', 'parallel']).default('sequential'),
+    expiresAt: z.date().optional(),
+    contractId: z.number().optional(),
+  });
+
+  const providerForm = useForm({
+    resolver: zodResolver(providerFormSchema),
+    defaultValues: {
+      name: '',
+      providerType: 'builtin' as const,
+      apiKey: '',
+      isActive: true,
+      isDefault: false,
+      settings: {},
+    },
+  });
+
+  const workflowForm = useForm({
+    resolver: zodResolver(workflowFormSchema),
+    defaultValues: {
+      workflowName: '',
+      documentTitle: '',
+      providerId: 0,
+      signingOrder: 'sequential' as const,
+    },
+  });
+
+  // Create signature provider mutation
+  const createProviderMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/signature-providers', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/signature-providers'] });
+      setIsProviderDialogOpen(false);
+      providerForm.reset();
+      toast({
+        title: 'Provider Created',
+        description: 'Signature provider has been created successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create provider.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Create signature workflow mutation
+  const createWorkflowMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/signature-workflows', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/signature-workflows'] });
+      setIsWorkflowDialogOpen(false);
+      workflowForm.reset();
+      toast({
+        title: 'Workflow Created',
+        description: 'Signature workflow has been created successfully.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create workflow.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Set default provider mutation
+  const setDefaultProviderMutation = useMutation({
+    mutationFn: (providerId: number) => apiRequest(`/api/signature-providers/${providerId}/set-default`, 'POST'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/signature-providers'] });
+      toast({
+        title: 'Default Provider Set',
+        description: 'Default signature provider has been updated.',
+      });
+    },
+  });
+
+  const handleSubmitProvider = (data: any) => {
+    if (editingProvider) {
+      // Update provider logic would go here
+    } else {
+      createProviderMutation.mutate(data);
+    }
+  };
+
+  const handleSubmitWorkflow = (data: any) => {
+    if (editingWorkflow) {
+      // Update workflow logic would go here
+    } else {
+      createWorkflowMutation.mutate(data);
+    }
+  };
+
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      {/* E-Signature Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Workflows</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{signatureWorkflows.filter((w: any) => w.status === 'active').length}</div>
+            <p className="text-xs text-muted-foreground">Currently in progress</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Completed This Month</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{signatureWorkflows.filter((w: any) => w.status === 'completed').length}</div>
+            <p className="text-xs text-muted-foreground">Successfully signed</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Pending Signatures</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{signatureWorkflows.filter((w: any) => w.status === 'draft').length}</div>
+            <p className="text-xs text-muted-foreground">Awaiting action</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Active Providers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{signatureProviders.filter((p: any) => p.isActive).length}</div>
+            <p className="text-xs text-muted-foreground">Configured services</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Common e-signature operations</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Button 
+              onClick={() => setIsWorkflowDialogOpen(true)}
+              className="h-20 flex-col gap-2"
+              variant="outline"
+            >
+              <FileSignature className="h-6 w-6" />
+              <span>New Signature Workflow</span>
+            </Button>
+            
+            <Button 
+              onClick={() => setIsProviderDialogOpen(true)}
+              className="h-20 flex-col gap-2"
+              variant="outline"
+            >
+              <Settings className="h-6 w-6" />
+              <span>Configure Provider</span>
+            </Button>
+            
+            <Button 
+              onClick={() => setActiveView('audit')}
+              className="h-20 flex-col gap-2"
+              variant="outline"
+            >
+              <Activity className="h-6 w-6" />
+              <span>View Audit Trail</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Workflows */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Signature Workflows</CardTitle>
+          <CardDescription>Latest e-signature activities</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {signatureWorkflows.length === 0 ? (
+            <div className="text-center py-8">
+              <FileSignature className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No signature workflows yet</p>
+              <Button onClick={() => setIsWorkflowDialogOpen(true)} className="mt-4">
+                Create First Workflow
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Workflow Name</TableHead>
+                  <TableHead>Document</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {signatureWorkflows.slice(0, 5).map((workflow: SignatureWorkflow) => (
+                  <TableRow key={workflow.id}>
+                    <TableCell className="font-medium">{workflow.workflowName}</TableCell>
+                    <TableCell>{workflow.documentTitle}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        workflow.status === 'completed' ? 'default' :
+                        workflow.status === 'active' ? 'secondary' :
+                        workflow.status === 'cancelled' ? 'destructive' : 'outline'
+                      }>
+                        {workflow.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{format(new Date(workflow.createdAt), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderProviders = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Signature Providers</h2>
+          <p className="text-muted-foreground">Configure your e-signature service providers</p>
+        </div>
+        <Button onClick={() => setIsProviderDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Provider
+        </Button>
+      </div>
+
+      {signatureProviders.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Providers Configured</h3>
+              <p className="text-muted-foreground mb-4">
+                Add your first e-signature provider to start creating workflows
+              </p>
+              <Button onClick={() => setIsProviderDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Configure Provider
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {signatureProviders.map((provider: SignatureProvider) => (
+            <Card key={provider.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{provider.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    {provider.isDefault && (
+                      <Badge variant="default">Default</Badge>
+                    )}
+                    <Badge variant={provider.isActive ? 'secondary' : 'outline'}>
+                      {provider.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+                <CardDescription className="capitalize">
+                  {provider.providerType === 'builtin' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-600 font-medium">Built-in System</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                        No API Required
+                      </Badge>
+                    </div>
+                  ) : (
+                    provider.providerType.replace('_', ' ')
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Created {format(new Date(provider.createdAt), 'MMM dd, yyyy')}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!provider.isDefault && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDefaultProviderMutation.mutate(provider.id)}
+                        disabled={setDefaultProviderMutation.isPending}
+                      >
+                        Set Default
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderWorkflows = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Signature Workflows</h2>
+          <p className="text-muted-foreground">Manage your document signing workflows</p>
+        </div>
+        <Button onClick={() => setIsWorkflowDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Workflow
+        </Button>
+      </div>
+
+      {signatureWorkflows.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <FileSignature className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Workflows Created</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first signature workflow to start collecting signatures
+              </p>
+              <Button onClick={() => setIsWorkflowDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Workflow
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="pt-6">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Workflow Name</TableHead>
+                  <TableHead>Document Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Signing Order</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {signatureWorkflows.map((workflow: SignatureWorkflow) => (
+                  <TableRow key={workflow.id}>
+                    <TableCell className="font-medium">{workflow.workflowName}</TableCell>
+                    <TableCell>{workflow.documentTitle}</TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        workflow.status === 'completed' ? 'default' :
+                        workflow.status === 'active' ? 'secondary' :
+                        workflow.status === 'cancelled' ? 'destructive' : 'outline'
+                      }>
+                        {workflow.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="capitalize">{workflow.signingOrder}</TableCell>
+                    <TableCell>{format(new Date(workflow.createdAt), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  const renderAuditTrail = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Signature Audit Trail</h2>
+          <p className="text-muted-foreground">Complete compliance and audit history</p>
+        </div>
+        <Button variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Export Audit Report
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center py-8">
+            <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Audit Trail</h3>
+            <p className="text-muted-foreground mb-4">
+              Complete signature audit trail will appear here once workflows are created
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">E-Signature Management</h1>
+          <p className="text-muted-foreground">
+            Professional digital signature workflows with full compliance and audit trails
+          </p>
+        </div>
+      </div>
+
+      {/* View Toggle Tabs */}
+      <Tabs value={activeView} onValueChange={(value) => setActiveView(value as any)} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="providers" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Providers
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <FileSignature className="h-4 w-4" />
+            Workflows
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Audit Trail
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard">
+          {renderDashboard()}
+        </TabsContent>
+
+        <TabsContent value="providers">
+          {renderProviders()}
+        </TabsContent>
+
+        <TabsContent value="workflows">
+          {renderWorkflows()}
+        </TabsContent>
+
+        <TabsContent value="audit">
+          {renderAuditTrail()}
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Provider Dialog */}
+      <Dialog open={isProviderDialogOpen} onOpenChange={setIsProviderDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProvider ? 'Edit Signature Provider' : 'Add Signature Provider'}
+            </DialogTitle>
+            <DialogDescription>
+              Configure your e-signature service provider settings
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...providerForm}>
+            <form onSubmit={providerForm.handleSubmit(handleSubmitProvider)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={providerForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provider Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter provider name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={providerForm.control}
+                  name="providerType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provider Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select provider type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="builtin">Built-in Signature System</SelectItem>
+                          <SelectItem value="docusign">DocuSign</SelectItem>
+                          <SelectItem value="adobe_sign">Adobe Sign</SelectItem>
+                          <SelectItem value="hellosign">HelloSign</SelectItem>
+                          <SelectItem value="pandadoc">PandaDoc</SelectItem>
+                          <SelectItem value="signnow">SignNow</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {providerForm.watch('providerType') === 'builtin' ? (
+                <div className="col-span-full">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-green-900">Built-in Signature System Selected</h4>
+                        <p className="text-sm text-green-700 mt-1">
+                          No external API key required! This system uses HTML5 Canvas for secure digital signatures without third-party dependencies.
+                        </p>
+                        <div className="mt-3 text-sm text-green-600">
+                          <strong>Features:</strong>
+                          <ul className="list-disc list-inside mt-1 space-y-1">
+                            <li>Draw signatures with mouse or touchpad</li>
+                            <li>Sequential and parallel signing workflows</li>
+                            <li>Complete audit trail and compliance tracking</li>
+                            <li>No monthly subscription or per-signature fees</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <FormField
+                  control={providerForm.control}
+                  name="apiKey"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>API Key</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="Enter API key" {...field} />
+                      </FormControl>
+                      <FormDescription>
+                        API key required for third-party signature providers
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={providerForm.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="rounded border-gray-300"
+                        />
+                      </FormControl>
+                      <FormLabel>Active Provider</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={providerForm.control}
+                  name="isDefault"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="rounded border-gray-300"
+                        />
+                      </FormControl>
+                      <FormLabel>Set as Default</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsProviderDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createProviderMutation.isPending}>
+                  {createProviderMutation.isPending ? 'Saving...' : editingProvider ? 'Update Provider' : 'Add Provider'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Workflow Dialog */}
+      <Dialog open={isWorkflowDialogOpen} onOpenChange={setIsWorkflowDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingWorkflow ? 'Edit Signature Workflow' : 'Create Signature Workflow'}
+            </DialogTitle>
+            <DialogDescription>
+              Set up a new digital signature workflow for your documents
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...workflowForm}>
+            <form onSubmit={workflowForm.handleSubmit(handleSubmitWorkflow)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={workflowForm.control}
+                  name="workflowName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Workflow Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter workflow name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={workflowForm.control}
+                  name="documentTitle"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Document Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter document title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={workflowForm.control}
+                  name="providerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Signature Provider</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select provider" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {signatureProviders.filter((p: any) => p.isActive).map((provider: SignatureProvider) => (
+                            <SelectItem key={provider.id} value={provider.id.toString()}>
+                              {provider.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={workflowForm.control}
+                  name="signingOrder"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Signing Order</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select signing order" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="sequential">Sequential (One by one)</SelectItem>
+                          <SelectItem value="parallel">Parallel (All at once)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={workflowForm.control}
+                name="expiresAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Expiration Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsWorkflowDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createWorkflowMutation.isPending}>
+                  {createWorkflowMutation.isPending ? 'Creating...' : editingWorkflow ? 'Update Workflow' : 'Create Workflow'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export default function ContractsModule() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [isEngagementDialogOpen, setIsEngagementDialogOpen] = useState(false);
+  const [editingContract, setEditingContract] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+
+  // Contract Form setup
+  const form = useForm<ContractFormData>({
+    resolver: zodResolver(contractFormSchema),
+    defaultValues: {
+      contractName: "",
+      contractType: "service",
+      status: "draft",
+      currency: "ZAR",
+      description: "",
+      terms: "",
+      scope: "",
+      deliverables: "",
+      paymentTerms: "",
+      invoiceSchedule: "",
+      autoRenewal: false,
+      reminderDays: 30,
+    }
+  });
+
+  // Engagement Letter Template Form
+  const templateForm = useForm({
+    resolver: zodResolver(engagementLetterTemplateSchema),
+    defaultValues: {
+      name: '',
+      serviceType: '',
+      description: '',
+      content: '',
+      defaultTerms: '',
+      feeStructure: '',
+      scope: '',
+      isActive: true,
+    },
+  });
+
+  // Fetch contracts
+  const { data: contracts = [], isLoading } = useQuery({
+    queryKey: ['/api/contracts'],
+  });
+
+  // Fetch dashboard stats
+  const { data: dashboardStats } = useQuery({
+    queryKey: ['/api/contracts/dashboard/stats'],
+    queryFn: () => apiRequest('/api/contracts/dashboard/stats')
+  });
+
+  // Fetch expiring contracts
+  const { data: expiringContracts = [] } = useQuery({
+    queryKey: ['/api/contracts/expiring'],
+    queryFn: () => apiRequest('/api/contracts/expiring')
+  });
+
+  // Fetch engagement letter templates
+  const { data: engagementTemplates = [] } = useQuery({
+    queryKey: ['/api/engagement-letter-templates'],
+    queryFn: () => apiRequest('/api/engagement-letter-templates')
+  });
+
+  // Fetch clients for dropdown
+  const { data: clients = [] } = useQuery({
+    queryKey: ['/api/clients'],
+  });
+
+  // Fetch projects for dropdown
+  const { data: projects = [] } = useQuery({
+    queryKey: ['/api/projects'],
+    queryFn: () => apiRequest('/api/projects')
+  });
+
+  // Create/Update contract mutation
+  const contractMutation = useMutation({
+    mutationFn: async (data: ContractFormData) => {
+      const url = editingContract ? `/api/contracts/${editingContract.id}` : '/api/contracts';
+      const method = editingContract ? 'PUT' : 'POST';
+      
+      return apiRequest(url, method, {
+        ...data,
+        startDate: data.startDate.toISOString(),
+        endDate: data.endDate.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: editingContract ? "Contract Updated" : "Contract Created",
+        description: `Contract has been ${editingContract ? 'updated' : 'created'} successfully.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts/dashboard/stats'] });
+      handleCloseDialog();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || `Failed to ${editingContract ? 'update' : 'create'} contract`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create engagement letter template mutation
+  const createEngagementTemplateMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/engagement-letter-templates', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/engagement-letter-templates'] });
+      toast({ title: 'Success', description: 'Engagement letter template created successfully' });
+      setIsTemplateDialogOpen(false);
+      templateForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to create template', variant: 'destructive' });
+    }
+  });
+
+  // Generate engagement letter mutation
+  const generateEngagementLetterMutation = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/engagement-letters/generate', 'POST', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      toast({ title: 'Success', description: 'Engagement letter generated and created successfully' });
+      setIsEngagementDialogOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to generate engagement letter', variant: 'destructive' });
+    }
+  });
+
+  // Delete contract mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (contractId: number) => {
+      return apiRequest(`/api/contracts/${contractId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      toast({
+        title: "Contract Deleted",
+        description: "Contract has been deleted successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts/dashboard/stats'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete contract",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = (data: ContractFormData) => {
+    contractMutation.mutate(data);
+  };
+
+  const handleEdit = (contract: any) => {
+    setEditingContract(contract);
+    form.reset({
+      contractName: contract.contractName || contract.title,
+      contractType: contract.contractType || contract.type,
+      clientId: contract.clientId,
+      projectId: contract.projectId,
+      startDate: new Date(contract.startDate),
+      endDate: new Date(contract.endDate),
+      value: contract.value,
+      currency: contract.currency || 'ZAR',
+      status: contract.status,
+      description: contract.description || "",
+      terms: contract.terms || "",
+      scope: contract.scope || "",
+      deliverables: contract.deliverables || "",
+      paymentTerms: contract.paymentTerms || "",
+      invoiceSchedule: contract.invoiceSchedule || "",
+      autoRenewal: contract.autoRenewal || false,
+      reminderDays: contract.reminderDays || 30,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = (contractId: number) => {
+    if (confirm("Are you sure you want to delete this contract?")) {
+      deleteMutation.mutate(contractId);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingContract(null);
+    form.reset();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-blue-100 text-blue-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'expired': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'cancelled': return <AlertTriangle className="h-4 w-4" />;
+      case 'expired': return <AlertTriangle className="h-4 w-4" />;
+      default: return <Circle className="h-4 w-4" />;
+    }
+  };
+
+  // Filter contracts
+  const filteredContracts = contracts.filter((contract: any) => {
+    const contractName = contract.contractName || contract.title || '';
+    const contractDescription = contract.description || '';
+    const clientName = contract.clientName || '';
+    
+    const matchesSearch = contractName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contractDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || contract.status === filterStatus;
+    const matchesType = filterType === "all" || (contract.contractType || contract.type) === filterType;
+    
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  // Enhanced Dashboard Component
+  const ContractDashboard = () => (
+    <div className="space-y-6">
+      {/* Enhanced Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.totalContracts || contracts.length}</div>
+            <p className="text-xs text-muted-foreground">All time contracts</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {dashboardStats?.activeContracts || contracts.filter((c: any) => c.status === 'active').length}
+            </div>
+            <p className="text-xs text-muted-foreground">Currently active</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{expiringContracts?.length || '0'}</div>
+            <p className="text-xs text-muted-foreground">Next 30 days</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              R {dashboardStats?.totalValue || contracts.reduce((sum: number, c: any) => sum + (c.value || 0), 0).toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Active contracts</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Quick Actions</CardTitle>
+          <CardDescription>Streamline your contract management workflow</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Button 
+              onClick={() => setIsDialogOpen(true)}
+              className="h-20 flex flex-col gap-2"
+              variant="outline"
+            >
+              <Plus className="h-6 w-6" />
+              Create Contract
+            </Button>
+
+            <Button 
+              onClick={() => setIsEngagementDialogOpen(true)}
+              className="h-20 flex flex-col gap-2"
+              variant="outline"
+            >
+              <Zap className="h-6 w-6" />
+              Generate Engagement Letter
+            </Button>
+
+            <Button 
+              onClick={() => setIsTemplateDialogOpen(true)}
+              className="h-20 flex flex-col gap-2"
+              variant="outline"
+            >
+              <FileText className="h-6 w-6" />
+              Create Template
+            </Button>
+
+            <Button 
+              onClick={() => setActiveTab('analytics')}
+              className="h-20 flex flex-col gap-2"
+              variant="outline"
+            >
+              <TrendingUp className="h-6 w-6" />
+              View Analytics
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expiring Contracts Alert */}
+      {expiringContracts && expiringContracts.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="text-orange-800 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Contracts Expiring Soon
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {expiringContracts.slice(0, 3).map((contract: any) => (
+                <div key={contract.id} className="flex justify-between items-center p-2 bg-white rounded border">
+                  <div>
+                    <p className="font-medium">{contract.title || contract.contractName}</p>
+                    <p className="text-sm text-muted-foreground">{contract.clientName}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{format(new Date(contract.endDate), 'MMM dd, yyyy')}</p>
+                    <Badge variant="outline" className="text-orange-600">
+                      {Math.ceil((new Date(contract.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  // Enhanced Contract List Component
+  const ContractsList = () => (
+    <div className="space-y-6">
+      {/* Search and Filter Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <CardTitle>Contracts</CardTitle>
+              <CardDescription>Manage your business contracts and agreements</CardDescription>
+            </div>
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Contract
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search contracts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="service">Service</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="consulting">Consulting</SelectItem>
+                <SelectItem value="development">Development</SelectItem>
+                <SelectItem value="engagement">Engagement Letter</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contracts Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Contract</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>End Date</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredContracts.map((contract: any) => (
+                <TableRow key={contract.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{contract.contractName || contract.title}</p>
+                      <p className="text-sm text-muted-foreground">{contract.description}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell>{contract.clientName || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{contract.contractType || contract.type}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(contract.status)}>
+                      <span className="flex items-center gap-1">
+                        {getStatusIcon(contract.status)}
+                        {contract.status}
+                      </span>
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
+                  </TableCell>
+                  <TableCell>{format(new Date(contract.endDate), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(contract)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="outline">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => handleDelete(contract.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  // Professional Template Management System Component
+  const EngagementLetterTemplates = () => {
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [templatePreview, setTemplatePreview] = useState<any>(null);
+    const [initializingTemplates, setInitializingTemplates] = useState(false);
+
+    // Query for categorized templates
+    const { data: categorizedTemplates = {}, isLoading: templatesLoading } = useQuery({
+      queryKey: ['/api/engagement-letter-templates/categories'],
+      enabled: true
+    });
+
+    // Individual template query for preview
+    const { data: previewTemplate } = useQuery({
+      queryKey: ['/api/engagement-letter-templates', templatePreview?.id],
+      enabled: !!templatePreview?.id
+    });
+
+    // Initialize professional templates mutation
+    const initializeTemplatesMutation = useMutation({
+      mutationFn: () => apiRequest('/api/engagement-letter-templates/initialize', 'POST', {}),
+      onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: ['/api/engagement-letter-templates'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/engagement-letter-templates/categories'] });
+        toast({ 
+          title: 'Templates Initialized Successfully', 
+          description: `${data.count} professional SA templates have been loaded into your system.` 
+        });
+        setInitializingTemplates(false);
+      },
+      onError: (error: any) => {
+        toast({ 
+          title: 'Initialization Failed', 
+          description: error.message || 'Failed to initialize professional templates', 
+          variant: 'destructive' 
+        });
+        setInitializingTemplates(false);
+      }
+    });
+
+    const handleInitializeTemplates = () => {
+      setInitializingTemplates(true);
+      initializeTemplatesMutation.mutate();
+    };
+
+    const serviceTypeLabels: Record<string, string> = {
+      bookkeeping: 'Bookkeeping Services',
+      tax: 'Tax Services',
+      vat: 'VAT Services',
+      payroll: 'Payroll Services',
+      audit: 'Audit Engagements',
+      review: 'Independent Reviews',
+      compilation: 'Compilation Services',
+      cipc: 'CIPC & Company Secretarial',
+      management_accounts: 'Management Accounts',
+      advisory: 'Business Advisory'
+    };
+
+    const getComplianceBadges = (template: any) => {
+      const badges = [];
+      if (template.saicaCompliant) badges.push({ label: 'SAICA', color: 'bg-blue-100 text-blue-800' });
+      if (template.saipaCompliant) badges.push({ label: 'SAIPA', color: 'bg-green-100 text-green-800' });
+      if (template.irbaCompliant) badges.push({ label: 'IRBA', color: 'bg-purple-100 text-purple-800' });
+      return badges;
+    };
+
+    const filteredTemplates = selectedCategory === 'all' 
+      ? Object.values(categorizedTemplates).flat()
+      : categorizedTemplates[selectedCategory] || [];
+
+    const totalTemplates = Object.values(categorizedTemplates).flat().length;
+
+    return (
+      <div className="space-y-6">
+        {/* Header with Initialize Button */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-2xl">Professional Template Management System</CardTitle>
+                <CardDescription>
+                  South African accounting and tax practice engagement letter templates meeting professional standards
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {totalTemplates === 0 && (
+                  <Button 
+                    onClick={handleInitializeTemplates} 
+                    disabled={initializingTemplates}
+                    className="bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+                  >
+                    {initializingTemplates ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    {initializingTemplates ? 'Loading...' : 'Initialize SA Templates'}
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsTemplateDialogOpen(true)}
+                  disabled={totalTemplates === 0}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Custom Template
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          
+          {totalTemplates > 0 && (
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card className="p-4 text-center bg-gradient-to-br from-blue-50 to-blue-100">
+                  <h3 className="text-2xl font-bold text-blue-600">{totalTemplates}</h3>
+                  <p className="text-sm text-blue-800">Total Templates</p>
+                </Card>
+                <Card className="p-4 text-center bg-gradient-to-br from-green-50 to-green-100">
+                  <h3 className="text-2xl font-bold text-green-600">{Object.keys(categorizedTemplates).length}</h3>
+                  <p className="text-sm text-green-800">Service Categories</p>
+                </Card>
+                <Card className="p-4 text-center bg-gradient-to-br from-purple-50 to-purple-100">
+                  <h3 className="text-2xl font-bold text-purple-600">100%</h3>
+                  <p className="text-sm text-purple-800">SA Compliant</p>
+                </Card>
+                <Card className="p-4 text-center bg-gradient-to-br from-orange-50 to-orange-100">
+                  <h3 className="text-2xl font-bold text-orange-600">Ready</h3>
+                  <p className="text-sm text-orange-800">Professional Use</p>
+                </Card>
+              </div>
+              
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  All Categories ({totalTemplates})
+                </Button>
+                {Object.entries(categorizedTemplates).map(([category, templates]) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {serviceTypeLabels[category] || category} ({templates.length})
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+
+        {/* Templates Grid */}
+        {totalTemplates === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold mb-2">No Templates Available</h3>
+              <p className="text-muted-foreground mb-6">
+                Initialize the professional South African accounting template library to get started with world-class engagement letters.
+              </p>
+              <Button 
+                onClick={handleInitializeTemplates} 
+                disabled={initializingTemplates}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+              >
+                {initializingTemplates ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {initializingTemplates ? 'Initializing Templates...' : 'Initialize Professional Templates'}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTemplates.map((template: any) => (
+              <Card key={template.id} className="border-2 hover:border-blue-200 transition-all duration-200 hover:shadow-lg">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg line-clamp-2">{template.name}</CardTitle>
+                      <Badge variant="outline" className="mt-2">
+                        {serviceTypeLabels[template.serviceType] || template.serviceType}
+                      </Badge>
+                    </div>
+                    {template.isSystemTemplate && (
+                      <Badge variant="secondary" className="ml-2">
+                        Professional
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {/* Compliance Badges */}
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {getComplianceBadges(template).map((badge, index) => (
+                      <span key={index} className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+                        {badge.label}
+                      </span>
+                    ))}
+                  </div>
+                </CardHeader>
+                
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                    {template.description}
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => setTemplatePreview(template)}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview
+                      </Button>
+                      <Button 
+                        size="sm"
+                        className="flex-1 bg-gradient-to-r from-green-500 to-blue-500 text-white"
+                        onClick={() => {
+                          setSelectedTemplate(template);
+                          setIsEngagementDialogOpen(true);
+                        }}
+                      >
+                        <Zap className="h-4 w-4 mr-2" />
+                        Use Template
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* AI-Powered Interactive Template Preview Dialog */}
+        {templatePreview && (
+          <AITemplatePreview 
+            template={templatePreview}
+            onClose={() => setTemplatePreview(null)}
+            onUseTemplate={(template) => {
+              setSelectedTemplate(template);
+              setIsEngagementDialogOpen(true);
+              setTemplatePreview(null);
+            }}
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Contracts Module</h1>
+          <p className="text-muted-foreground">
+            Professional contract management with engagement letter automation and e-signature integration
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <ModuleHelp 
+            title="Contracts Module" 
+            description="Comprehensive contract management system with professional engagement letter templates, automated contract generation, and integrated e-signature workflows for accounting and tax practice management."
+          />
+          <StartWorkingButton />
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Contract
+          </Button>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="dashboard" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="contracts" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Contracts
+          </TabsTrigger>
+          <TabsTrigger value="engagement-letters" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Engagement Letters
+          </TabsTrigger>
+          <TabsTrigger value="e-signatures" className="flex items-center gap-2">
+            <PenTool className="h-4 w-4" />
+            E-Signatures
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="dashboard" className="space-y-6">
+          <ContractDashboard />
+        </TabsContent>
+
+        <TabsContent value="contracts" className="space-y-6">
+          <ContractsList />
+        </TabsContent>
+
+        <TabsContent value="engagement-letters" className="space-y-6">
+          <EngagementLetterTemplates />
+        </TabsContent>
+
+        <TabsContent value="e-signatures" className="space-y-6">
+          <ESignatureModule />
+        </TabsContent>
+      </Tabs>
+
+      {/* Enhanced Create/Edit Contract Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingContract ? 'Edit Contract' : 'Create New Contract'}</DialogTitle>
+            <DialogDescription>
+              {editingContract ? 'Update contract details' : 'Create a professional contract with comprehensive terms and conditions'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="contractName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter contract name" {...field} />
+                      </FormControl>
+                      <FieldHelp description="Descriptive name for the contract (e.g., 'Annual Bookkeeping Services Agreement')" />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="contractType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select contract type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="service">Service Agreement</SelectItem>
+                          <SelectItem value="maintenance">Maintenance Contract</SelectItem>
+                          <SelectItem value="consulting">Consulting Agreement</SelectItem>
+                          <SelectItem value="development">Development Contract</SelectItem>
+                          <SelectItem value="engagement">Engagement Letter</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clients.map((client: any) => (
+                            <SelectItem key={client.id} value={client.id.toString()}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="projectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Related Project (Optional)</FormLabel>
+                      <Select onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select project" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {projects.map((project: any) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Value (ZAR)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0.00" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ZAR">South African Rand (ZAR)</SelectItem>
+                          <SelectItem value="USD">US Dollar (USD)</SelectItem>
+                          <SelectItem value="EUR">Euro (EUR)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Brief description of the contract"
+                        rows={3}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="scope"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Scope of Work</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Detailed scope of work and deliverables"
+                        rows={4}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FieldHelp description="Define the specific services, deliverables, and expectations for this contract" />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="terms"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Terms and Conditions</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Contract terms and conditions"
+                        rows={4}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="paymentTerms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Terms</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Payment schedule and terms"
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="invoiceSchedule"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Invoice Schedule</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="When and how invoices will be sent"
+                          rows={3}
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="autoRenewal"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                      <FormControl>
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={field.onChange}
+                          className="rounded border-gray-300"
+                        />
+                      </FormControl>
+                      <FormLabel>Auto-renewal</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="reminderDays"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Reminder Days Before Expiry</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number"
+                          placeholder="30"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={contractMutation.isPending}>
+                  {contractMutation.isPending ? 'Saving...' : editingContract ? 'Update Contract' : 'Create Contract'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Engagement Letter Template Dialog */}
+      <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Engagement Letter Template</DialogTitle>
+            <DialogDescription>
+              Create a professional engagement letter template for accounting and tax services
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={templateForm.handleSubmit((data) => createEngagementTemplateMutation.mutate(data))} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="template-name" className="block text-sm font-medium mb-2">Template Name</label>
+                <Input
+                  id="template-name"
+                  {...templateForm.register('name')}
+                  placeholder="Enter template name"
+                />
+                {templateForm.formState.errors.name && (
+                  <p className="text-sm text-red-600">{templateForm.formState.errors.name.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="serviceType" className="block text-sm font-medium mb-2">Service Type</label>
+                <Select onValueChange={(value) => templateForm.setValue('serviceType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select service type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bookkeeping">Bookkeeping Services</SelectItem>
+                    <SelectItem value="tax_preparation">Tax Preparation</SelectItem>
+                    <SelectItem value="audit">Audit Services</SelectItem>
+                    <SelectItem value="consulting">Financial Consulting</SelectItem>
+                    <SelectItem value="payroll">Payroll Services</SelectItem>
+                    <SelectItem value="vat">VAT Services</SelectItem>
+                  </SelectContent>
+                </Select>
+                {templateForm.formState.errors.serviceType && (
+                  <p className="text-sm text-red-600">{templateForm.formState.errors.serviceType.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="template-description" className="block text-sm font-medium mb-2">Description</label>
+              <Textarea
+                id="template-description"
+                {...templateForm.register('description')}
+                placeholder="Brief description of this template"
+                rows={2}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="scope" className="block text-sm font-medium mb-2">Scope of Services</label>
+              <Textarea
+                id="scope"
+                {...templateForm.register('scope')}
+                placeholder="Define the scope of services for this engagement"
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="feeStructure" className="block text-sm font-medium mb-2">Fee Structure</label>
+              <Textarea
+                id="feeStructure"
+                {...templateForm.register('feeStructure')}
+                placeholder="Describe the fee structure and billing arrangements"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="defaultTerms" className="block text-sm font-medium mb-2">Default Terms</label>
+              <Textarea
+                id="defaultTerms"
+                {...templateForm.register('defaultTerms')}
+                placeholder="Standard terms and conditions for this service type"
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="content" className="block text-sm font-medium mb-2">Template Content</label>
+              <Textarea
+                id="content"
+                {...templateForm.register('content')}
+                placeholder="Full engagement letter template content with placeholders (e.g., [CLIENT_NAME], [SERVICE_DATE])"
+                rows={8}
+              />
+              <FieldHelp description="Use placeholders like [CLIENT_NAME], [SERVICE_DATE], [FEE_AMOUNT] that will be automatically replaced when generating letters" />
+              {templateForm.formState.errors.content && (
+                <p className="text-sm text-red-600">{templateForm.formState.errors.content.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="template-active"
+                {...templateForm.register('isActive')}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="template-active" className="text-sm font-medium">Template is active</label>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsTemplateDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={createEngagementTemplateMutation.isPending}>
+                {createEngagementTemplateMutation.isPending ? 'Creating...' : 'Create Template'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generate Engagement Letter Dialog */}
+      <Dialog open={isEngagementDialogOpen} onOpenChange={setIsEngagementDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Generate Engagement Letter</DialogTitle>
+            <DialogDescription>
+              Automatically generate a professional engagement letter from a template
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="template-select" className="block text-sm font-medium mb-2">Select Template</label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose an engagement letter template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {engagementTemplates.filter((t: any) => t.isActive).map((template: any) => (
+                    <SelectItem key={template.id} value={template.id.toString()}>
+                      {template.name} - {template.serviceType}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="client-select" className="block text-sm font-medium mb-2">Select Client</label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose client for this engagement" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client: any) => (
+                    <SelectItem key={client.id} value={client.id.toString()}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="service-date" className="block text-sm font-medium mb-2">Service Start Date</label>
+                <Input
+                  id="service-date"
+                  type="date"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="fee-amount" className="block text-sm font-medium mb-2">Fee Amount (ZAR)</label>
+                <Input
+                  id="fee-amount"
+                  type="number"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEngagementDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button disabled={generateEngagementLetterMutation.isPending}>
+                {generateEngagementLetterMutation.isPending ? 'Generating...' : 'Generate Letter'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
