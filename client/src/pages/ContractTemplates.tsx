@@ -487,7 +487,7 @@ We are pleased to confirm our engagement to provide professional services..."
                       <p className="text-xs text-gray-600 mt-1 line-clamp-2">{category.description}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className="text-sm font-medium text-gray-700">
-                          {statistics[category.value as keyof typeof statistics] || category.count} templates
+                          {statistics[category.value as keyof typeof statistics] || 0} templates
                         </span>
                         <div className="flex gap-1">
                           {category.compliance.map((comp) => (
@@ -724,8 +724,8 @@ We are pleased to confirm our engagement to provide professional services..."
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Service Package</Label>
-                  <Badge className={`mt-1 ${packageColors[viewingTemplate.servicePackage as keyof typeof packageColors]}`}>
-                    {servicePackages.find(p => p.value === viewingTemplate.servicePackage)?.label || viewingTemplate.servicePackage}
+                  <Badge className={`mt-1 ${categoryColors[viewingTemplate.servicePackage as keyof typeof categoryColors]}`}>
+                    {professionalCategories.find(p => p.value === viewingTemplate.servicePackage)?.label || viewingTemplate.servicePackage}
                   </Badge>
                 </div>
                 <div>
