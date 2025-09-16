@@ -46,8 +46,11 @@ export class ContractTemplateEngine {
 export class ContractService {
   // Template management
   async createTemplate(companyId: number, data: InsertContractTemplate): Promise<ContractTemplate> {
+    // Extract merge fields from template body
+    const fields = data.bodyMd ? ContractTemplateEngine.extractFields(data.bodyMd) : [];
+    
     const [template] = await db.insert(contractTemplates)
-      .values({ ...data, companyId })
+      .values({ ...data, companyId, fields })
       .returning();
     return template;
   }
@@ -70,8 +73,14 @@ export class ContractService {
   }
 
   async updateTemplate(companyId: number, templateId: number, data: Partial<InsertContractTemplate>): Promise<ContractTemplate | null> {
+    // Extract merge fields from template body if bodyMd is being updated
+    const updateData: any = { ...data, updatedAt: new Date() };
+    if (data.bodyMd) {
+      updateData.fields = ContractTemplateEngine.extractFields(data.bodyMd);
+    }
+    
     const [template] = await db.update(contractTemplates)
-      .set({ ...data, updatedAt: new Date() })
+      .set(updateData)
       .where(and(
         eq(contractTemplates.id, templateId),
         eq(contractTemplates.companyId, companyId)
@@ -319,7 +328,19 @@ export class ContractService {
       const allSigned = allSigners.every(s => s.hasSigned);
       
       if (allSigned) {
-        await this.updateContractStatus(0, contractId, 'signed', 'system'); // companyId not needed for status update
+        // Get the contract to obtain the companyId
+        const [contract] = await db.select()
+          .from(contracts)
+          .where(eq(contracts.id, contractId))
+          .limit(1);
+          
+        if (contract) {
+          // Update contract status with proper companyId
+          await this.updateContractStatus(contract.companyId, contractId, 'signed', 'system');
+          
+          // Trigger automation hook for project and task creation
+          await this.onContractCountersigned(contractId, contract.companyId);
+        }
       }
 
       return true;
@@ -483,7 +504,89 @@ export class ContractService {
   }
 
   private getServiceTaskTemplates(servicePackage: string): Array<{title: string; description: string; priority?: string}> {
-    const templates: Record<string, Array<{title: string; description: string; priority?: string}>> = {
+    // Professional service task templates aligned with SAICA/SAIPA standards
+    const professionalTemplates: Record<string, Array<{title: string; description: string; priority?: string}>> = {
+      // Audit & Assurance Services (SAICA/IRBA Standards)
+      audit_services: [
+        { title: 'Engagement Letter Review', description: 'Review and finalize audit engagement letter with client', priority: 'high' },
+        { title: 'Risk Assessment', description: 'Conduct preliminary risk assessment and materiality calculations', priority: 'high' },
+        { title: 'Planning Memorandum', description: 'Prepare detailed audit planning memorandum', priority: 'medium' },
+        { title: 'Internal Controls Evaluation', description: 'Assess and document client internal controls', priority: 'medium' },
+        { title: 'Substantive Testing', description: 'Perform detailed substantive audit procedures', priority: 'medium' },
+        { title: 'Management Letter', description: 'Prepare management letter with recommendations', priority: 'low' },
+        { title: 'Audit Opinion', description: 'Finalize audit opinion and issue audit report', priority: 'high' }
+      ],
+
+      // Tax Compliance Services (SAICA/SAIT Standards)
+      tax_compliance: [
+        { title: 'Tax Status Review', description: 'Review client tax compliance status and obligations', priority: 'high' },
+        { title: 'Document Collection', description: 'Collect all tax-related documents and records', priority: 'high' },
+        { title: 'Tax Return Preparation', description: 'Prepare annual income tax returns', priority: 'medium' },
+        { title: 'Tax Planning Session', description: 'Conduct tax planning and optimization session', priority: 'medium' },
+        { title: 'SARS Correspondence', description: 'Handle SARS queries and correspondence', priority: 'low' },
+        { title: 'Tax Reconciliation', description: 'Reconcile tax provisions and payments', priority: 'low' }
+      ],
+
+      // VAT Services (SAICA/SAIT Standards)  
+      vat_compliance: [
+        { title: 'VAT Registration Review', description: 'Review VAT registration status and requirements', priority: 'high' },
+        { title: 'VAT Return Preparation', description: 'Prepare monthly/bi-monthly VAT returns', priority: 'high' },
+        { title: 'VAT Reconciliation', description: 'Reconcile VAT accounts and input/output tax', priority: 'medium' },
+        { title: 'Export Documentation', description: 'Review export documentation for zero-rating', priority: 'medium' },
+        { title: 'VAT201 Submission', description: 'Submit VAT201 returns to SARS', priority: 'medium' },
+        { title: 'VAT Verification', description: 'Verify VAT calculations and compliance', priority: 'low' }
+      ],
+
+      // Review Engagements (SAICA/IRBA Standards)
+      review_services: [
+        { title: 'Review Engagement Letter', description: 'Finalize review engagement terms with client', priority: 'high' },
+        { title: 'Analytical Procedures', description: 'Perform analytical review procedures', priority: 'medium' },
+        { title: 'Inquiry Procedures', description: 'Conduct management inquiries and confirmations', priority: 'medium' },
+        { title: 'Review Documentation', description: 'Document review procedures and findings', priority: 'medium' },
+        { title: 'Review Report', description: 'Issue independent review report', priority: 'high' }
+      ],
+
+      // Bookkeeping Services (SAIPA/IAC Standards)
+      bookkeeping: [
+        { title: 'Chart of Accounts Setup', description: 'Set up or review chart of accounts structure', priority: 'high' },
+        { title: 'Transaction Processing', description: 'Process and categorize daily transactions', priority: 'high' },
+        { title: 'Bank Reconciliation', description: 'Perform monthly bank reconciliations', priority: 'medium' },
+        { title: 'Debtors/Creditors Reconciliation', description: 'Reconcile debtors and creditors accounts', priority: 'medium' },
+        { title: 'Monthly Management Accounts', description: 'Prepare monthly management accounts', priority: 'medium' },
+        { title: 'Year-end Adjustments', description: 'Process year-end journals and adjustments', priority: 'low' }
+      ],
+
+      // Payroll Services (SAIPA Standards)
+      payroll: [
+        { title: 'Employee Data Setup', description: 'Set up employee master data and tax directives', priority: 'high' },
+        { title: 'Monthly Payroll Processing', description: 'Calculate and process monthly payroll', priority: 'high' },
+        { title: 'PAYE/UIF Calculations', description: 'Calculate PAYE, UIF and SDL deductions', priority: 'medium' },
+        { title: 'EMP501 Reconciliation', description: 'Prepare and submit EMP501 reconciliation', priority: 'medium' },
+        { title: 'IRP5/IT3A Certificates', description: 'Generate employee tax certificates', priority: 'low' },
+        { title: 'SARS Returns', description: 'Submit monthly EMP201 returns to SARS', priority: 'medium' }
+      ],
+
+      // Company Secretarial Services (SAICA/SAIPA Standards)
+      compliance: [
+        { title: 'CIPC Compliance Review', description: 'Review CIPC annual return requirements', priority: 'high' },
+        { title: 'Annual Financial Statements', description: 'Prepare and file annual financial statements', priority: 'high' },
+        { title: 'Directors Resolutions', description: 'Prepare board resolutions and meeting minutes', priority: 'medium' },
+        { title: 'Share Capital Changes', description: 'Process share capital and shareholding changes', priority: 'medium' },
+        { title: 'Statutory Registers', description: 'Update and maintain statutory registers', priority: 'low' },
+        { title: 'CIPC Filings', description: 'Submit required CIPC forms and returns', priority: 'medium' }
+      ],
+
+      // Business Advisory Services (SAICA/SAIPA Standards)
+      advisory: [
+        { title: 'Business Assessment', description: 'Conduct comprehensive business assessment', priority: 'high' },
+        { title: 'Financial Analysis', description: 'Perform detailed financial ratio analysis', priority: 'medium' },
+        { title: 'Strategic Planning Session', description: 'Facilitate strategic planning workshop', priority: 'medium' },
+        { title: 'Cash Flow Forecasting', description: 'Prepare cash flow forecasts and projections', priority: 'medium' },
+        { title: 'Performance Review', description: 'Review KPIs and performance metrics', priority: 'low' },
+        { title: 'Recommendations Report', description: 'Prepare advisory recommendations report', priority: 'medium' }
+      ],
+
+      // Legacy support for existing basic/standard/premium
       basic: [
         { title: 'Initial Client Meeting', description: 'Conduct initial consultation with client', priority: 'high' },
         { title: 'Document Collection', description: 'Collect all required documents from client' },
@@ -507,7 +610,7 @@ export class ContractService {
       ]
     };
 
-    return templates[servicePackage] || templates.basic;
+    return professionalTemplates[servicePackage] || professionalTemplates.basic;
   }
 }
 
