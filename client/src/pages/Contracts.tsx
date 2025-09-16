@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical, BarChart3, CheckCircle2 } from "lucide-react";
+import { Plus, FileText, Users, Clock, CheckCircle, AlertCircle, Eye, Edit3, Send, Search, Filter, Download, Mail, PenTool, MoreVertical, BarChart3, CheckCircle2, Award, Briefcase, Calculator, Building, BookOpen, Shield, Globe, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { professionalCategories, legacyComplianceColors as complianceColors } from "@shared/professionalCategories";
 
 interface ContractTemplate {
   id: number;
@@ -20,7 +21,7 @@ interface ContractTemplate {
   description: string;
   servicePackage: string;
   bodyMd: string;
-  mergeFields: string[];
+  fields: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -48,6 +49,7 @@ const statusColors = {
   completed: "bg-purple-100 text-purple-800",
   cancelled: "bg-red-100 text-red-800"
 };
+
 
 const statusIcons = {
   draft: Edit3,
@@ -161,6 +163,11 @@ export default function Contracts() {
     window.open(`/api/contracts/${contractId}/view`, '_blank');
   };
 
+  const handlePreviewTemplate = (templateId: number) => {
+    // Navigate to template preview page
+    setLocation(`/contracts/templates/${templateId}/preview`);
+  };
+
   const ContractCard = ({ contract }: { contract: Contract }) => {
     const StatusIcon = statusIcons[contract.status as keyof typeof statusIcons];
     
@@ -244,48 +251,79 @@ export default function Contracts() {
     );
   };
 
-  const TemplateCard = ({ template }: { template: ContractTemplate }) => (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              {template.name}
-            </CardTitle>
-            <CardDescription className="mt-1">
-              {template.category} • {template.servicePackage} package
-            </CardDescription>
+  const TemplateCard = ({ template }: { template: ContractTemplate }) => {
+    const category = professionalCategories.find(cat => cat.value === template.servicePackage);
+    const CategoryIcon = category?.icon || FileText;
+    
+    return (
+      <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <CategoryIcon className="w-4 h-4 text-blue-600" />
+                <CardTitle className="text-lg font-semibold text-gray-900">
+                  {template.name}
+                </CardTitle>
+              </div>
+              <CardDescription className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-xs">
+                  {category?.label || template.servicePackage}
+                </Badge>
+                <span className="text-xs text-gray-500">•</span>
+                <span className="text-xs text-gray-500">
+                  {template.fields?.length || 0} merge fields
+                </span>
+              </CardDescription>
+            </div>
+            <div className="flex flex-col gap-1">
+              {category?.compliance.slice(0, 2).map((comp) => (
+                <Badge 
+                  key={comp} 
+                  variant="outline"
+                  className={`text-xs px-2 py-0 ${complianceColors[comp as keyof typeof complianceColors]}`}
+                >
+                  {comp}
+                </Badge>
+              ))}
+            </div>
           </div>
-          <Badge variant="outline">
-            {template.mergeFields?.length || 0} fields
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-          {template.description}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            data-testid={`button-view-template-${template.id}`}
-          >
-            <Eye className="w-4 h-4 mr-1" />
-            Preview
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleCreateContract}
-            data-testid={`button-use-template-${template.id}`}
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Use Template
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+            {template.description}
+          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePreviewTemplate(template.id)}
+                data-testid={`button-view-template-${template.id}`}
+              >
+                <Eye className="w-4 h-4 mr-1" />
+                Preview
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreateContract}
+                data-testid={`button-use-template-${template.id}`}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Use Template
+              </Button>
+            </div>
+            {category?.compliance.length && category.compliance.length > 2 && (
+              <Badge variant="outline" className="text-xs">
+                +{category.compliance.length - 2} more
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const StatsCard = ({ title, value, icon: Icon, color }: { 
     title: string; 
