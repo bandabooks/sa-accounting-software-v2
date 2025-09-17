@@ -43,7 +43,7 @@ const getNavigationGroupsForRole = (userRole: string) => {
       module: "compliance",
       roleTypes: ["all"],
       items: [
-        { path: "/contracts", label: "Contracts and Engagements", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
+        { path: "/contracts-v2", label: "Contracts and Engagements", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
       ]
     },
     
@@ -217,7 +217,7 @@ const getFullNavigationGroups = () => [
     icon: FileText,
     module: "compliance",
     items: [
-      { path: "/contracts", label: "Contracts and Engagements", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
+      { path: "/contracts-v2", label: "Contracts and Engagements", icon: FileText, permission: "COMPLIANCE_VIEW", module: "compliance" }
     ]
   },
   // 3. Banking & Cash
