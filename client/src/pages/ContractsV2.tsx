@@ -395,11 +395,18 @@ export default function ContractsV2() {
   const contractForm = useForm<ContractFormData>({
     resolver: zodResolver(contractFormSchema),
     defaultValues: {
+      templateId: "",
+      contractName: "",
       contractType: "service",
       currency: "ZAR",
       status: "draft",
       autoRenewal: false,
       reminderDays: 30,
+      startDate: new Date(),
+      endDate: new Date(new Date().setMonth(new Date().getMonth() + 12)),
+      value: 0,
+      description: "",
+      paymentTerms: "",
     },
   });
 
