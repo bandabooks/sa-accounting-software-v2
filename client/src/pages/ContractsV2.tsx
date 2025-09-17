@@ -395,7 +395,7 @@ export default function ContractsV2() {
     totalContracts: contracts.length,
     activeContracts: contracts.filter((c: any) => c.status === 'active').length,
     expiredContracts: contracts.filter((c: any) => c.status === 'expired').length,
-    totalValue: contracts.reduce((sum: number, contract: any) => sum + (contract.value || 0), 0),
+    totalValue: contracts.reduce((sum: number, contract: any) => sum + (parseFloat(contract.value) || 0), 0),
   };
 
   // Contract form
@@ -532,49 +532,57 @@ export default function ContractsV2() {
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/50 dark:to-background shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Contracts</CardTitle>
+                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-total-contracts">{dashboardStats.totalContracts}</div>
-                <p className="text-xs text-muted-foreground">All time contracts</p>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-total-contracts">{dashboardStats.totalContracts}</div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">All time contracts</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 to-white dark:from-green-950/50 dark:to-background shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Active Contracts</CardTitle>
+                <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-active-contracts">{dashboardStats.activeContracts}</div>
-                <p className="text-xs text-muted-foreground">Currently active</p>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-active-contracts">{dashboardStats.activeContracts}</div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Currently active</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Expired</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/50 dark:to-background shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Expired</CardTitle>
+                <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-expired-contracts">{dashboardStats.expiredContracts}</div>
-                <p className="text-xs text-muted-foreground">Need attention</p>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-expired-contracts">{dashboardStats.expiredContracts}</div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Need attention</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Card className="relative overflow-hidden border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/50 dark:to-background shadow-sm hover:shadow-md transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-sm font-semibold text-gray-700 dark:text-gray-300">Total Value</CardTitle>
+                <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid="text-total-value">
+                <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-total-value">
                   R {dashboardStats.totalValue.toLocaleString()}
                 </div>
-                <p className="text-xs text-muted-foreground">Active contracts</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Active contracts</p>
               </CardContent>
             </Card>
           </div>
