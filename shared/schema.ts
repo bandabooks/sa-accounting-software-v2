@@ -7980,6 +7980,7 @@ export type InsertSystemHealthMetric = z.infer<typeof insertSystemHealthMetricSc
 export const contracts = pgTable("contracts", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").notNull(),
+  customerId: integer("customer_id").notNull(), // Legacy column for compatibility
   contractName: text("contract_name").notNull(),
   contractType: text("contract_type").notNull().default("service"), // service, maintenance, consulting, development, engagement, other
   clientId: integer("client_id").notNull().references(() => customers.id),

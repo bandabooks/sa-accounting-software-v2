@@ -113,12 +113,12 @@ export class ContractService {
 
   // Contract management
   async createContract(companyId: number, data: InsertContract): Promise<Contract> {
-    // Map client_id to both customer_id (old column) and client_id (new column) for compatibility
+    // Map clientId to both customerId (legacy) and clientId (new) for compatibility
     const contractData = {
       ...data,
       companyId,
-      customer_id: data.clientId, // Map to old column for compatibility
-      client_id: data.clientId   // Keep new column as well
+      customerId: data.clientId, // Map to legacy customer_id column
+      clientId: data.clientId    // Keep new client_id column as well
     };
     
     const [contract] = await db.insert(contracts)
