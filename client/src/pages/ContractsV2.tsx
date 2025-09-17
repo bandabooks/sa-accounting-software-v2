@@ -367,6 +367,12 @@ export default function ContractsV2() {
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
 
+  // Fetch projects
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ['/api/projects'],
+    enabled: showContractDialog // Only fetch when dialog is open
+  });
+
   // Fetch signature workflows
   const { data: workflowsResponse = [], isLoading: workflowsLoading } = useQuery({
     queryKey: ["/api/signature-workflows"],
@@ -434,7 +440,16 @@ export default function ContractsV2() {
   });
 
   const handleCreateContract = (data: ContractFormData) => {
-    createContractMutation.mutate(data);
+    // Ensure dates are proper Date objects
+    const contractData = {
+      ...data,
+      startDate: new Date(data.startDate),
+      endDate: new Date(data.endDate),
+      value: Number(data.value) || 0,
+      projectId: data.projectId || null,
+      templateId: data.templateId || null,
+    };
+    createContractMutation.mutate(contractData);
   };
 
   const statusColors = {
@@ -1024,26 +1039,33 @@ export default function ContractsV2() {
                       </FormDescription>
                       <Select 
                         onValueChange={(value) => {
-                          field.onChange(value);
-                          // Find the selected template and pre-populate form
-                          const selectedTemplate = templates.find((t: any) => t.id.toString() === value);
-                          if (selectedTemplate) {
-                            contractForm.setValue('contractType', 'engagement');
-                            contractForm.setValue('contractName', selectedTemplate.name);
-                            // Set default value based on template
-                            if (selectedTemplate.name.includes('Bookkeeping')) {
-                              contractForm.setValue('value', 5000);
-                            } else if (selectedTemplate.name.includes('Audit')) {
-                              contractForm.setValue('value', 15000);
-                            } else if (selectedTemplate.name.includes('Tax')) {
-                              contractForm.setValue('value', 8000);
-                            } else {
-                              contractForm.setValue('value', 10000);
+                          field.onChange(value === "none" ? "" : value);
+                          // Clear or populate based on selection
+                          if (value === "none") {
+                            contractForm.setValue('contractName', '');
+                            contractForm.setValue('contractType', 'service');
+                            contractForm.setValue('value', 0);
+                          } else {
+                            // Find the selected template and pre-populate form
+                            const selectedTemplate = templates.find((t: any) => t.id.toString() === value);
+                            if (selectedTemplate) {
+                              contractForm.setValue('contractType', 'engagement');
+                              contractForm.setValue('contractName', selectedTemplate.name);
+                              // Set default value based on template
+                              if (selectedTemplate.name.includes('Bookkeeping')) {
+                                contractForm.setValue('value', 5000);
+                              } else if (selectedTemplate.name.includes('Audit')) {
+                                contractForm.setValue('value', 15000);
+                              } else if (selectedTemplate.name.includes('Tax')) {
+                                contractForm.setValue('value', 8000);
+                              } else {
+                                contractForm.setValue('value', 10000);
+                              }
+                              toast({
+                                title: 'Template Selected',
+                                description: `Pre-populated with "${selectedTemplate.name}" template details`
+                              });
                             }
-                            toast({
-                              title: 'Template Selected',
-                              description: `Pre-populated with "${selectedTemplate.name}" template details`
-                            });
                           }
                         }} 
                         defaultValue={field.value}
@@ -1236,13 +1258,24 @@ export default function ContractsV2() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Project (Optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Link to project (optional)" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
-                        />
-                      </FormControl>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))}
+                        defaultValue={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Link to project (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No Project</SelectItem>
+                          {projects.map((project: any) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
