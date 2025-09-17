@@ -20880,10 +20880,15 @@ Format your response as a JSON array of tip objects with "title", "description",
 
   app.post("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
-      const contract = await contractService.createContract(req.user.companyId, {
+      // Ensure dates are converted to proper Date objects
+      const contractData = {
         ...req.body,
+        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
+        endDate: req.body.endDate ? new Date(req.body.endDate) : new Date(new Date().setMonth(new Date().getMonth() + 12)),
         createdBy: req.user.id
-      });
+      };
+      
+      const contract = await contractService.createContract(req.user.companyId, contractData);
       res.status(201).json(contract);
     } catch (error) {
       console.error("Error creating contract:", error);

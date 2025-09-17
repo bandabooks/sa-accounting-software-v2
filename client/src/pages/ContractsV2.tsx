@@ -440,11 +440,9 @@ export default function ContractsV2() {
   });
 
   const handleCreateContract = (data: ContractFormData) => {
-    // Ensure dates are proper Date objects
+    // Pass data directly - backend will handle date conversion
     const contractData = {
       ...data,
-      startDate: new Date(data.startDate),
-      endDate: new Date(data.endDate),
       value: Number(data.value) || 0,
       projectId: data.projectId || undefined,
       templateId: data.templateId || undefined,
