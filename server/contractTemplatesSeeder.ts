@@ -1,9 +1,13 @@
 import { db } from "./db";
 import { contractTemplates } from "../shared/schema";
 import { eq } from "drizzle-orm";
+import { SOUTH_AFRICAN_PROFESSIONAL_TEMPLATES } from "./sa-professional-templates";
 
-// Comprehensive South African Professional Engagement Letter Templates
-const SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES = [
+// Use the comprehensive 68 South African Professional Engagement Letter Templates
+const SOUTH_AFRICAN_ENGAGEMENT_TEMPLATES = SOUTH_AFRICAN_PROFESSIONAL_TEMPLATES;
+
+// Legacy templates for backward compatibility
+const LEGACY_TEMPLATES = [
   {
     name: "Individual Income Tax Return (ITR12)",
     version: 1,

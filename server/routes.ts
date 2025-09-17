@@ -20568,7 +20568,11 @@ Format your response as a JSON array of tip objects with "title", "description",
       console.log(`→ Fetching contract templates for company ${companyId}`);
       const templates = await contractService.getTemplates(companyId);
       console.log(`→ Found ${templates?.length || 0} contract templates`);
-      res.json(templates || []);
+      console.log(`📦 Sending templates response:`, JSON.stringify(templates?.slice(0, 2))); // Log first 2 templates
+      
+      // Ensure we're always sending an array
+      const response = Array.isArray(templates) ? templates : [];
+      res.json(response);
     } catch (error) {
       console.error("Error fetching contract templates:", error);
       res.status(500).json({ error: "Failed to fetch contract templates" });
