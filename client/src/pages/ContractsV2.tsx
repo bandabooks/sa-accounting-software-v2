@@ -1044,29 +1044,61 @@ export default function ContractsV2() {
 
       {/* Create Contract Dialog */}
       <Dialog open={showContractDialog} onOpenChange={setShowContractDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create New Contract</DialogTitle>
-            <DialogDescription>
-              Add a new contract to your system
-            </DialogDescription>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-6 border-b">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold">Create New Contract</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  Create a professional contract with AI-powered templates and compliance features
+                </DialogDescription>
+              </div>
+            </div>
+            
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center mt-6 space-x-4">
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-medium">1</div>
+                <span className="ml-2 text-sm font-medium text-gray-700">Template</span>
+              </div>
+              <div className="h-0.5 w-12 bg-gray-200"></div>
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">2</div>
+                <span className="ml-2 text-sm font-medium text-gray-500">Details</span>
+              </div>
+              <div className="h-0.5 w-12 bg-gray-200"></div>
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-sm font-medium">3</div>
+                <span className="ml-2 text-sm font-medium text-gray-500">Client & Terms</span>
+              </div>
+            </div>
           </DialogHeader>
 
           <Form {...contractForm}>
-            <form onSubmit={contractForm.handleSubmit(handleCreateContract)} className="space-y-4">
-              {/* Template Selection - FIRST STEP */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <FormField
-                  control={contractForm.control}
-                  name="templateId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base font-semibold">
-                        Step 1: Select Template (Optional)
-                      </FormLabel>
-                      <FormDescription>
-                        Choose from our 68 professional templates to pre-populate contract details
-                      </FormDescription>
+            <form onSubmit={contractForm.handleSubmit(handleCreateContract)} className="space-y-8 pt-6">
+              {/* Step 1: Template Selection */}
+              <Card className="border-2 border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-gray-900">Select Template (Optional)</CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Choose from our 68+ professional South African templates to pre-populate contract details
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={contractForm.control}
+                    name="templateId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="sr-only">Template Selection</FormLabel>
                       <Select 
                         onValueChange={(value) => {
                           field.onChange(value === "none" ? "" : value);
@@ -1132,12 +1164,24 @@ export default function ContractsV2() {
                     </FormItem>
                   )}
                 />
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Contract Details - STEP 2 */}
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Step 2: Contract Details</Label>
-                <div className="grid grid-cols-2 gap-4">
+            {/* Step 2: Contract Details */}
+              <Card className="border-2 border-green-100 bg-gradient-to-r from-green-50 to-emerald-50">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-gray-900">Contract Details</CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Define the contract name, type, and basic information
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-6">
                   <FormField
                     control={contractForm.control}
                     name="contractName"
