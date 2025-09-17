@@ -348,13 +348,17 @@ export default function ContractsV2() {
   };
 
   // Fetch contracts
-  const { data: contracts = [], isLoading: contractsLoading } = useQuery({
+  const { data: contractsData = [], isLoading: contractsLoading } = useQuery({
     queryKey: ["/api/contracts", statusFilter === "all" ? undefined : statusFilter],
     queryFn: async () => {
       const response = await apiRequest(`/api/contracts${statusFilter !== "all" ? `?status=${statusFilter}` : ""}`, "GET");
-      return response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     },
   });
+
+  // Ensure contracts is always an array
+  const contracts = Array.isArray(contractsData) ? contractsData : [];
 
   // Fetch engagement letter templates (68 professional templates)
   const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
