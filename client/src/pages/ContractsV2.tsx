@@ -377,7 +377,10 @@ export default function ContractsV2() {
   // Fetch signature workflows
   const { data: workflowsResponse = [], isLoading: workflowsLoading } = useQuery({
     queryKey: ["/api/signature-workflows"],
-    queryFn: async () => apiRequest("/api/signature-workflows"),
+    queryFn: async () => {
+      const response = await apiRequest("/api/signature-workflows", "GET");
+      return response.json();
+    },
   });
 
   const workflows = Array.isArray(workflowsResponse) ? workflowsResponse : [];
@@ -385,7 +388,10 @@ export default function ContractsV2() {
   // Fetch signature providers
   const { data: providersResponse = [], isLoading: providersLoading } = useQuery({
     queryKey: ["/api/signature-providers"],
-    queryFn: async () => apiRequest("/api/signature-providers"),
+    queryFn: async () => {
+      const response = await apiRequest("/api/signature-providers", "GET");
+      return response.json();
+    },
   });
 
   const providers = Array.isArray(providersResponse) ? providersResponse : [];
