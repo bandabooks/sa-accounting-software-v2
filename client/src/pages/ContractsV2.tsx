@@ -304,6 +304,8 @@ export default function ContractsV2() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
 
   // Fetch contracts
   const { data: contractsResponse = [], isLoading: contractsLoading } = useQuery({
@@ -763,11 +765,28 @@ export default function ContractsV2() {
 
                           {/* Action Buttons */}
                           <div className="flex gap-2 pt-2">
-                            <Button variant="outline" size="sm" className="flex-1">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={() => {
+                                setSelectedTemplate(template);
+                                setShowPreviewDialog(true);
+                              }}
+                            >
                               <Eye className="h-4 w-4 mr-1" />
                               Preview
                             </Button>
-                            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
+                            <Button 
+                              size="sm" 
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={() => {
+                                setSelectedTemplate(template);
+                                setShowContractDialog(true);
+                                contractForm.setValue('contractType', 'engagement');
+                                contractForm.setValue('description', `Based on template: ${template.name}`);
+                              }}
+                            >
                               <FileText className="h-4 w-4 mr-1" />
                               Use Template
                             </Button>
@@ -985,6 +1004,87 @@ export default function ContractsV2() {
                 />
               </div>
 
+              {/* Client Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="clientId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Client *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter client name or select from list" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="projectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Link to project (optional)" 
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Value and Payment */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={contractForm.control}
@@ -1030,6 +1130,62 @@ export default function ContractsV2() {
                 />
               </div>
 
+              {/* Payment Terms */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="paymentTerms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Payment Terms</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select payment terms" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="net30">Net 30 Days</SelectItem>
+                          <SelectItem value="net60">Net 60 Days</SelectItem>
+                          <SelectItem value="net90">Net 90 Days</SelectItem>
+                          <SelectItem value="immediate">Immediate Payment</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="annual">Annual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="pending">Pending Approval</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <FormField
                 control={contractForm.control}
                 name="description"
@@ -1066,6 +1222,63 @@ export default function ContractsV2() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template Preview Dialog */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Template Preview: {selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>
+              {selectedTemplate?.servicePackage && (
+                <Badge variant="outline" className="mt-2">
+                  {professionalCategories.find(c => c.value === selectedTemplate.servicePackage)?.label}
+                </Badge>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 rounded-lg">
+            {selectedTemplate?.bodyMd ? (
+              <div className="prose max-w-none">
+                <div dangerouslySetInnerHTML={{ 
+                  __html: selectedTemplate.bodyMd
+                    .replace(/{{(\w+)}}/g, '<span class="bg-yellow-200 px-1 rounded">[$1]</span>')
+                    .replace(/\n/g, '<br />')
+                    .replace(/#{1,6}\s(.+)/g, '<h3 class="font-bold text-lg mt-4 mb-2">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                }} />
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No preview available</p>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-2">
+            <div className="text-sm text-muted-foreground">
+              <strong>Template Fields:</strong> {selectedTemplate?.fields?.length ? 
+                JSON.parse(selectedTemplate.fields).join(', ') : 
+                'No custom fields'}
+            </div>
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
+              Close
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowPreviewDialog(false);
+                setShowContractDialog(true);
+                contractForm.setValue('contractType', 'engagement');
+                contractForm.setValue('description', `Based on template: ${selectedTemplate?.name}`);
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Use This Template
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
