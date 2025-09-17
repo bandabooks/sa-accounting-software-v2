@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -70,6 +70,7 @@ import {
 
 // Contract form schemas
 const contractFormSchema = z.object({
+  templateId: z.string().optional(),
   contractName: z.string().min(1, "Contract name is required"),
   contractType: z.enum(["service", "maintenance", "consulting", "development", "engagement", "other"]).default("service"),
   clientId: z.coerce.number({ required_error: "Client is required" }),
@@ -1001,40 +1002,71 @@ export default function ContractsV2() {
 
           <Form {...contractForm}>
             <form onSubmit={contractForm.handleSubmit(handleCreateContract)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              {/* Template Selection - FIRST STEP */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <FormField
                   control={contractForm.control}
-                  name="contractName"
+                  name="templateId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contract Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter contract name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={contractForm.control}
-                  name="contractType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contract Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel className="text-base font-semibold">
+                        Step 1: Select Template (Optional)
+                      </FormLabel>
+                      <FormDescription>
+                        Choose from our 68 professional templates to pre-populate contract details
+                      </FormDescription>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          // Find the selected template and pre-populate form
+                          const selectedTemplate = templates.find((t: any) => t.id.toString() === value);
+                          if (selectedTemplate) {
+                            contractForm.setValue('contractType', 'engagement');
+                            contractForm.setValue('contractName', selectedTemplate.name);
+                            // Set default value based on template
+                            if (selectedTemplate.name.includes('Bookkeeping')) {
+                              contractForm.setValue('value', 5000);
+                            } else if (selectedTemplate.name.includes('Audit')) {
+                              contractForm.setValue('value', 15000);
+                            } else if (selectedTemplate.name.includes('Tax')) {
+                              contractForm.setValue('value', 8000);
+                            } else {
+                              contractForm.setValue('value', 10000);
+                            }
+                            toast({
+                              title: 'Template Selected',
+                              description: `Pre-populated with "${selectedTemplate.name}" template details`
+                            });
+                          }
+                        }} 
+                        defaultValue={field.value}
+                      >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select contract type" />
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select a template to use..." />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="service">Service Agreement</SelectItem>
-                          <SelectItem value="maintenance">Maintenance Contract</SelectItem>
-                          <SelectItem value="consulting">Consulting Agreement</SelectItem>
-                          <SelectItem value="development">Development Contract</SelectItem>
-                          <SelectItem value="engagement">Engagement Letter</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
+                        <SelectContent className="max-h-[300px]">
+                          <SelectItem value="none">
+                            <span className="font-medium">Create from scratch</span>
+                          </SelectItem>
+                          {templates.length > 0 && (
+                            <>
+                              {templates.map((template: any) => (
+                                <SelectItem key={template.id} value={template.id.toString()}>
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                    <span>{template.name}</span>
+                                    {template.saicaCompliant && (
+                                      <Badge variant="outline" className="ml-2 text-xs bg-blue-50">
+                                        SAICA
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1043,9 +1075,57 @@ export default function ContractsV2() {
                 />
               </div>
 
-              {/* Client Information */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
+              {/* Contract Details - STEP 2 */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Step 2: Contract Details</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={contractForm.control}
+                    name="contractName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contract Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter contract name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={contractForm.control}
+                    name="contractType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contract Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select contract type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="service">Service Agreement</SelectItem>
+                            <SelectItem value="maintenance">Maintenance Contract</SelectItem>
+                            <SelectItem value="consulting">Consulting Agreement</SelectItem>
+                            <SelectItem value="development">Development Contract</SelectItem>
+                            <SelectItem value="engagement">Engagement Letter</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Client Information - STEP 3 */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Step 3: Client Information</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
                   control={contractForm.control}
                   name="clientId"
                   render={({ field }) => (
@@ -1303,6 +1383,7 @@ export default function ContractsV2() {
                     </FormItem>
                   )}
                 />
+              </div>
               </div>
 
               <FormField
