@@ -113,8 +113,16 @@ export class ContractService {
 
   // Contract management
   async createContract(companyId: number, data: InsertContract): Promise<Contract> {
+    // Map client_id to both customer_id (old column) and client_id (new column) for compatibility
+    const contractData = {
+      ...data,
+      companyId,
+      customer_id: data.clientId, // Map to old column for compatibility
+      client_id: data.clientId   // Keep new column as well
+    };
+    
     const [contract] = await db.insert(contracts)
-      .values({ ...data, companyId })
+      .values(contractData)
       .returning();
     
     // Create initial version (only if template is provided)
