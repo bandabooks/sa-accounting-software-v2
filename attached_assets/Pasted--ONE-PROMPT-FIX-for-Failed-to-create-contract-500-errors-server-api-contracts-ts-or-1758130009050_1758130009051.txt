@@ -1,0 +1,69 @@
+// ONE-PROMPT FIX for "Failed to create contract" 500 errors
+
+// ==== server (/api/contracts.ts or NestJS controller logic) ====
+import { z } from "zod";
+import { prisma } from "@/server/prisma";
+
+const ContractSchema = z.object({
+  name: z.string().min(3),
+  type: z.string(),
+  clientId: z.string().uuid(),
+  projectId: z.string().uuid().optional().nullable(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  value: z.preprocess((v) => Number(v), z.number().nonnegative()),
+  currency: z.string().length(3),
+  paymentTerms: z.string(),
+  status: z.enum(["DRAFT", "ACTIVE", "CANCELLED"]),
+  description: z.string().optional(),
+});
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).end();
+
+  const parsed = ContractSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  try {
+    const dto = parsed.data;
+    const created = await prisma.contract.create({
+      data: {
+        name: dto.name,
+        type: dto.type,
+        clientId: dto.clientId,
+        projectId: dto.projectId ?? null,
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        valueCents: Math.round(dto.value * 100),
+        currency: dto.currency.toUpperCase(),
+        paymentTerms: dto.paymentTerms,
+        status: dto.status,
+        description: dto.description ?? "",
+      },
+    });
+    return res.status(201).json(created);
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message || "Failed to create contract" });
+  }
+}
+
+// ==== frontend submit fix ====
+const toISO = (s: string) => s.replaceAll("/", "-"); // ensures YYYY-MM-DD
+
+await fetch("/api/contracts", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    name: form.contractName,
+    type: form.contractType,
+    clientId: form.client.id,          // must be ID not label
+    projectId: form.project?.id ?? null,
+    startDate: toISO(form.startDate),  // "2025/09/01" -> "2025-09-01"
+    endDate: toISO(form.endDate),
+    value: Number(form.contractValue),
+    currency: "ZAR",
+    paymentTerms: form.paymentTerms,
+    status: form.status || "DRAFT",
+    description: form.description,
+  }),
+});
