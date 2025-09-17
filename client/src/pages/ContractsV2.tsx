@@ -672,7 +672,7 @@ export default function ContractsV2() {
             </CardContent>
           </Card>
 
-          {/* Enhanced Contract Cards Layout */}
+          {/* Professional Contracts Table with Headers */}
           {contracts.length === 0 ? (
             <Card className="border-2 border-dashed border-gray-200 bg-gradient-to-br from-gray-50 to-white">
               <CardContent className="text-center py-12">
@@ -693,73 +693,98 @@ export default function ContractsV2() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {contracts.map((contract: any) => (
-                <Card 
-                  key={contract.id} 
-                  className="relative overflow-hidden border-l-2 hover:shadow-sm transition-colors"
-                  style={{
-                    borderLeftColor: 
-                      contract.status === 'active' ? '#22c55e' :
-                      contract.status === 'expired' ? '#f59e0b' :
-                      contract.status === 'completed' ? '#3b82f6' :
-                      contract.status === 'cancelled' ? '#ef4444' : '#6b7280'
-                  }}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      {/* Icon & Title */}
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="h-6 w-6 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          <FileText className="h-3 w-3 text-blue-600" />
+            <Card>
+              <CardContent className="p-0">
+                {/* Table Header */}
+                <div className="border-b bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                  <div className="grid grid-cols-12 gap-4 text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                    <div className="col-span-4">Contract Name</div>
+                    <div className="col-span-2">Client</div>
+                    <div className="col-span-2">Type</div>
+                    <div className="col-span-1">Value</div>
+                    <div className="col-span-1">Due Date</div>
+                    <div className="col-span-1">Status</div>
+                    <div className="col-span-1">Actions</div>
+                  </div>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {contracts.map((contract: any) => (
+                    <div 
+                      key={contract.id} 
+                      className="grid grid-cols-12 gap-4 items-center px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    >
+                      {/* Contract Name */}
+                      <div className="col-span-4 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-sm font-medium text-gray-900 truncate">
-                            {contract.contractName || contract.title}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {contract.contractName || contract.title || contract.name}
                           </h3>
-                          <p className="text-xs text-gray-500 truncate">{contract.description}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {contract.description || contract.scope}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Compact Info Grid */}
-                      <div className="hidden md:flex items-center gap-4 flex-shrink-0">
-                        <div className="flex items-center gap-1 text-xs">
+                      {/* Client */}
+                      <div className="col-span-2">
+                        <div className="flex items-center gap-1 text-sm">
                           <Building2 className="h-3 w-3 text-gray-400" />
-                          <span className="text-gray-600">{contract.clientName || 'N/A'}</span>
+                          <span className="text-gray-900 dark:text-white">
+                            {contract.client?.name || contract.clientName || contract.customer?.name || 'No Client Set'}
+                          </span>
                         </div>
-                        
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                          {contract.contractType || contract.type}
+                      </div>
+
+                      {/* Type */}
+                      <div className="col-span-2">
+                        <Badge variant="outline" className="text-xs">
+                          {contract.contractType || contract.type || 'General'}
                         </Badge>
-                        
-                        <div className="flex items-center gap-1 text-xs">
-                          <DollarSign className="h-3 w-3 text-green-500" />
-                          <span className="text-green-600 font-medium">
+                      </div>
+
+                      {/* Value */}
+                      <div className="col-span-1">
+                        <div className="flex items-center gap-1 text-sm">
+                          <span className="text-green-600 dark:text-green-400 font-medium">
                             {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
                           </span>
                         </div>
-                        
-                        <div className="flex items-center gap-1 text-xs">
+                      </div>
+
+                      {/* Due Date */}
+                      <div className="col-span-1">
+                        <div className="flex items-center gap-1 text-sm">
                           <Calendar className="h-3 w-3 text-orange-500" />
-                          <span className="text-gray-600">{format(new Date(contract.endDate), 'MMM dd')}</span>
+                          <span className="text-gray-600 dark:text-gray-300">
+                            {contract.endDate ? format(new Date(contract.endDate), 'MMM dd') : '-'}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Status & Actions */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Status */}
+                      <div className="col-span-1">
                         <Badge 
-                          className={`${statusColors[contract.status as keyof typeof statusColors]} text-xs px-2 py-0.5`}
+                          className={`${statusColors[contract.status as keyof typeof statusColors]} text-xs`}
                         >
                           <span className="flex items-center gap-1">
                             {getStatusIcon(contract.status)}
-                            <span className="capitalize">{contract.status}</span>
+                            <span className="capitalize">{contract.status || 'Draft'}</span>
                           </span>
                         </Badge>
+                      </div>
 
+                      {/* Actions */}
+                      <div className="col-span-1 flex items-center gap-1">
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          className="h-7 px-2 text-xs"
+                          className="h-8 px-2 text-xs"
+                          data-testid={`button-view-${contract.id}`}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View
@@ -768,37 +793,17 @@ export default function ContractsV2() {
                         <Button 
                           size="sm" 
                           variant="ghost"
-                          className="h-7 w-7 p-0"
+                          className="h-8 w-8 p-0"
+                          data-testid={`button-menu-${contract.id}`}
                         >
                           <MoreHorizontal className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-
-                    {/* Mobile Info (shown only on mobile) */}
-                    <div className="md:hidden mt-2 flex flex-wrap gap-2 text-xs">
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-3 w-3 text-gray-400" />
-                        <span className="text-gray-600">{contract.clientName || 'N/A'}</span>
-                      </div>
-                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                        {contract.contractType || contract.type}
-                      </Badge>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3 text-green-500" />
-                        <span className="text-green-600 font-medium">
-                          {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3 text-orange-500" />
-                        <span className="text-gray-600">{format(new Date(contract.endDate), 'MMM dd')}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
