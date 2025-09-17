@@ -1239,16 +1239,18 @@ export default function ContractsV2() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 rounded-lg">
+          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 rounded-lg">
             {selectedTemplate?.bodyMd ? (
-              <div className="prose max-w-none">
-                <div dangerouslySetInnerHTML={{ 
-                  __html: selectedTemplate.bodyMd
-                    .replace(/{{(\w+)}}/g, '<span class="bg-yellow-200 px-1 rounded">[$1]</span>')
-                    .replace(/\n/g, '<br />')
-                    .replace(/#{1,6}\s(.+)/g, '<h3 class="font-bold text-lg mt-4 mb-2">$1</h3>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                }} />
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div className="whitespace-pre-wrap font-mono text-sm">
+                  {selectedTemplate.bodyMd}
+                </div>
+              </div>
+            ) : selectedTemplate?.content ? (
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <div className="whitespace-pre-wrap font-mono text-sm">
+                  {selectedTemplate.content}
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground">No preview available</p>
