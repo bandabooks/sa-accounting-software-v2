@@ -664,81 +664,134 @@ export default function ContractsV2() {
             </CardContent>
           </Card>
 
-          {/* Contracts Table */}
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Contract</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contracts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
-                        <div>
-                          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                          <h3 className="text-lg font-medium mb-2">No contracts found</h3>
-                          <p className="text-muted-foreground mb-4">Get started by creating your first contract.</p>
-                          <Button onClick={() => setShowContractDialog(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Create Contract
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    contracts.map((contract: any) => (
-                      <TableRow key={contract.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{contract.contractName || contract.title}</p>
-                            <p className="text-sm text-muted-foreground">{contract.description}</p>
+          {/* Enhanced Contract Cards Layout */}
+          {contracts.length === 0 ? (
+            <Card className="border-2 border-dashed border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+              <CardContent className="text-center py-12">
+                <div className="max-w-md mx-auto">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                    <FileText className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3">No contracts found</h3>
+                  <p className="text-gray-600 mb-6">Get started by creating your first contract with our professional templates.</p>
+                  <Button 
+                    onClick={() => setShowContractDialog(true)}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Contract
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6">
+              {contracts.map((contract: any) => (
+                <Card 
+                  key={contract.id} 
+                  className="group relative overflow-hidden border-l-4 bg-gradient-to-r from-white via-gray-50/30 to-white hover:shadow-xl transition-all duration-300 hover:scale-[1.01] hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-white hover:to-indigo-50/50"
+                  style={{
+                    borderLeftColor: 
+                      contract.status === 'active' ? '#22c55e' :
+                      contract.status === 'expired' ? '#f59e0b' :
+                      contract.status === 'completed' ? '#3b82f6' :
+                      contract.status === 'cancelled' ? '#ef4444' : '#6b7280'
+                  }}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-4">
+                        {/* Header Section with Enhanced Visual */}
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
+                            <FileText className="h-6 w-6 text-white" />
                           </div>
-                        </TableCell>
-                        <TableCell>{contract.clientName || 'N/A'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{contract.contractType || contract.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={statusColors[contract.status as keyof typeof statusColors]}>
-                            <span className="flex items-center gap-1">
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+                              {contract.contractName || contract.title}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">{contract.description}</p>
+                          </div>
+                        </div>
+
+                        {/* Enhanced Content Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</p>
+                            <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                              <Building2 className="h-4 w-4 text-blue-600" />
+                              <span className="font-medium text-gray-900">{contract.clientName || 'N/A'}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</p>
+                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-sm">
+                              {contract.contractType || contract.type}
+                            </Badge>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Value</p>
+                            <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
+                              <DollarSign className="h-4 w-4 text-green-600" />
+                              <span className="font-bold text-green-700">
+                                {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">End Date</p>
+                            <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-100">
+                              <Calendar className="h-4 w-4 text-orange-600" />
+                              <span className="text-sm font-medium text-orange-700">{format(new Date(contract.endDate), 'MMM dd, yyyy')}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Enhanced Status & Actions Section */}
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                          <Badge 
+                            className={`${statusColors[contract.status as keyof typeof statusColors]} shadow-lg px-3 py-1 font-medium`}
+                          >
+                            <span className="flex items-center gap-2">
                               {getStatusIcon(contract.status)}
-                              {contract.status}
+                              <span className="capitalize">{contract.status}</span>
                             </span>
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
-                        </TableCell>
-                        <TableCell>{format(new Date(contract.endDate), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>
+
                           <div className="flex items-center gap-2">
-                            <Button size="sm" variant="outline">
-                              <Edit className="h-4 w-4" />
+                            <Button 
+                              size="sm" 
+                              className="h-9 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
                             </Button>
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-4 w-4" />
+                            <Button 
+                              size="sm" 
+                              className="h-9 px-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all"
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
                             </Button>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-9 w-9 p-0 hover:bg-gray-100 hover:scale-110 transition-all"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Engagement Letters Tab - Professional Template Management System */}
