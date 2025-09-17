@@ -1228,7 +1228,8 @@ export default function ContractsV2() {
                     )}
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
               {/* Client Information - STEP 3 */}
               <div className="space-y-4">
