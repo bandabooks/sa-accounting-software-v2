@@ -10,6 +10,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useForm } from "react-hook-form";
@@ -48,7 +61,10 @@ import {
   Printer,
   FileSignature,
   RefreshCw,
-  BarChart3
+  BarChart3,
+  ChevronsUpDown,
+  Check,
+  Building2
 } from "lucide-react";
 
 // Contract form schemas
@@ -306,6 +322,28 @@ export default function ContractsV2() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+
+  // Fetch customers for dropdown
+  const { data: customers, isLoading: customersLoading } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    enabled: showContractDialog // Only fetch when dialog is open
+  });
+
+  // Get professional affiliation badges for customer
+  const getCustomerBadges = (customer: any) => {
+    if (!customer) return [];
+    const badges = [];
+    // Check for SAICA/SAIPA based on category or notes
+    if (customer.category === 'premium' || customer.notes?.includes('SAICA')) {
+      badges.push({ label: 'SAICA', color: 'bg-blue-100 text-blue-800', icon: '🎓' });
+    }
+    if (customer.category === 'wholesale' || customer.notes?.includes('SAIPA')) {
+      badges.push({ label: 'SAIPA', color: 'bg-green-100 text-green-800', icon: '📚' });
+    }
+    return badges;
+  };
 
   // Fetch contracts
   const { data: contractsResponse = [], isLoading: contractsLoading } = useQuery({
@@ -1010,15 +1048,95 @@ export default function ContractsV2() {
                   control={contractForm.control}
                   name="clientId"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col">
                       <FormLabel>Client *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter client name or select from list" 
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                        />
-                      </FormControl>
+                      <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={clientSearchOpen}
+                              className={cn(
+                                "w-full justify-between",
+                                !field.value && "text-muted-foreground"
+                              )}
+                              data-testid="button-select-client"
+                            >
+                              {field.value && customers ? (
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4" />
+                                  <span className="truncate">
+                                    {customers.find((c: any) => c.id === field.value)?.name}
+                                  </span>
+                                  {getCustomerBadges(customers.find((c: any) => c.id === field.value)).map((badge, idx) => (
+                                    <Badge key={idx} variant="outline" className={cn(badge.color, 'ml-auto text-xs')}>
+                                      <span className="mr-1 text-xs">{badge.icon}</span>
+                                      {badge.label}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                "Select a client..."
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search clients..." />
+                            <CommandEmpty>No clients found.</CommandEmpty>
+                            <CommandGroup className="max-h-64 overflow-y-auto">
+                              {customersLoading ? (
+                                <div className="py-2 px-2 text-sm text-muted-foreground">
+                                  Loading clients...
+                                </div>
+                              ) : (
+                                customers?.map((customer: any) => {
+                                  const badges = getCustomerBadges(customer);
+                                  return (
+                                    <CommandItem
+                                      key={customer.id}
+                                      value={customer.name}
+                                      onSelect={() => {
+                                        field.onChange(customer.id);
+                                        setClientSearchOpen(false);
+                                      }}
+                                      className="flex items-center gap-2 py-2"
+                                      data-testid={`option-client-${customer.id}`}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          field.value === customer.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <User className="h-4 w-4 text-muted-foreground" />
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">{customer.name}</span>
+                                          {badges.map((badge, idx) => (
+                                            <Badge key={idx} variant="outline" className={cn(badge.color, 'text-xs')}>
+                                              <span className="mr-1 text-xs">{badge.icon}</span>
+                                              {badge.label}
+                                            </Badge>
+                                          ))}
+                                        </div>
+                                        {customer.email && (
+                                          <div className="text-xs text-muted-foreground">
+                                            {customer.email} • {customer.category || 'Standard'}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })
+                              )}
+                            </CommandGroup>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
