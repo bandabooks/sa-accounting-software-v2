@@ -56,10 +56,23 @@ export class ContractService {
   }
 
   async getTemplates(companyId: number): Promise<ContractTemplate[]> {
-    return db.select()
-      .from(contractTemplates)
-      .where(eq(contractTemplates.companyId, companyId))
-      .orderBy(desc(contractTemplates.updatedAt));
+    try {
+      console.log(`🔍 Querying templates for company ${companyId}`);
+      const templates = await db.select()
+        .from(contractTemplates)
+        .where(eq(contractTemplates.companyId, companyId))
+        .orderBy(desc(contractTemplates.updatedAt));
+      
+      console.log(`🔍 Raw query result:`, templates);
+      console.log(`🔍 Templates type:`, typeof templates);
+      console.log(`🔍 Templates length:`, templates?.length);
+      console.log(`🔍 Is array:`, Array.isArray(templates));
+      
+      return templates || [];
+    } catch (error) {
+      console.error(`❌ Error in getTemplates for company ${companyId}:`, error);
+      return [];
+    }
   }
 
   async getTemplate(companyId: number, templateId: number): Promise<ContractTemplate | null> {
