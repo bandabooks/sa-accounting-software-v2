@@ -636,10 +636,10 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
                       <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
                         <Label className="text-sm text-muted-foreground">Recommended Monthly Fee</Label>
                         <p className="text-4xl font-bold text-green-600 mt-2">
-                          R {feeEstimate.recommendedFee?.toLocaleString('en-ZA')}
+                          R {(feeEstimate.monthlyFee || feeEstimate.recommendedFee || 0).toLocaleString('en-ZA')}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Annual: R {(feeEstimate.annualFee || feeEstimate.recommendedFee * 12)?.toLocaleString('en-ZA')}
+                          Annual: R {(feeEstimate.annualFee || (feeEstimate.monthlyFee || feeEstimate.recommendedFee || 0) * 12).toLocaleString('en-ZA')}
                         </p>
                       </div>
 
@@ -648,13 +648,13 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
                         <div className="text-center p-3 border rounded-lg">
                           <Label className="text-xs text-muted-foreground">Minimum</Label>
                           <p className="text-xl font-semibold mt-1">
-                            R {feeEstimate.minFee?.toLocaleString('en-ZA')}
+                            R {(feeEstimate.minFee || 0).toLocaleString('en-ZA')}
                           </p>
                         </div>
                         <div className="text-center p-3 border rounded-lg">
                           <Label className="text-xs text-muted-foreground">Maximum</Label>
                           <p className="text-xl font-semibold mt-1">
-                            R {feeEstimate.maxFee?.toLocaleString('en-ZA')}
+                            R {(feeEstimate.maxFee || 0).toLocaleString('en-ZA')}
                           </p>
                         </div>
                       </div>
@@ -675,7 +675,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
                             <div className="pt-2 mt-2 border-t flex justify-between items-center">
                               <span className="text-sm font-medium">Total (incl. VAT)</span>
                               <span className="text-lg font-bold text-green-600">
-                                R {(feeEstimate.recommendedFee * 1.15)?.toLocaleString('en-ZA')}
+                                R {((feeEstimate.monthlyFee || feeEstimate.recommendedFee || 0) * 1.15).toLocaleString('en-ZA')}
                               </span>
                             </div>
                           </div>
@@ -689,7 +689,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
                           className="flex-1"
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `Fee Estimate:\nMonthly: R ${feeEstimate.recommendedFee?.toLocaleString('en-ZA')}\nAnnual: R ${(feeEstimate.annualFee || feeEstimate.recommendedFee * 12)?.toLocaleString('en-ZA')}`
+                              `Fee Estimate:\nMonthly: R ${(feeEstimate.monthlyFee || feeEstimate.recommendedFee || 0).toLocaleString('en-ZA')}\nAnnual: R ${(feeEstimate.annualFee || (feeEstimate.monthlyFee || feeEstimate.recommendedFee || 0) * 12).toLocaleString('en-ZA')}`
                             );
                             toast({
                               title: 'Copied to Clipboard',
