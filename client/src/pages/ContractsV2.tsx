@@ -1343,6 +1343,117 @@ export default function ContractsV2() {
         </DialogContent>
       </Dialog>
 
+      {/* Create Signature Workflow Dialog */}
+      <Dialog open={showSignatureDialog} onOpenChange={setShowSignatureDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Signature Workflow</DialogTitle>
+            <DialogDescription>
+              Set up a new digital signature workflow for collecting signatures
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="workflowName">Workflow Name *</Label>
+                <Input
+                  id="workflowName"
+                  placeholder="Enter workflow name"
+                  data-testid="input-workflow-name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="documentTitle">Document Title *</Label>
+                <Input
+                  id="documentTitle"
+                  placeholder="Enter document title"
+                  data-testid="input-document-title"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Select Contract</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a contract..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contracts.map((contract: any) => (
+                      <SelectItem key={contract.id} value={contract.id.toString()}>
+                        {contract.contractName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select defaultValue="builtin">
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="builtin">Built-in E-Signature</SelectItem>
+                    <SelectItem value="docusign">DocuSign</SelectItem>
+                    <SelectItem value="adobe_sign">Adobe Sign</SelectItem>
+                    <SelectItem value="hellosign">HelloSign</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Signers</Label>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input placeholder="Signer name" />
+                  <Input placeholder="Email address" type="email" />
+                  <Button type="button" variant="outline" size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="message">Message to Signers</Label>
+              <Textarea
+                id="message"
+                placeholder="Enter a message for the signers..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input type="checkbox" id="sendReminders" className="rounded" />
+              <Label htmlFor="sendReminders">Send automatic reminders</Label>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSignatureDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                toast({
+                  title: "Signature Workflow Created",
+                  description: "Your signature workflow has been created successfully.",
+                });
+                setShowSignatureDialog(false);
+              }}
+            >
+              Create Workflow
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* AI-Powered Template Preview Dialog */}
       {showPreviewDialog && selectedTemplate && (
         <AITemplatePreview
