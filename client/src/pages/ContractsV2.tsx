@@ -441,7 +441,19 @@ export default function ContractsV2() {
 
   const handleCreateContract = (data: ContractFormData) => {
     // Format data to match backend validation schema  
-    const toISO = (s: string) => s.replace(/\//g, "-"); // ensures YYYY-MM-DD
+    const toISO = (dateValue: any) => {
+      if (!dateValue) return "";
+      // Handle string dates like "2025/09/01" or "2025-09-01"
+      if (typeof dateValue === "string") {
+        return dateValue.replace(/\//g, "-");
+      }
+      // Handle Date objects by converting to YYYY-MM-DD format
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString().split('T')[0];
+      }
+      // Fallback: convert to string and replace
+      return String(dateValue).replace(/\//g, "-");
+    };
     
     const contractData = {
       contractName: data.contractName,
