@@ -446,8 +446,8 @@ export default function ContractsV2() {
       startDate: new Date(data.startDate),
       endDate: new Date(data.endDate),
       value: Number(data.value) || 0,
-      projectId: data.projectId || null,
-      templateId: data.templateId || null,
+      projectId: data.projectId || undefined,
+      templateId: data.templateId || undefined,
     };
     createContractMutation.mutate(contractData);
   };
