@@ -20879,20 +20879,48 @@ Format your response as a JSON array of tip objects with "title", "description",
   });
 
   app.post("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
+    const ContractSchema = z.object({
+      contractName: z.string().min(3),
+      contractType: z.string().default("service"),
+      clientId: z.number(),
+      projectId: z.number().optional().nullable(),
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      value: z.preprocess((v) => Number(v), z.number().nonnegative()),
+      currency: z.string().length(3).default("ZAR"),
+      paymentTerms: z.string().optional(),
+      status: z.enum(["draft", "active", "completed", "cancelled"]).default("draft"),
+      description: z.string().optional(),
+    });
+
+    const parsed = ContractSchema.safeParse(req.body);
+    if (!parsed.success) {
+      console.error("Contract validation failed:", parsed.error.flatten());
+      return res.status(400).json({ error: parsed.error.flatten() });
+    }
+
     try {
-      // Ensure dates are converted to proper Date objects
+      const dto = parsed.data;
       const contractData = {
-        ...req.body,
-        startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
-        endDate: req.body.endDate ? new Date(req.body.endDate) : new Date(new Date().setMonth(new Date().getMonth() + 12)),
+        contractName: dto.contractName,
+        contractType: dto.contractType,
+        clientId: dto.clientId,
+        projectId: dto.projectId ?? null,
+        startDate: new Date(dto.startDate),
+        endDate: new Date(dto.endDate),
+        value: dto.value.toString(),
+        currency: dto.currency.toUpperCase(),
+        paymentTerms: dto.paymentTerms || "Net 30 Days",
+        status: dto.status,
+        description: dto.description || "",
         createdBy: req.user.id
       };
-      
+
       const contract = await contractService.createContract(req.user.companyId, contractData);
       res.status(201).json(contract);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating contract:", error);
-      res.status(500).json({ error: "Failed to create contract" });
+      return res.status(400).json({ error: error.message || "Failed to create contract" });
     }
   });
 

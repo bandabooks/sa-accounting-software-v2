@@ -440,13 +440,24 @@ export default function ContractsV2() {
   });
 
   const handleCreateContract = (data: ContractFormData) => {
-    // Pass data directly - backend will handle date conversion
+    // Format data to match backend validation schema
+    const toISO = (s: string) => s.replaceAll("/", "-"); // ensures YYYY-MM-DD
+    
     const contractData = {
-      ...data,
+      contractName: data.contractName,
+      contractType: data.contractType || "service", 
+      clientId: Number(data.clientId), // must be number not string
+      projectId: data.projectId ? Number(data.projectId) : null,
+      startDate: toISO(data.startDate), // "2025/09/01" -> "2025-09-01"
+      endDate: toISO(data.endDate),
       value: Number(data.value) || 0,
-      projectId: data.projectId || undefined,
-      templateId: data.templateId || undefined,
+      currency: "ZAR",
+      paymentTerms: data.paymentTerms || "Net 30 Days",
+      status: data.status || "draft",
+      description: data.description || "",
     };
+    
+    console.log("Sending contract data:", contractData);
     createContractMutation.mutate(contractData);
   };
 
