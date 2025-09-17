@@ -10,10 +10,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { 
   Wand2, 
   Eye, 
@@ -26,11 +38,16 @@ import {
   Zap,
   Copy,
   Download,
-  RefreshCw
+  RefreshCw,
+  ChevronsUpDown,
+  Check,
+  Building2,
+  User
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 interface AITemplatePreviewProps {
   template: any;
@@ -58,13 +75,22 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
   });
   const [customizationPrompt, setCustomizationPrompt] = useState('');
   const [complianceLevel, setComplianceLevel] = useState<'basic' | 'standard' | 'comprehensive'>('standard');
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const [pricingComplexity, setPricingComplexity] = useState<'basic' | 'standard' | 'comprehensive'>('standard');
+
+  // Fetch customers for dropdown
+  const { data: customers, isLoading: loadingCustomers } = useQuery<any[]>({
+    queryKey: ['/api/customers'],
+    enabled: activeTab === 'pricing' || activeTab === 'customize'
+  });
 
   // AI Customization Mutation
   const customizeTemplateMutation = useMutation({
     mutationFn: async (customizationData: any) => {
       return apiRequest('/api/engagement-letter-templates/ai/customize', 'POST', customizationData);
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setCustomizedContent(data.customizedContent);
       setActiveTab('preview');
       toast({
@@ -84,7 +110,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
   });
 
   // Template Analysis Query
-  const { data: analysis, isLoading: analyzing } = useQuery({
+  const { data: analysis, isLoading: analyzing } = useQuery<any>({
     queryKey: ['template-analysis', template.id],
     queryFn: () => apiRequest('/api/engagement-letter-templates/ai/analyze', 'POST', {
       templateContent: customizedContent,
@@ -94,15 +120,51 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
   });
 
   // Fee Estimation Query
-  const { data: feeEstimate } = useQuery({
-    queryKey: ['fee-estimate', template.serviceType, clientDetails],
-    queryFn: () => apiRequest('/api/engagement-letter-templates/ai/estimate-fees', 'POST', {
-      serviceType: template.serviceType,
-      clientDetails,
-      complexity: complianceLevel
-    }),
-    enabled: !!clientDetails.name
+  const { data: feeEstimate, isLoading: loadingFees, refetch: refetchFees } = useQuery<any>({
+    queryKey: ['fee-estimate', template.serviceType, selectedClientId, pricingComplexity],
+    queryFn: () => {
+      const selectedCustomer = customers?.find((c: any) => c.id === selectedClientId);
+      if (!selectedCustomer) return null;
+      
+      return apiRequest('/api/engagement-letter-templates/ai/estimate-fees', 'POST', {
+        serviceType: template.serviceType || template.servicePackage,
+        clientDetails: {
+          name: selectedCustomer.name,
+          industry: selectedCustomer.category || 'professional',
+          size: 'medium' // Default size, could be enhanced with actual data
+        },
+        complexity: pricingComplexity
+      });
+    },
+    enabled: !!selectedClientId && !!customers
   });
+
+  // Handle client selection
+  const handleClientSelect = (customerId: number) => {
+    setSelectedClientId(customerId);
+    const customer = customers?.find((c: any) => c.id === customerId);
+    if (customer) {
+      setClientDetails({
+        name: customer.name,
+        industry: customer.category || 'professional',
+        size: 'medium',
+        specificRequirements: ''
+      });
+    }
+  };
+
+  // Get professional affiliation badge for customer
+  const getCustomerBadges = (customer: any) => {
+    const badges = [];
+    // Check for SAICA/SAIPA based on category or custom logic
+    if (customer.category === 'premium' || customer.notes?.includes('SAICA')) {
+      badges.push({ label: 'SAICA', color: 'bg-blue-100 text-blue-800', icon: '🎓' });
+    }
+    if (customer.category === 'wholesale' || customer.notes?.includes('SAIPA')) {
+      badges.push({ label: 'SAIPA', color: 'bg-green-100 text-green-800', icon: '📚' });
+    }
+    return badges;
+  };
 
   const handleCustomizeWithAI = () => {
     setIsCustomizing(true);
@@ -404,47 +466,264 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
 
           {/* Pricing Tab */}
           <TabsContent value="pricing" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fee Estimation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {feeEstimate ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium">Estimated Fee Range</Label>
-                        <p className="text-2xl font-bold">
-                          R {feeEstimate.minFee.toLocaleString()} - R {feeEstimate.maxFee.toLocaleString()}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Recommended Fee</Label>
-                        <p className="text-2xl font-bold text-green-600">
-                          R {feeEstimate.recommendedFee.toLocaleString()}
-                        </p>
+            <div className="grid grid-cols-2 gap-6">
+              {/* Client Selection & Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Client & Service Details
+                  </CardTitle>
+                  <CardDescription>
+                    Select a client and customize service parameters
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Client Selection Dropdown */}
+                  <div className="space-y-2">
+                    <Label>Select Client</Label>
+                    <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={clientSearchOpen}
+                          className="w-full justify-between"
+                          data-testid="button-select-client"
+                        >
+                          {selectedClientId && customers ? (
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              <span>{customers.find((c: any) => c.id === selectedClientId)?.name}</span>
+                              {getCustomerBadges(customers.find((c: any) => c.id === selectedClientId)).map((badge, idx) => (
+                                <Badge key={idx} variant="outline" className={cn(badge.color, 'ml-auto')}>
+                                  <span className="mr-1">{badge.icon}</span>
+                                  {badge.label}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Select a client...</span>
+                          )}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search clients..." />
+                          <CommandEmpty>No clients found.</CommandEmpty>
+                          <CommandGroup className="max-h-64 overflow-y-auto">
+                            {loadingCustomers ? (
+                              <div className="py-2 px-2 text-sm text-muted-foreground">
+                                Loading clients...
+                              </div>
+                            ) : (
+                              customers?.map((customer: any) => {
+                                const badges = getCustomerBadges(customer);
+                                return (
+                                  <CommandItem
+                                    key={customer.id}
+                                    value={customer.name}
+                                    onSelect={() => {
+                                      handleClientSelect(customer.id);
+                                      setClientSearchOpen(false);
+                                    }}
+                                    className="flex items-center gap-2 py-2"
+                                    data-testid={`option-client-${customer.id}`}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedClientId === customer.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{customer.name}</span>
+                                        {badges.map((badge, idx) => (
+                                          <Badge key={idx} variant="outline" className={cn(badge.color, 'text-xs')}>
+                                            <span className="mr-1 text-xs">{badge.icon}</span>
+                                            {badge.label}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                      {customer.email && (
+                                        <div className="text-xs text-muted-foreground">
+                                          {customer.email} • {customer.category || 'Standard'}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })
+                            )}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Complexity Level */}
+                  <div className="space-y-2">
+                    <Label>Service Complexity</Label>
+                    <Select value={pricingComplexity} onValueChange={(value: any) => setPricingComplexity(value)}>
+                      <SelectTrigger data-testid="select-complexity">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="basic">Basic - Simple engagement</SelectItem>
+                        <SelectItem value="standard">Standard - Regular complexity</SelectItem>
+                        <SelectItem value="comprehensive">Comprehensive - High complexity</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Service Type Info */}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Service Type</Label>
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium">
+                        {serviceTypeLabels[template.servicePackage] || serviceTypeLabels[template.serviceType] || 'Professional Services'}
+                      </p>
+                      <div className="flex gap-1 mt-2">
+                        {getComplianceBadges(template).map((badge, index) => (
+                          <Badge key={index} variant="outline" className={badge.color}>
+                            {badge.label}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
-                    
-                    {feeEstimate.breakdown && (
-                      <div>
-                        <Label className="text-sm font-medium">Fee Breakdown</Label>
-                        <div className="mt-2 space-y-2">
-                          {Object.entries(feeEstimate.breakdown).map(([item, amount]: [string, any]) => (
-                            <div key={item} className="flex justify-between">
-                              <span className="text-sm">{item}</span>
-                              <span className="text-sm font-medium">R {amount.toLocaleString()}</span>
-                            </div>
-                          ))}
+                  </div>
+
+                  {/* Generate Button */}
+                  <Button 
+                    onClick={() => refetchFees()}
+                    disabled={!selectedClientId || loadingFees}
+                    className="w-full"
+                    data-testid="button-generate-quote"
+                  >
+                    {loadingFees ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Calculating Fees...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Generate Fee Estimate
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Fee Estimation Results */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Fee Estimation
+                  </CardTitle>
+                  <CardDescription>
+                    Professional service fee calculation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {feeEstimate ? (
+                    <div className="space-y-6">
+                      {/* Main Fee Display */}
+                      <div className="text-center p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg">
+                        <Label className="text-sm text-muted-foreground">Recommended Monthly Fee</Label>
+                        <p className="text-4xl font-bold text-green-600 mt-2">
+                          R {feeEstimate.recommendedFee?.toLocaleString('en-ZA')}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Annual: R {(feeEstimate.annualFee || feeEstimate.recommendedFee * 12)?.toLocaleString('en-ZA')}
+                        </p>
+                      </div>
+
+                      {/* Fee Range */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 border rounded-lg">
+                          <Label className="text-xs text-muted-foreground">Minimum</Label>
+                          <p className="text-xl font-semibold mt-1">
+                            R {feeEstimate.minFee?.toLocaleString('en-ZA')}
+                          </p>
+                        </div>
+                        <div className="text-center p-3 border rounded-lg">
+                          <Label className="text-xs text-muted-foreground">Maximum</Label>
+                          <p className="text-xl font-semibold mt-1">
+                            R {feeEstimate.maxFee?.toLocaleString('en-ZA')}
+                          </p>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">Enter client details to get fee estimation</p>
-                )}
-              </CardContent>
-            </Card>
+
+                      {/* Fee Breakdown */}
+                      {feeEstimate.breakdown && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Fee Breakdown</Label>
+                          <div className="space-y-2 p-3 bg-gray-50 rounded-lg">
+                            {Object.entries(feeEstimate.breakdown).map(([item, amount]: [string, any]) => (
+                              <div key={item} className="flex justify-between items-center">
+                                <span className="text-sm">{item}</span>
+                                <span className="text-sm font-medium">
+                                  R {amount?.toLocaleString('en-ZA')}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="pt-2 mt-2 border-t flex justify-between items-center">
+                              <span className="text-sm font-medium">Total (incl. VAT)</span>
+                              <span className="text-lg font-bold text-green-600">
+                                R {(feeEstimate.recommendedFee * 1.15)?.toLocaleString('en-ZA')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `Fee Estimate:\nMonthly: R ${feeEstimate.recommendedFee?.toLocaleString('en-ZA')}\nAnnual: R ${(feeEstimate.annualFee || feeEstimate.recommendedFee * 12)?.toLocaleString('en-ZA')}`
+                            );
+                            toast({
+                              title: 'Copied to Clipboard',
+                              description: 'Fee estimate has been copied.'
+                            });
+                          }}
+                          data-testid="button-copy-estimate"
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copy Estimate
+                        </Button>
+                        <Button 
+                          className="flex-1"
+                          onClick={() => onUseTemplate({ ...template, feeEstimate })}
+                          data-testid="button-use-with-pricing"
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Use with Pricing
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-muted-foreground">
+                        {!selectedClientId 
+                          ? 'Select a client to generate fee estimation'
+                          : 'Click "Generate Fee Estimate" to calculate fees'}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
 
