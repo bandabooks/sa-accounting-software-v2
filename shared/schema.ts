@@ -8189,6 +8189,8 @@ export const insertContractSchema = createInsertSchema(contracts).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).refine(data => data.customerId || data.clientId, {
+  message: "Either customerId or clientId is required"
 });
 
 export const insertEngagementLetterTemplateSchema = createInsertSchema(engagementLetterTemplates).omit({

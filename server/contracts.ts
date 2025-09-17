@@ -113,12 +113,17 @@ export class ContractService {
 
   // Contract management
   async createContract(companyId: number, data: InsertContract): Promise<Contract> {
-    // Map clientId to both customerId (legacy) and clientId (new) for compatibility
+    // Coalesce IDs and ensure both columns are set for compatibility
+    const id = data.customerId ?? data.clientId;
+    if (!id) {
+      throw new Error("Either customerId or clientId is required");
+    }
+    
     const contractData = {
       ...data,
       companyId,
-      customerId: data.clientId, // Map to legacy customer_id column
-      clientId: data.clientId    // Keep new client_id column as well
+      customerId: id,  // Set legacy customer_id column
+      clientId: id     // Set new client_id column
     };
     
     const [contract] = await db.insert(contracts)

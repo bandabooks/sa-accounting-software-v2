@@ -20882,7 +20882,8 @@ Format your response as a JSON array of tip objects with "title", "description",
     const ContractSchema = z.object({
       contractName: z.string().min(3),
       contractType: z.string().default("service"),
-      clientId: z.number(),
+      clientId: z.number().optional(),
+      customerId: z.number().optional(),
       projectId: z.number().optional().nullable(),
       startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -20891,6 +20892,8 @@ Format your response as a JSON array of tip objects with "title", "description",
       paymentTerms: z.string().optional(),
       status: z.enum(["draft", "active", "completed", "cancelled"]).default("draft"),
       description: z.string().optional(),
+    }).refine(data => data.customerId || data.clientId, {
+      message: "Either customerId or clientId is required"
     });
 
     const parsed = ContractSchema.safeParse(req.body);
@@ -20901,10 +20904,15 @@ Format your response as a JSON array of tip objects with "title", "description",
 
     try {
       const dto = parsed.data;
+      // Normalize IDs - frontend might send clientId or customerId
+      const id = dto.customerId ?? dto.clientId!;
+      console.log(`Creating contract with ID: ${id} (customerId: ${dto.customerId}, clientId: ${dto.clientId})`);
+      
       const contractData = {
         contractName: dto.contractName,
         contractType: dto.contractType,
-        clientId: dto.clientId,
+        customerId: id,  // Map to both columns for compatibility
+        clientId: id,
         projectId: dto.projectId ?? null,
         startDate: new Date(dto.startDate),
         endDate: new Date(dto.endDate),
