@@ -314,13 +314,30 @@ export default function ContractsV2() {
   const contracts = Array.isArray(contractsResponse) ? contractsResponse : [];
 
   // Fetch engagement letter templates (68 professional templates)
-  const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
+  const { data: templatesResponse = [], isLoading: templatesLoading, error: templatesError } = useQuery({
     queryKey: ["/api/contracts/templates"],
-    queryFn: async () => apiRequest("/api/contracts/templates"),
+    queryFn: async () => {
+      console.log("🔄 Fetching contract templates...");
+      const result = await apiRequest("/api/contracts/templates");
+      console.log("📄 Templates response:", result);
+      console.log("📊 Templates count:", Array.isArray(result) ? result.length : "Not an array");
+      return result;
+    },
     retry: 3,
   });
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
+  
+  // Debug logging
+  console.log("🎯 Templates state:", {
+    loading: templatesLoading,
+    error: templatesError,
+    responseType: typeof templatesResponse,
+    isArray: Array.isArray(templatesResponse),
+    templatesCount: templates.length,
+    activeTab,
+    selectedCategory
+  });
 
   // Fetch signature workflows
   const { data: workflowsResponse = [], isLoading: workflowsLoading } = useQuery({

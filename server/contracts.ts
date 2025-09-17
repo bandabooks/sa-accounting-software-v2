@@ -124,38 +124,76 @@ export class ContractService {
   }
 
   async getContracts(companyId: number, status?: string): Promise<any[]> {
-    let whereCondition: any = eq(contracts.companyId, companyId);
-    
-    if (status && status !== 'all') {
-      whereCondition = and(
-        eq(contracts.companyId, companyId),
-        eq(contracts.status, status)
+    try {
+      let whereCondition: any = eq(contracts.companyId, companyId);
+      
+      if (status && status !== 'all') {
+        whereCondition = and(
+          eq(contracts.companyId, companyId),
+          eq(contracts.status, status)
+        );
+      }
+      
+      // First, get basic contract data without joins to avoid schema issues
+      const contractsData = await db.select()
+        .from(contracts)
+        .where(whereCondition)
+        .orderBy(desc(contracts.updatedAt));
+      
+      // If no contracts found, return empty array
+      if (!contractsData || contractsData.length === 0) {
+        return [];
+      }
+      
+      // Enrich with customer and template names where possible
+      const enrichedContracts = await Promise.all(
+        contractsData.map(async (contract) => {
+          let customerName = 'N/A';
+          let customerEmail = '';
+          let templateName = '';
+          
+          try {
+            // Get customer info if customerId exists
+            if (contract.customerId) {
+              const customerData = await db.select()
+                .from(customers)
+                .where(eq(customers.id, contract.customerId))
+                .limit(1);
+              if (customerData && customerData[0]) {
+                customerName = customerData[0].name || 'N/A';
+                customerEmail = customerData[0].email || '';
+              }
+            }
+            
+            // Get template name if templateId exists
+            if (contract.templateId) {
+              const templateData = await db.select()
+                .from(contractTemplates)
+                .where(eq(contractTemplates.id, contract.templateId))
+                .limit(1);
+              if (templateData && templateData[0]) {
+                templateName = templateData[0].name || '';
+              }
+            }
+          } catch (error) {
+            console.warn(`Error enriching contract ${contract.id}:`, error);
+            // Continue with default values
+          }
+          
+          return {
+            ...contract,
+            customerName,
+            customerEmail,
+            templateName,
+          };
+        })
       );
+      
+      return enrichedContracts;
+    } catch (error) {
+      console.error("Error in getContracts:", error);
+      return []; // Return empty array instead of throwing
     }
-    
-    return db.select({
-      id: contracts.id,
-      companyId: contracts.companyId,
-      customerId: contracts.customerId,
-      templateId: contracts.templateId,
-      status: contracts.status,
-      expiresAt: contracts.expiresAt,
-      currentVersion: contracts.currentVersion,
-      projectId: contracts.projectId,
-      createdBy: contracts.createdBy,
-      createdAt: contracts.createdAt,
-      updatedAt: contracts.updatedAt,
-      // Join customer data
-      customerName: customers.name,
-      customerEmail: customers.email,
-      // Add template name if available
-      templateName: contractTemplates.name,
-    })
-    .from(contracts)
-    .leftJoin(customers, eq(contracts.customerId, customers.id))
-    .leftJoin(contractTemplates, eq(contracts.templateId, contractTemplates.id))
-    .where(whereCondition)
-    .orderBy(desc(contracts.updatedAt));
   }
 
   async getContract(companyId: number, contractId: number): Promise<Contract | null> {
