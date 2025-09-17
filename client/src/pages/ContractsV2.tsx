@@ -1377,19 +1377,79 @@ export default function ContractsV2() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Select Contract</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a contract..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contracts.map((contract: any) => (
-                      <SelectItem key={contract.id} value={contract.id.toString()}>
-                        {contract.contractName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Select Client</Label>
+                <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedClientId && customers ? (
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4" />
+                          <span>{customers.find((c: any) => c.id === selectedClientId)?.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Choose a client...</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search clients..." />
+                      <CommandEmpty>No clients found.</CommandEmpty>
+                      <CommandGroup className="max-h-64 overflow-y-auto">
+                        {customersLoading ? (
+                          <div className="py-2 px-2 text-sm text-muted-foreground">
+                            Loading clients...
+                          </div>
+                        ) : (
+                          customers?.map((customer: any) => {
+                            const badges = getCustomerBadges(customer);
+                            return (
+                              <CommandItem
+                                key={customer.id}
+                                value={customer.name}
+                                onSelect={() => {
+                                  setSelectedClientId(customer.id);
+                                  setClientSearchOpen(false);
+                                }}
+                                className="flex items-center gap-2 py-2"
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedClientId === customer.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{customer.name}</span>
+                                    {badges.map((badge, idx) => (
+                                      <Badge key={idx} variant="outline" className={cn(badge.color, 'text-xs')}>
+                                        <span className="mr-1 text-xs">{badge.icon}</span>
+                                        {badge.label}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                  {customer.email && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {customer.email}
+                                    </div>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            );
+                          })
+                        )}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">

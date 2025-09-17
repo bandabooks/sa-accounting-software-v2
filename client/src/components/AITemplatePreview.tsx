@@ -81,8 +81,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
 
   // Fetch customers for dropdown
   const { data: customers, isLoading: loadingCustomers } = useQuery<any[]>({
-    queryKey: ['/api/customers'],
-    enabled: activeTab === 'pricing' || activeTab === 'customize'
+    queryKey: ['/api/customers']
   });
 
   // AI Customization Mutation
