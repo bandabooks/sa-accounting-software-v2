@@ -440,8 +440,8 @@ export default function ContractsV2() {
   });
 
   const handleCreateContract = (data: ContractFormData) => {
-    // Format data to match backend validation schema
-    const toISO = (s: string) => s.replaceAll("/", "-"); // ensures YYYY-MM-DD
+    // Format data to match backend validation schema  
+    const toISO = (s: string) => s.replace(/\//g, "-"); // ensures YYYY-MM-DD
     
     const contractData = {
       contractName: data.contractName,
