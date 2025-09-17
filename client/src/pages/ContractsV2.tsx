@@ -474,6 +474,8 @@ export default function ContractsV2() {
       paymentTerms: data.paymentTerms || "Net 30 Days",
       status: data.status || "draft",
       description: data.description || "",
+      autoRenewal: data.autoRenewal || false,
+      reminderDays: data.reminderDays || 30,
     };
     
     console.log("Sending contract data:", contractData);
