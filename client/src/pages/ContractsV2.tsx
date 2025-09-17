@@ -298,6 +298,7 @@ export default function ContractsV2() {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   // Fetch contracts
   const { data: contractsResponse = [], isLoading: contractsLoading } = useQuery({
@@ -310,6 +311,7 @@ export default function ContractsV2() {
   // Fetch engagement letter templates (68 professional templates)
   const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
     queryKey: ["/api/contracts/templates"],
+    queryFn: async () => apiRequest("/api/contracts/templates"),
     retry: 3,
   });
 
@@ -815,7 +817,7 @@ export default function ContractsV2() {
                     </Card>
                   );
                 })
-              )}
+              }
             </div>
           )}
         </TabsContent>
