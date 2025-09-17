@@ -1257,8 +1257,13 @@ export default function ContractsV2() {
 
           <div className="mt-4 space-y-2">
             <div className="text-sm text-muted-foreground">
-              <strong>Template Fields:</strong> {selectedTemplate?.fields?.length ? 
-                JSON.parse(selectedTemplate.fields).join(', ') : 
+              <strong>Template Fields:</strong> {selectedTemplate?.fields ? 
+                (Array.isArray(selectedTemplate.fields) ? 
+                  selectedTemplate.fields.join(', ') : 
+                  typeof selectedTemplate.fields === 'string' ? 
+                    selectedTemplate.fields : 
+                    'No custom fields'
+                ) : 
                 'No custom fields'}
             </div>
           </div>
