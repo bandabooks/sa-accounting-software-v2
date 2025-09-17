@@ -306,10 +306,10 @@ export default function ContractsV2() {
 
   const contracts = Array.isArray(contractsResponse) ? contractsResponse : [];
 
-  // Fetch engagement letter templates
+  // Fetch engagement letter templates (68 professional templates)
   const { data: templatesResponse = [], isLoading: templatesLoading } = useQuery({
-    queryKey: ["/api/engagement-letter-templates"],
-    queryFn: async () => apiRequest("/api/engagement-letter-templates"),
+    queryKey: ["/api/contract-templates"],
+    queryFn: async () => apiRequest("/api/contract-templates"),
   });
 
   const templates = Array.isArray(templatesResponse) ? templatesResponse : [];
