@@ -7024,10 +7024,10 @@ export type ClientServiceSubscription = typeof clientServiceSubscriptions.$infer
 export type InsertClientServiceSubscription = z.infer<typeof insertClientServiceSubscriptionSchema>;
 
 // ===========================
-// CONTRACTS MODULE (ENGAGEMENT LETTERS)
+// LEGACY CONTRACTS MODULE (COMPATIBILITY)
 // ===========================
 
-// Contract templates and reusable blocks
+// Contract templates and reusable blocks - Legacy system for backwards compatibility
 export const contractTemplates = pgTable("contract_templates", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
@@ -7055,25 +7055,6 @@ export const contractBlocks = pgTable("contract_blocks", {
   companyIdx: index("contract_blocks_company_idx").on(table.companyId),
 }));
 
-// Contracts and versions
-export const contracts = pgTable("contracts", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  customerId: integer("customer_id").references(() => customers.id).notNull(),
-  templateId: integer("template_id").references(() => contractTemplates.id),
-  status: text("status").notNull().default("draft"), // draft|issued|signed|countersigned|active|expired|void
-  expiresAt: timestamp("expires_at"),
-  currentVersion: integer("current_version").notNull().default(1),
-  projectId: integer("project_id").references(() => projects.id),
-  createdBy: integer("created_by").references(() => users.id).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  companyIdx: index("contracts_company_idx").on(table.companyId),
-  customerIdx: index("contracts_customer_idx").on(table.customerId),
-  statusIdx: index("contracts_status_idx").on(table.status),
-}));
-
 export const contractVersions = pgTable("contract_versions", {
   id: serial("id").primaryKey(),
   contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
@@ -7087,7 +7068,6 @@ export const contractVersions = pgTable("contract_versions", {
   contractIdx: index("contract_versions_contract_idx").on(table.contractId),
 }));
 
-// Signers and signatures
 export const contractSigners = pgTable("contract_signers", {
   id: serial("id").primaryKey(),
   contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
@@ -7118,7 +7098,6 @@ export const contractEvents = pgTable("contract_events", {
   kindIdx: index("contract_events_kind_idx").on(table.kind),
 }));
 
-// OTP and magic links
 export const contractTokens = pgTable("contract_tokens", {
   id: serial("id").primaryKey(),
   contractId: integer("contract_id").references(() => contracts.id, { onDelete: "cascade" }).notNull(),
@@ -7134,30 +7113,7 @@ export const contractTokens = pgTable("contract_tokens", {
   tokenHashIdx: index("contract_tokens_token_hash_idx").on(table.tokenHash),
 }));
 
-// Contract relations
-export const contractRelations = relations(contracts, ({ one, many }) => ({
-  company: one(companies, {
-    fields: [contracts.companyId],
-    references: [companies.id],
-  }),
-  customer: one(customers, {
-    fields: [contracts.customerId],
-    references: [customers.id],
-  }),
-  template: one(contractTemplates, {
-    fields: [contracts.templateId],
-    references: [contractTemplates.id],
-  }),
-  project: one(projects, {
-    fields: [contracts.projectId],
-    references: [projects.id],
-  }),
-  versions: many(contractVersions),
-  signers: many(contractSigners),
-  events: many(contractEvents),
-  tokens: many(contractTokens),
-}));
-
+// Legacy contract relations
 export const contractTemplateRelations = relations(contractTemplates, ({ one, many }) => ({
   company: one(companies, {
     fields: [contractTemplates.companyId],
@@ -7181,7 +7137,7 @@ export const contractSignerRelations = relations(contractSigners, ({ one, many }
   tokens: many(contractTokens),
 }));
 
-// Insert schemas for contracts
+// Legacy insert schemas for contracts
 export const insertContractTemplateSchema = createInsertSchema(contractTemplates).omit({
   id: true,
   createdAt: true,
@@ -7191,12 +7147,6 @@ export const insertContractTemplateSchema = createInsertSchema(contractTemplates
 export const insertContractBlockSchema = createInsertSchema(contractBlocks).omit({
   id: true,
   createdAt: true,
-});
-
-export const insertContractSchema = createInsertSchema(contracts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertContractVersionSchema = createInsertSchema(contractVersions).omit({
@@ -7218,15 +7168,12 @@ export const insertContractTokenSchema = createInsertSchema(contractTokens).omit
   createdAt: true,
 });
 
-// Contract types
+// Legacy contract types
 export type ContractTemplate = typeof contractTemplates.$inferSelect;
 export type InsertContractTemplate = z.infer<typeof insertContractTemplateSchema>;
 
 export type ContractBlock = typeof contractBlocks.$inferSelect;
 export type InsertContractBlock = z.infer<typeof insertContractBlockSchema>;
-
-export type Contract = typeof contracts.$inferSelect;
-export type InsertContract = z.infer<typeof insertContractSchema>;
 
 export type ContractVersion = typeof contractVersions.$inferSelect;
 export type InsertContractVersion = z.infer<typeof insertContractVersionSchema>;
@@ -7239,6 +7186,7 @@ export type InsertContractEvent = z.infer<typeof insertContractEventSchema>;
 
 export type ContractToken = typeof contractTokens.$inferSelect;
 export type InsertContractToken = z.infer<typeof insertContractTokenSchema>;
+
 
 // ========================================
 // ENHANCED RECONCILIATION SYSTEM FOR SA BANKING
