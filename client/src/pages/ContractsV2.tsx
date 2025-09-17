@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -318,6 +319,8 @@ export default function ContractsV2() {
   const [showContractDialog, setShowContractDialog] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -330,7 +333,7 @@ export default function ContractsV2() {
   // Fetch customers for dropdown
   const { data: customers, isLoading: customersLoading } = useQuery<any[]>({
     queryKey: ['/api/customers'],
-    enabled: showContractDialog // Only fetch when dialog is open
+    enabled: showContractDialog || showEditDialog // Enable for both create and edit dialogs
   });
 
   // Get professional affiliation badges for customer
@@ -375,7 +378,7 @@ export default function ContractsV2() {
   // Fetch projects
   const { data: projects = [] } = useQuery<any[]>({
     queryKey: ['/api/projects'],
-    enabled: showContractDialog // Only fetch when dialog is open
+    enabled: showContractDialog || showEditDialog // Enable for both create and edit dialogs
   });
 
   // Fetch signature workflows
@@ -450,6 +453,83 @@ export default function ContractsV2() {
     },
   });
 
+  // Delete contract mutation
+  const deleteContractMutation = useMutation({
+    mutationFn: async (contractId: number) => {
+      return apiRequest(`/api/contracts/${contractId}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      toast({
+        title: "Contract Deleted",
+        description: "Contract has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete contract",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Edit contract mutation (for status updates and basic edits)
+  const editContractMutation = useMutation({
+    mutationFn: async ({ contractId, data }: { contractId: number; data: any }) => {
+      return apiRequest(`/api/contracts/${contractId}`, 'PATCH', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contracts'] });
+      setShowEditDialog(false);
+      toast({
+        title: "Contract Updated",
+        description: "Contract has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update contract",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Action handlers
+  const handleViewContract = (contract: any) => {
+    setSelectedContract(contract);
+    setShowViewDialog(true);
+  };
+
+  const handleEditContract = (contract: any) => {
+    setSelectedContract(contract);
+    // Pre-fill the form with existing contract data
+    contractForm.reset({
+      templateId: contract.templateId?.toString() || "",
+      contractName: contract.contractName || contract.title || contract.name || "",
+      contractType: contract.contractType || contract.type || "service",
+      currency: contract.currency || "ZAR",
+      status: contract.status || "draft",
+      autoRenewal: contract.autoRenewal || false,
+      reminderDays: contract.reminderDays || 30,
+      startDate: contract.startDate ? new Date(contract.startDate) : new Date(),
+      endDate: contract.endDate ? new Date(contract.endDate) : new Date(new Date().setMonth(new Date().getMonth() + 12)),
+      value: contract.value || 0,
+      description: contract.description || "",
+      paymentTerms: contract.paymentTerms || "",
+      clientId: contract.clientId?.toString() || "",
+      projectId: contract.projectId?.toString() || "",
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteContract = (contract: any) => {
+    if (window.confirm(`Are you sure you want to delete "${contract.contractName || contract.title || contract.name}"?`)) {
+      deleteContractMutation.mutate(Number(contract.id));
+    }
+  };
+
   const handleCreateContract = (data: ContractFormData) => {
     // Format data to match backend validation schema  
     const toISO = (dateValue: any) => {
@@ -484,6 +564,45 @@ export default function ContractsV2() {
     
     console.log("Sending contract data:", contractData);
     createContractMutation.mutate(contractData);
+  };
+
+  const handleEditContractSubmit = (data: ContractFormData) => {
+    if (!selectedContract) return;
+    
+    // Format data to match backend validation schema - same as create
+    const toISO = (dateValue: any) => {
+      if (!dateValue) return "";
+      if (typeof dateValue === "string") {
+        return dateValue.replace(/\//g, "-");
+      }
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString().split('T')[0];
+      }
+      return String(dateValue).replace(/\//g, "-");
+    };
+    
+    const contractData = {
+      contractName: data.contractName,
+      contractType: data.contractType || "service", 
+      clientId: Number(data.clientId), 
+      projectId: data.projectId ? Number(data.projectId) : undefined,
+      templateId: data.templateId ? Number(data.templateId) : undefined,
+      startDate: toISO(data.startDate),
+      endDate: toISO(data.endDate),
+      value: Number(data.value) || 0,
+      currency: data.currency || "ZAR",
+      status: data.status || "draft",
+      description: data.description || "",
+      paymentTerms: data.paymentTerms || "",
+      autoRenewal: data.autoRenewal || false,
+      reminderDays: data.reminderDays || 30,
+    };
+    
+    console.log("Updating contract data:", contractData);
+    editContractMutation.mutate({ 
+      contractId: Number(selectedContract.id), 
+      data: contractData 
+    });
   };
 
   const statusColors = {
@@ -784,20 +903,49 @@ export default function ContractsV2() {
                           size="sm" 
                           variant="ghost"
                           className="h-8 px-2 text-xs"
+                          onClick={() => handleViewContract(contract)}
                           data-testid={`button-view-${contract.id}`}
                         >
                           <Eye className="h-3 w-3 mr-1" />
                           View
                         </Button>
                         
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          data-testid={`button-menu-${contract.id}`}
-                        >
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              data-testid={`button-menu-${contract.id}`}
+                            >
+                              <MoreHorizontal className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => handleViewContract(contract)}
+                              data-testid={`menu-view-${contract.id}`}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEditContract(contract)}
+                              data-testid={`menu-edit-${contract.id}`}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Contract
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteContract(contract)}
+                              className="text-red-600 focus:text-red-600"
+                              data-testid={`menu-delete-${contract.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Contract
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   ))}
@@ -1785,6 +1933,94 @@ export default function ContractsV2() {
         </DialogContent>
       </Dialog>
 
+      {/* View Contract Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>View Contract Details</DialogTitle>
+            <DialogDescription>
+              Contract information and details
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedContract && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Contract Name</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.contractName || selectedContract.title || selectedContract.name || 'Unnamed Contract'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Type</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.contractType || selectedContract.type || 'General'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Client</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.client?.name || selectedContract.clientName || selectedContract.customer?.name || 'No Client Set'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <Badge className={statusColors[selectedContract.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}>
+                    {selectedContract.status || 'Draft'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Value</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.value ? `R ${selectedContract.value.toLocaleString()}` : 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Currency</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.currency || 'ZAR'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Start Date</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.startDate ? format(new Date(selectedContract.startDate), 'PPP') : 'Not set'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">End Date</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.endDate ? format(new Date(selectedContract.endDate), 'PPP') : 'Not set'}</p>
+                </div>
+              </div>
+
+              {selectedContract.description && (
+                <div>
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm text-gray-600 mt-1">{selectedContract.description}</p>
+                </div>
+              )}
+
+              {selectedContract.paymentTerms && (
+                <div>
+                  <Label className="text-sm font-medium">Payment Terms</Label>
+                  <p className="text-sm text-gray-600 mt-1">{selectedContract.paymentTerms}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowViewDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setShowViewDialog(false);
+              handleEditContract(selectedContract);
+            }}>
+              Edit Contract
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* AI-Powered Template Preview Dialog */}
       {showPreviewDialog && selectedTemplate && (
         <AITemplatePreview
@@ -1804,6 +2040,316 @@ export default function ContractsV2() {
           }}
         />
       )}
+
+      {/* View Contract Dialog */}
+      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>View Contract Details</DialogTitle>
+            <DialogDescription>
+              Contract information and details
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedContract && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Contract Name</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.contractName || selectedContract.title || selectedContract.name || 'Unnamed Contract'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Type</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.contractType || selectedContract.type || 'General'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Client</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.client?.name || selectedContract.clientName || selectedContract.customer?.name || 'No Client Set'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Status</Label>
+                  <Badge className={statusColors[selectedContract.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}>
+                    {selectedContract.status || 'Draft'}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Value</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.value ? `R ${selectedContract.value.toLocaleString()}` : 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Currency</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.currency || 'ZAR'}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Start Date</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.startDate ? format(new Date(selectedContract.startDate), 'PPP') : 'Not set'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">End Date</Label>
+                  <p className="text-sm text-gray-600">{selectedContract.endDate ? format(new Date(selectedContract.endDate), 'PPP') : 'Not set'}</p>
+                </div>
+              </div>
+
+              {selectedContract.description && (
+                <div>
+                  <Label className="text-sm font-medium">Description</Label>
+                  <p className="text-sm text-gray-600 mt-1">{selectedContract.description}</p>
+                </div>
+              )}
+
+              {selectedContract.paymentTerms && (
+                <div>
+                  <Label className="text-sm font-medium">Payment Terms</Label>
+                  <p className="text-sm text-gray-600 mt-1">{selectedContract.paymentTerms}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowViewDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={() => {
+              setShowViewDialog(false);
+              handleEditContract(selectedContract);
+            }}>
+              Edit Contract
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Contract Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Contract</DialogTitle>
+            <DialogDescription>
+              Update contract details and information
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...contractForm}>
+            <form onSubmit={contractForm.handleSubmit(handleEditContractSubmit)} className="space-y-6">
+              {/* Contract Basic Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="contractName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter contract name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="contractType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select contract type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="service">Service Agreement</SelectItem>
+                          <SelectItem value="engagement">Engagement Letter</SelectItem>
+                          <SelectItem value="advisory">Advisory Services</SelectItem>
+                          <SelectItem value="compliance">Compliance Services</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Client and Value */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="value"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Contract Value</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="currency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ZAR">ZAR (South African Rand)</SelectItem>
+                          <SelectItem value="USD">USD (US Dollar)</SelectItem>
+                          <SelectItem value="EUR">EUR (Euro)</SelectItem>
+                          <SelectItem value="GBP">GBP (British Pound)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={contractForm.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={contractForm.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field}
+                          value={field.value instanceof Date ? field.value.toISOString().split('T')[0] : field.value}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Description and Payment Terms */}
+              <FormField
+                control={contractForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Contract description and scope of work" 
+                        {...field} 
+                        rows={3}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={contractForm.control}
+                name="paymentTerms"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Terms</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Payment terms and conditions" 
+                        {...field} 
+                        rows={2}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={editContractMutation.isPending}>
+                  {editContractMutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Contract"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
