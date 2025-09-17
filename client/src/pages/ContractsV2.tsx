@@ -685,11 +685,11 @@ export default function ContractsV2() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-6">
+            <div className="space-y-2">
               {contracts.map((contract: any) => (
                 <Card 
                   key={contract.id} 
-                  className="group relative overflow-hidden border-l-4 bg-gradient-to-r from-white via-gray-50/30 to-white hover:shadow-xl transition-all duration-300 hover:scale-[1.01] hover:bg-gradient-to-r hover:from-blue-50/50 hover:via-white hover:to-indigo-50/50"
+                  className="relative overflow-hidden border-l-2 hover:shadow-sm transition-colors"
                   style={{
                     borderLeftColor: 
                       contract.status === 'active' ? '#22c55e' :
@@ -698,93 +698,93 @@ export default function ContractsV2() {
                       contract.status === 'cancelled' ? '#ef4444' : '#6b7280'
                   }}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-4">
-                        {/* Header Section with Enhanced Visual */}
-                        <div className="flex items-center gap-4">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                            <FileText className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                              {contract.contractName || contract.title}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">{contract.description}</p>
-                          </div>
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-3">
+                      {/* Icon & Title */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-6 w-6 rounded bg-blue-100 flex items-center justify-center flex-shrink-0">
+                          <FileText className="h-3 w-3 text-blue-600" />
                         </div>
-
-                        {/* Enhanced Content Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</p>
-                            <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-100">
-                              <Building2 className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium text-gray-900">{contract.clientName || 'N/A'}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</p>
-                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-sm">
-                              {contract.contractType || contract.type}
-                            </Badge>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Value</p>
-                            <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg border border-green-100">
-                              <DollarSign className="h-4 w-4 text-green-600" />
-                              <span className="font-bold text-green-700">
-                                {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">End Date</p>
-                            <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg border border-orange-100">
-                              <Calendar className="h-4 w-4 text-orange-600" />
-                              <span className="text-sm font-medium text-orange-700">{format(new Date(contract.endDate), 'MMM dd, yyyy')}</span>
-                            </div>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {contract.contractName || contract.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 truncate">{contract.description}</p>
                         </div>
+                      </div>
 
-                        {/* Enhanced Status & Actions Section */}
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                          <Badge 
-                            className={`${statusColors[contract.status as keyof typeof statusColors]} shadow-lg px-3 py-1 font-medium`}
-                          >
-                            <span className="flex items-center gap-2">
-                              {getStatusIcon(contract.status)}
-                              <span className="capitalize">{contract.status}</span>
-                            </span>
-                          </Badge>
-
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm" 
-                              className="h-9 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              className="h-9 px-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md hover:shadow-lg transition-all"
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="h-9 w-9 p-0 hover:bg-gray-100 hover:scale-110 transition-all"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </div>
+                      {/* Compact Info Grid */}
+                      <div className="hidden md:flex items-center gap-4 flex-shrink-0">
+                        <div className="flex items-center gap-1 text-xs">
+                          <Building2 className="h-3 w-3 text-gray-400" />
+                          <span className="text-gray-600">{contract.clientName || 'N/A'}</span>
                         </div>
+                        
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                          {contract.contractType || contract.type}
+                        </Badge>
+                        
+                        <div className="flex items-center gap-1 text-xs">
+                          <DollarSign className="h-3 w-3 text-green-500" />
+                          <span className="text-green-600 font-medium">
+                            {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-xs">
+                          <Calendar className="h-3 w-3 text-orange-500" />
+                          <span className="text-gray-600">{format(new Date(contract.endDate), 'MMM dd')}</span>
+                        </div>
+                      </div>
+
+                      {/* Status & Actions */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge 
+                          className={`${statusColors[contract.status as keyof typeof statusColors]} text-xs px-2 py-0.5`}
+                        >
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(contract.status)}
+                            <span className="capitalize">{contract.status}</span>
+                          </span>
+                        </Badge>
+
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
+                        
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Mobile Info (shown only on mobile) */}
+                    <div className="md:hidden mt-2 flex flex-wrap gap-2 text-xs">
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3 text-gray-400" />
+                        <span className="text-gray-600">{contract.clientName || 'N/A'}</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                        {contract.contractType || contract.type}
+                      </Badge>
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3 text-green-500" />
+                        <span className="text-green-600 font-medium">
+                          {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3 text-orange-500" />
+                        <span className="text-gray-600">{format(new Date(contract.endDate), 'MMM dd')}</span>
                       </div>
                     </div>
                   </CardContent>
