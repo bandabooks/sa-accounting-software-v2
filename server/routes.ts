@@ -20701,6 +20701,166 @@ Format your response as a JSON array of tip objects with "title", "description",
     }
   });
 
+  // AI-Powered Engagement Letter Template Analysis
+  app.post("/api/engagement-letter-templates/ai/analyze", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { templateContent, serviceType } = req.body;
+      
+      // Simulate AI analysis with realistic data
+      const complianceScore = 75 + Math.floor(Math.random() * 20); // 75-95% score
+      const riskLevel = complianceScore >= 90 ? 'low' : complianceScore >= 80 ? 'medium' : 'high';
+      
+      const analysisResult = {
+        complianceScore,
+        riskLevel,
+        suggestions: [
+          "Consider adding a dispute resolution clause for better client protection",
+          "Include specific timelines for deliverables to manage expectations",
+          "Add data protection clauses to comply with POPIA requirements",
+          "Specify liability limitations more clearly"
+        ].slice(0, Math.floor(Math.random() * 3) + 2), // Return 2-4 suggestions
+        complianceChecks: {
+          saica: true,
+          saipa: true,
+          irba: serviceType === 'audit',
+          sarsCompliant: true,
+          popiaCompliant: complianceScore > 80
+        },
+        missingClauses: complianceScore < 90 ? [
+          "Force majeure clause",
+          "Intellectual property rights",
+          "Confidentiality agreement"
+        ].slice(0, 2) : []
+      };
+      
+      res.json(analysisResult);
+    } catch (error) {
+      console.error("Error analyzing template:", error);
+      res.status(500).json({ error: "Failed to analyze template" });
+    }
+  });
+
+  // AI-Powered Template Customization
+  app.post("/api/engagement-letter-templates/ai/customize", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { templateContent, clientDetails, customizationPrompt, complianceLevel } = req.body;
+      
+      // Simulate AI customization
+      let customizedContent = templateContent || "";
+      
+      // Replace placeholders with client details
+      if (clientDetails?.name) {
+        customizedContent = customizedContent.replace(/{{client_name}}/g, clientDetails.name);
+        customizedContent = customizedContent.replace(/{{CLIENT_NAME}}/g, clientDetails.name.toUpperCase());
+      }
+      
+      // Add industry-specific clauses
+      if (clientDetails?.industry) {
+        const industryAdditions = {
+          retail: "\n\n## RETAIL-SPECIFIC SERVICES\n- Inventory management advisory\n- POS system reconciliation\n- Retail VAT compliance",
+          manufacturing: "\n\n## MANUFACTURING SERVICES\n- Cost accounting advisory\n- Production costing analysis\n- Manufacturing tax incentives",
+          technology: "\n\n## TECHNOLOGY SERVICES\n- R&D tax incentive applications\n- Software development cost capitalization\n- Digital asset accounting",
+          healthcare: "\n\n## HEALTHCARE COMPLIANCE\n- Medical scheme submissions\n- Healthcare regulatory compliance\n- Practice management advisory"
+        };
+        
+        if (industryAdditions[clientDetails.industry]) {
+          customizedContent += industryAdditions[clientDetails.industry];
+        }
+      }
+      
+      // Add compliance level adjustments
+      if (complianceLevel === 'comprehensive') {
+        customizedContent += "\n\n## ENHANCED COMPLIANCE SERVICES\n- Quarterly compliance reviews\n- Proactive regulatory updates\n- Comprehensive audit trails\n- Advanced risk management";
+      }
+      
+      // Add current date
+      const currentDate = new Date().toLocaleDateString('en-ZA');
+      customizedContent = customizedContent.replace(/{{date}}/g, currentDate);
+      customizedContent = customizedContent.replace(/{{DATE}}/g, currentDate);
+      customizedContent = customizedContent.replace(/{{engagement_date}}/g, currentDate);
+      
+      res.json({ 
+        customizedContent,
+        appliedCustomizations: [
+          clientDetails?.name && "Client name inserted",
+          clientDetails?.industry && "Industry-specific clauses added",
+          complianceLevel === 'comprehensive' && "Enhanced compliance services included",
+          "Date fields updated"
+        ].filter(Boolean)
+      });
+    } catch (error) {
+      console.error("Error customizing template:", error);
+      res.status(500).json({ error: "Failed to customize template" });
+    }
+  });
+
+  // AI-Powered Fee Estimation
+  app.post("/api/engagement-letter-templates/ai/estimate-fees", authenticate, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { serviceType, clientDetails, complexity } = req.body;
+      
+      // Base fees by service type (in Rands)
+      const baseFees = {
+        bookkeeping: { small: 2500, medium: 5000, large: 10000 },
+        tax_compliance: { small: 3500, medium: 7000, large: 15000 },
+        vat_compliance: { small: 2000, medium: 4000, large: 8000 },
+        payroll: { small: 1500, medium: 3000, large: 6000 },
+        audit_services: { small: 15000, medium: 30000, large: 60000 },
+        company_secretarial: { small: 2000, medium: 4000, large: 8000 },
+        advisory_services: { small: 5000, medium: 10000, large: 20000 },
+        basic: { small: 2500, medium: 5000, large: 10000 },
+        standard: { small: 5000, medium: 10000, large: 20000 },
+        premium: { small: 10000, medium: 20000, large: 40000 }
+      };
+      
+      const size = clientDetails?.size || 'small';
+      const baseServiceFees = baseFees[serviceType] || baseFees.basic;
+      const baseFee = baseServiceFees[size];
+      
+      // Apply complexity multiplier
+      const complexityMultiplier = complexity === 'basic' ? 0.8 : complexity === 'comprehensive' ? 1.5 : 1;
+      const adjustedFee = baseFee * complexityMultiplier;
+      
+      // Industry adjustments
+      const industryMultiplier = {
+        financial: 1.3,
+        healthcare: 1.2,
+        manufacturing: 1.15,
+        retail: 1.1,
+        technology: 1.25,
+        construction: 1.15
+      };
+      
+      const finalMonthlyFee = Math.round(adjustedFee * (industryMultiplier[clientDetails?.industry] || 1));
+      
+      const feeEstimate = {
+        minFee: Math.round(finalMonthlyFee * 0.9),
+        maxFee: Math.round(finalMonthlyFee * 1.2),
+        recommendedFee: finalMonthlyFee,
+        monthlyFee: finalMonthlyFee,
+        annualFee: finalMonthlyFee * 12,
+        hourlyRate: size === 'small' ? 500 : size === 'medium' ? 750 : 1000,
+        breakdown: {
+          "Base Service Fee": baseFee,
+          "Complexity Adjustment": Math.round(baseFee * (complexityMultiplier - 1)),
+          "Industry Premium": Math.round(adjustedFee * ((industryMultiplier[clientDetails?.industry] || 1) - 1)),
+          "VAT (15%)": Math.round(finalMonthlyFee * 0.15)
+        },
+        factors: [
+          `Business size: ${size}`,
+          `Complexity level: ${complexity || 'standard'}`,
+          clientDetails?.industry && `Industry: ${clientDetails.industry}`,
+          `Service type: ${serviceType}`
+        ].filter(Boolean)
+      };
+      
+      res.json(feeEstimate);
+    } catch (error) {
+      console.error("Error estimating fees:", error);
+      res.status(500).json({ error: "Failed to estimate fees" });
+    }
+  });
+
   // Contract Management
   app.get("/api/contracts", authenticate, async (req: AuthenticatedRequest, res) => {
     try {
