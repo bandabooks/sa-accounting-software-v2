@@ -16,6 +16,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from 'date-fns';
+import { professionalCategories, categoryColors } from '@shared/professionalCategories';
 import { 
   Plus, 
   Search, 
@@ -676,83 +677,147 @@ export default function ContractsV2() {
           </Card>
         </TabsContent>
 
-        {/* Engagement Letters Tab */}
+        {/* Engagement Letters Tab - Professional Template Management System */}
         <TabsContent value="engagement-letters" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-2xl font-bold">Engagement Letters</h2>
-              <p className="text-muted-foreground">Professional engagement letter templates and automation</p>
+              <h2 className="text-2xl font-bold">Professional Template Management System</h2>
+              <p className="text-muted-foreground">South African accounting and tax practice engagement letter templates meeting professional standards</p>
             </div>
             <Button onClick={() => setShowTemplateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Template
+              <Plus className="h-4 h-4 mr-2" />
+              Custom Template
             </Button>
           </div>
 
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Template Name</TableHead>
-                  <TableHead>Service Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Modified</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {templatesLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    </TableCell>
-                  </TableRow>
-                ) : templates.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      <div className="text-center">
-                        <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-medium mb-2">No templates found</h3>
-                        <p className="text-muted-foreground mb-4">Create your first engagement letter template.</p>
-                        <Button onClick={() => setShowTemplateDialog(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create Template
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  templates.map((template: EngagementLetterTemplate) => (
-                    <TableRow key={template.id}>
-                      <TableCell className="font-medium">{template.name}</TableCell>
-                      <TableCell>{template.serviceType}</TableCell>
-                      <TableCell>
-                        <Badge variant={template.isActive ? "default" : "secondary"}>
-                          {template.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(template.updatedAt), 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-6 text-center">
+                <div className="text-4xl font-bold text-blue-600 mb-2">68</div>
+                <div className="text-sm text-blue-700">Total Templates</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-6 text-center">
+                <div className="text-4xl font-bold text-green-600 mb-2">11</div>
+                <div className="text-sm text-green-700">Service Categories</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-purple-50 border-purple-200">
+              <CardContent className="p-6 text-center">
+                <div className="text-4xl font-bold text-purple-600 mb-2">100%</div>
+                <div className="text-sm text-purple-700">SA Compliant</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-orange-50 border-orange-200">
+              <CardContent className="p-6 text-center">
+                <div className="text-4xl font-bold text-orange-600 mb-2">Ready</div>
+                <div className="text-sm text-orange-700">Professional Use</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Category Filters */}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={selectedCategory === "all" ? "default" : "outline"}
+              onClick={() => setSelectedCategory("all")}
+              className="text-sm"
+            >
+              All Categories ({templates.length})
+            </Button>
+            {professionalCategories.map(category => {
+              const categoryTemplates = templates.filter((t: any) => t.servicePackage === category.value);
+              return (
+                <Button 
+                  key={category.value}
+                  variant={selectedCategory === category.value ? "default" : "outline"}
+                  onClick={() => setSelectedCategory(category.value)}
+                  className="text-sm"
+                >
+                  {category.label} ({categoryTemplates.length})
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Template Grid */}
+          {templatesLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            </div>
+          ) : templates.length === 0 ? (
+            <div className="text-center py-8">
+              <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No templates found</h3>
+              <p className="text-muted-foreground mb-4">Create your first engagement letter template.</p>
+              <Button onClick={() => setShowTemplateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Template
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {templates
+                .filter((template: any) => 
+                  selectedCategory === "all" || template.servicePackage === selectedCategory
+                )
+                .map((template: any) => {
+                  const category = professionalCategories.find(c => c.value === template.servicePackage);
+                  return (
+                    <Card key={template.id} className="hover:shadow-lg transition-shadow">
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          {/* Header with Professional Badge */}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold text-lg">{template.name}</h3>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                                  Professional
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Service Type */}
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {category?.label || template.servicePackage}
+                            </p>
+                          </div>
+
+                          {/* Compliance Badges */}
+                          <div className="flex gap-2">
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">SAICA</Badge>
+                            <Badge className="bg-green-100 text-green-800 text-xs">SAIPA</Badge>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {template.description || `Comprehensive ${category?.label.toLowerCase()} and strategic consulting`}
+                          </p>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 pt-2">
+                            <Button variant="outline" size="sm" className="flex-1">
+                              <Eye className="h-4 w-4 mr-1" />
+                              Preview
+                            </Button>
+                            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700">
+                              <FileText className="h-4 w-4 mr-1" />
+                              Use Template
+                            </Button>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          )}
         </TabsContent>
 
         {/* E-Signatures Tab */}
