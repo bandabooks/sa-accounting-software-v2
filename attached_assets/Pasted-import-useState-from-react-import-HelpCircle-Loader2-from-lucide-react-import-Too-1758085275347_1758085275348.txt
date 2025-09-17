@@ -1,0 +1,133 @@
+import { useState } from "react";
+import { HelpCircle, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+
+interface ContextualHelpResponse {
+  title: string;
+  explanation: string;
+  tips: string[];
+  relatedActions: string[];
+  complexity?: 'basic' | 'intermediate' | 'advanced';
+}
+
+interface AIHelpTooltipProps {
+  context: string;
+  element?: string;
+  className?: string;
+  iconSize?: "sm" | "md" | "lg";
+  trigger?: "hover" | "click";
+}
+
+export default function AIHelpTooltip({ 
+  context, 
+  element = "", 
+  className = "", 
+  iconSize = "sm",
+  trigger = "hover"
+}: AIHelpTooltipProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [shouldFetch, setShouldFetch] = useState(false);
+
+  const { data: helpContent, isLoading } = useQuery<ContextualHelpResponse>({
+    queryKey: ['/api/ai/contextual-help', context, element],
+    queryFn: async (): Promise<ContextualHelpResponse> => {
+      return await apiRequest('POST', '/api/ai/contextual-help', {
+        context,
+        element,
+        userRole: 'practitioner'
+      }) as ContextualHelpResponse;
+    },
+    enabled: shouldFetch && isOpen,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && !shouldFetch) {
+      setShouldFetch(true);
+    }
+  };
+
+  const iconSizeClass = {
+    sm: "h-3 w-3",
+    md: "h-4 w-4", 
+    lg: "h-5 w-5"
+  }[iconSize];
+
+  const TriggerComponent = trigger === "click" ? Button : "div";
+  const triggerProps = trigger === "click" 
+    ? { variant: "ghost" as const, size: "sm" as const }
+    : { className: "cursor-pointer inline-flex" };
+
+  return (
+    <TooltipProvider>
+      <Tooltip open={isOpen} onOpenChange={handleOpenChange}>
+        <TooltipTrigger asChild>
+          <TriggerComponent {...triggerProps} className={`${triggerProps.className} ${className}`}>
+            <HelpCircle className={`${iconSizeClass} text-gray-400 hover:text-blue-500 transition-colors`} />
+          </TriggerComponent>
+        </TooltipTrigger>
+        <TooltipContent 
+          className="max-w-xs p-4 bg-white dark:bg-gray-800 border shadow-lg"
+          side="top"
+          align="center"
+        >
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Getting help...</span>
+            </div>
+          ) : helpContent ? (
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                {helpContent.title}
+              </h4>
+              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                {helpContent.explanation}
+              </p>
+              {helpContent.tips && helpContent.tips.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Quick Tips:
+                  </p>
+                  <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                    {helpContent.tips.map((tip, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-blue-500 mr-1">•</span>
+                        <span>{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {helpContent.relatedActions && helpContent.relatedActions.length > 0 && (
+                <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    Related Actions:
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {helpContent.relatedActions.map((action, index) => (
+                      <span 
+                        key={index}
+                        className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded"
+                      >
+                        {action}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              No help available for this context.
+            </div>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}

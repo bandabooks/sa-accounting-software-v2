@@ -8025,3 +8025,258 @@ export type InsertAlertEscalationRule = z.infer<typeof insertAlertEscalationRule
 
 export type SystemHealthMetric = typeof systemHealthMetrics.$inferSelect;
 export type InsertSystemHealthMetric = z.infer<typeof insertSystemHealthMetricSchema>;
+
+// =================== CONTRACTS MODULE ===================
+
+// Contracts - Main contracts management table
+export const contracts = pgTable("contracts", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  contractName: text("contract_name").notNull(),
+  contractType: text("contract_type").notNull().default("service"), // service, maintenance, consulting, development, engagement, other
+  clientId: integer("client_id").notNull().references(() => customers.id),
+  projectId: integer("project_id"), // Future reference to projects table
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  value: decimal("value", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("ZAR"),
+  status: text("status").notNull().default("draft"), // draft, active, completed, cancelled, expired
+  description: text("description"),
+  terms: text("terms"),
+  scope: text("scope"),
+  deliverables: text("deliverables"),
+  paymentTerms: text("payment_terms"),
+  invoiceSchedule: text("invoice_schedule"),
+  autoRenewal: boolean("auto_renewal").default(false),
+  reminderDays: integer("reminder_days").default(30),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("contracts_company_idx").on(table.companyId),
+  clientIdx: index("contracts_client_idx").on(table.clientId),
+  statusIdx: index("contracts_status_idx").on(table.status),
+  typeIdx: index("contracts_type_idx").on(table.contractType),
+}));
+
+// Engagement Letter Templates - Professional templates with SA compliance
+export const engagementLetterTemplates = pgTable("engagement_letter_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id"), // null for system templates, specific company for custom templates
+  name: text("name").notNull(),
+  serviceType: text("service_type").notNull(), // bookkeeping, tax, vat, payroll, audit, review, compilation, etc.
+  servicePackage: text("service_package"), // For categorization
+  description: text("description"),
+  templateContent: text("template_content").notNull(), // Full template content
+  defaultTerms: text("default_terms"),
+  feeStructure: text("fee_structure"),
+  scope: text("scope"),
+  isActive: boolean("is_active").default(true),
+  isSystemTemplate: boolean("is_system_template").default(false), // System-provided vs custom
+  saicaCompliant: boolean("saica_compliant").default(true),
+  saipaCompliant: boolean("saipa_compliant").default(true),
+  irbaCompliant: boolean("irba_compliant").default(false),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("engagement_templates_company_idx").on(table.companyId),
+  serviceTypeIdx: index("engagement_templates_service_type_idx").on(table.serviceType),
+  activeIdx: index("engagement_templates_active_idx").on(table.isActive),
+}));
+
+// E-Signature Providers - Configuration for signature services
+export const signatureProviders = pgTable("signature_providers", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  name: text("name").notNull(),
+  providerType: text("provider_type").notNull().default("builtin"), // builtin, docusign, adobe_sign, hellosign, pandadoc, signnow, other
+  apiKey: text("api_key"),
+  apiSecret: text("api_secret"),
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  settings: jsonb("settings").default({}),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("signature_providers_company_idx").on(table.companyId),
+  typeIdx: index("signature_providers_type_idx").on(table.providerType),
+  activeIdx: index("signature_providers_active_idx").on(table.isActive),
+}));
+
+// Signature Workflows - Manage signature workflows for contracts
+export const signatureWorkflows = pgTable("signature_workflows", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull(),
+  contractId: integer("contract_id").references(() => contracts.id),
+  workflowName: text("workflow_name").notNull(),
+  documentTitle: text("document_title").notNull(),
+  providerId: integer("provider_id").notNull().references(() => signatureProviders.id),
+  status: text("status").notNull().default("draft"), // draft, active, completed, cancelled, expired
+  signingOrder: text("signing_order").notNull().default("sequential"), // sequential, parallel
+  documentContent: text("document_content"), // The actual document content to be signed
+  expiresAt: timestamp("expires_at"),
+  completedAt: timestamp("completed_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  cancelReason: text("cancel_reason"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  companyIdx: index("signature_workflows_company_idx").on(table.companyId),
+  contractIdx: index("signature_workflows_contract_idx").on(table.contractId),
+  statusIdx: index("signature_workflows_status_idx").on(table.status),
+  providerIdx: index("signature_workflows_provider_idx").on(table.providerId),
+}));
+
+// Signature Requests - Individual signature requests within workflows
+export const signatureRequests = pgTable("signature_requests", {
+  id: serial("id").primaryKey(),
+  workflowId: integer("workflow_id").notNull().references(() => signatureWorkflows.id),
+  signerName: text("signer_name").notNull(),
+  signerEmail: text("signer_email").notNull(),
+  signerRole: text("signer_role").notNull(), // client, accountant, partner, witness
+  signingOrder: integer("signing_order").notNull().default(1),
+  status: text("status").notNull().default("pending"), // pending, sent, viewed, signed, declined, expired
+  secureSigningLink: text("secure_signing_link"),
+  documentTitle: text("document_title").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  signedAt: timestamp("signed_at"),
+  declinedAt: timestamp("declined_at"),
+  declineReason: text("decline_reason"),
+  reminderCount: integer("reminder_count").default(0),
+  reminderSentAt: timestamp("reminder_sent_at"),
+  signatureData: text("signature_data"), // Base64 encoded signature image
+  signedIpAddress: text("signed_ip_address"),
+  signedUserAgent: text("signed_user_agent"),
+  signedLocation: text("signed_location"),
+  viewedIpAddress: text("viewed_ip_address"),
+  viewedUserAgent: text("viewed_user_agent"),
+  createdBy: integer("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workflowIdx: index("signature_requests_workflow_idx").on(table.workflowId),
+  statusIdx: index("signature_requests_status_idx").on(table.status),
+  emailIdx: index("signature_requests_email_idx").on(table.signerEmail),
+  expiryIdx: index("signature_requests_expiry_idx").on(table.expiresAt),
+}));
+
+// Contract Relations
+export const contractsRelations = relations(contracts, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [contracts.companyId],
+    references: [companies.id]
+  }),
+  client: one(customers, {
+    fields: [contracts.clientId],
+    references: [customers.id]
+  }),
+  createdByUser: one(users, {
+    fields: [contracts.createdBy],
+    references: [users.id]
+  }),
+  signatureWorkflows: many(signatureWorkflows)
+}));
+
+export const engagementLetterTemplatesRelations = relations(engagementLetterTemplates, ({ one }) => ({
+  company: one(companies, {
+    fields: [engagementLetterTemplates.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [engagementLetterTemplates.createdBy],
+    references: [users.id]
+  })
+}));
+
+export const signatureProvidersRelations = relations(signatureProviders, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [signatureProviders.companyId],
+    references: [companies.id]
+  }),
+  createdByUser: one(users, {
+    fields: [signatureProviders.createdBy],
+    references: [users.id]
+  }),
+  workflows: many(signatureWorkflows)
+}));
+
+export const signatureWorkflowsRelations = relations(signatureWorkflows, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [signatureWorkflows.companyId],
+    references: [companies.id]
+  }),
+  contract: one(contracts, {
+    fields: [signatureWorkflows.contractId],
+    references: [contracts.id]
+  }),
+  provider: one(signatureProviders, {
+    fields: [signatureWorkflows.providerId],
+    references: [signatureProviders.id]
+  }),
+  createdByUser: one(users, {
+    fields: [signatureWorkflows.createdBy],
+    references: [users.id]
+  }),
+  requests: many(signatureRequests)
+}));
+
+export const signatureRequestsRelations = relations(signatureRequests, ({ one }) => ({
+  workflow: one(signatureWorkflows, {
+    fields: [signatureRequests.workflowId],
+    references: [signatureWorkflows.id]
+  }),
+  createdByUser: one(users, {
+    fields: [signatureRequests.createdBy],
+    references: [users.id]
+  })
+}));
+
+// Insert Schemas for Contracts Module
+export const insertContractSchema = createInsertSchema(contracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEngagementLetterTemplateSchema = createInsertSchema(engagementLetterTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSignatureProviderSchema = createInsertSchema(signatureProviders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSignatureWorkflowSchema = createInsertSchema(signatureWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSignatureRequestSchema = createInsertSchema(signatureRequests).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for Contracts Module
+export type Contract = typeof contracts.$inferSelect;
+export type InsertContract = z.infer<typeof insertContractSchema>;
+
+export type EngagementLetterTemplate = typeof engagementLetterTemplates.$inferSelect;
+export type InsertEngagementLetterTemplate = z.infer<typeof insertEngagementLetterTemplateSchema>;
+
+export type SignatureProvider = typeof signatureProviders.$inferSelect;
+export type InsertSignatureProvider = z.infer<typeof insertSignatureProviderSchema>;
+
+export type SignatureWorkflow = typeof signatureWorkflows.$inferSelect;
+export type InsertSignatureWorkflow = z.infer<typeof insertSignatureWorkflowSchema>;
+
+export type SignatureRequest = typeof signatureRequests.$inferSelect;
+export type InsertSignatureRequest = z.infer<typeof insertSignatureRequestSchema>;

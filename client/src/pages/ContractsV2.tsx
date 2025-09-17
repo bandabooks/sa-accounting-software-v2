@@ -15,6 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import StartWorkingButton from "@/components/StartWorkingButton";
+import AITooltip, { FieldHelp, ModuleHelp } from '@/components/AITooltip';
+import AITemplatePreview from '@/components/AITemplatePreview';
 import { format } from 'date-fns';
 import { professionalCategories, categoryColors } from '@shared/professionalCategories';
 import { 
@@ -52,11 +55,11 @@ import {
 const contractFormSchema = z.object({
   contractName: z.string().min(1, "Contract name is required"),
   contractType: z.enum(["service", "maintenance", "consulting", "development", "engagement", "other"]).default("service"),
-  clientId: z.number({ required_error: "Client is required" }),
-  projectId: z.number().optional(),
-  startDate: z.date(),
-  endDate: z.date(),
-  value: z.number().min(0, "Contract value must be positive"),
+  clientId: z.coerce.number({ required_error: "Client is required" }),
+  projectId: z.coerce.number().optional(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
+  value: z.coerce.number().min(0, "Contract value must be positive"),
   currency: z.string().default("ZAR"),
   status: z.enum(["draft", "active", "completed", "cancelled", "expired"]).default("draft"),
   description: z.string().optional(),
@@ -66,7 +69,7 @@ const contractFormSchema = z.object({
   paymentTerms: z.string().optional(),
   invoiceSchedule: z.string().optional(),
   autoRenewal: z.boolean().default(false),
-  reminderDays: z.number().min(1).max(365).default(30),
+  reminderDays: z.coerce.number().min(1).max(365).default(30),
 });
 
 // Enhanced engagement letter template schema
@@ -266,6 +269,7 @@ function SignatureCanvas({ onSignatureChange, width = 400, height = 200 }: Signa
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          data-testid="canvas-signature"
         />
       </div>
       
@@ -279,6 +283,7 @@ function SignatureCanvas({ onSignatureChange, width = 400, height = 200 }: Signa
           size="sm" 
           onClick={clearSignature}
           disabled={isEmpty}
+          data-testid="button-clear-signature"
         >
           Clear Signature
         </Button>
@@ -363,15 +368,15 @@ export default function ContractsV2() {
       setShowContractDialog(false);
       contractForm.reset();
       toast({
-        title: 'Contract Created',
-        description: 'Contract has been created successfully.',
+        title: "Contract Created",
+        description: "Contract has been created successfully.",
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Error Creating Contract',
-        description: error.message || 'Failed to create contract',
-        variant: 'destructive',
+        title: "Error",
+        description: error.message || "Failed to create contract.",
+        variant: "destructive",
       });
     },
   });
@@ -385,47 +390,40 @@ export default function ContractsV2() {
     active: "bg-green-100 text-green-800",
     completed: "bg-blue-100 text-blue-800",
     cancelled: "bg-red-100 text-red-800",
-    expired: "bg-orange-100 text-orange-800"
+    expired: "bg-orange-100 text-orange-800",
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'draft': return Circle;
-      case 'active': return CheckCircle;
-      case 'completed': return CheckCircle;
-      case 'cancelled': return AlertTriangle;
-      case 'expired': return Clock;
-      default: return Circle;
+      case 'active': return <CheckCircle className="h-4 w-4" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'cancelled': return <AlertTriangle className="h-4 w-4" />;
+      case 'expired': return <AlertTriangle className="h-4 w-4" />;
+      default: return <Circle className="h-4 w-4" />;
     }
   };
 
   return (
-    <div className="space-y-6" data-testid="contracts-module">
+    <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Contracts Module</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Contracts Management</h1>
           <p className="text-muted-foreground">
-            Professional contract management with engagement letter automation and e-signature integration
+            Professional contract management with AI-powered templates and e-signatures
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button onClick={() => setActiveTab("dashboard")} variant="outline" data-testid="button-start-work">
-            <Activity className="h-4 w-4 mr-2" />
-            Start Work
-          </Button>
-          <Button onClick={() => setShowContractDialog(true)} data-testid="button-create-contract">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Contract
-          </Button>
+        <div className="flex items-center gap-2">
+          <ModuleHelp context="contracts" className="mr-2" />
+          <StartWorkingButton />
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Main Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <Activity className="h-4 w-4" />
+            <BarChart3 className="h-4 w-4" />
             Dashboard
           </TabsTrigger>
           <TabsTrigger value="contracts" className="flex items-center gap-2">
@@ -433,8 +431,8 @@ export default function ContractsV2() {
             Contracts
           </TabsTrigger>
           <TabsTrigger value="engagement-letters" className="flex items-center gap-2">
-            <Zap className="h-4 w-4" />
-            Engagement Letters
+            <Mail className="h-4 w-4" />
+            Templates
           </TabsTrigger>
           <TabsTrigger value="e-signatures" className="flex items-center gap-2">
             <FileSignature className="h-4 w-4" />
@@ -444,73 +442,50 @@ export default function ContractsV2() {
 
         {/* Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">
-          {/* Dashboard Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card data-testid="card-total-contracts">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Contracts</p>
-                    <p className="text-3xl font-bold" data-testid="text-total-contracts">
-                      {dashboardStats.totalContracts}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">All time contracts</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <FileText className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-total-contracts">{dashboardStats.totalContracts}</div>
+                <p className="text-xs text-muted-foreground">All time contracts</p>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-active-contracts">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Active Contracts</p>
-                    <p className="text-3xl font-bold" data-testid="text-active-contracts">
-                      {dashboardStats.activeContracts}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Currently active</p>
-                  </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  </div>
-                </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-active-contracts">{dashboardStats.activeContracts}</div>
+                <p className="text-xs text-muted-foreground">Currently active</p>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-expiring-soon">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Expiring Soon</p>
-                    <p className="text-3xl font-bold" data-testid="text-expiring-soon">
-                      {dashboardStats.expiredContracts}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Next 30 days</p>
-                  </div>
-                  <div className="p-3 bg-orange-100 rounded-lg">
-                    <Clock className="h-6 w-6 text-orange-600" />
-                  </div>
-                </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Expired</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-expired-contracts">{dashboardStats.expiredContracts}</div>
+                <p className="text-xs text-muted-foreground">Need attention</p>
               </CardContent>
             </Card>
 
-            <Card data-testid="card-total-value">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-                    <p className="text-3xl font-bold" data-testid="text-total-value">
-                      R {dashboardStats.totalValue.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">Active contracts</p>
-                  </div>
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-purple-600" />
-                  </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold" data-testid="text-total-value">
+                  R {dashboardStats.totalValue.toLocaleString()}
                 </div>
+                <p className="text-xs text-muted-foreground">Active contracts</p>
               </CardContent>
             </Card>
           </div>
@@ -519,49 +494,22 @@ export default function ContractsV2() {
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Streamline your contract management workflow</CardDescription>
+              <CardDescription>Common contract management tasks</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowContractDialog(true)}>
-                  <CardContent className="p-6 text-center">
-                    <div className="p-3 bg-blue-100 rounded-lg w-fit mx-auto mb-3">
-                      <Plus className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Create Contract</h3>
-                    <p className="text-sm text-muted-foreground">Start a new contract</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("engagement-letters")}>
-                  <CardContent className="p-6 text-center">
-                    <div className="p-3 bg-green-100 rounded-lg w-fit mx-auto mb-3">
-                      <Mail className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Generate Engagement Letter</h3>
-                    <p className="text-sm text-muted-foreground">Professional engagement letters</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setShowTemplateDialog(true)}>
-                  <CardContent className="p-6 text-center">
-                    <div className="p-3 bg-purple-100 rounded-lg w-fit mx-auto mb-3">
-                      <FileText className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <h3 className="font-semibold mb-2">Create Template</h3>
-                    <p className="text-sm text-muted-foreground">Design custom templates</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab("e-signatures")}>
-                  <CardContent className="p-6 text-center">
-                    <div className="p-3 bg-orange-100 rounded-lg w-fit mx-auto mb-3">
-                      <BarChart3 className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <h3 className="font-semibold mb-2">View Analytics</h3>
-                    <p className="text-sm text-muted-foreground">Contract insights</p>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button onClick={() => setShowContractDialog(true)} className="h-20 flex-col gap-2" variant="outline">
+                  <Plus className="h-6 w-6" />
+                  Create Contract
+                </Button>
+                <Button onClick={() => setActiveTab('engagement-letters')} className="h-20 flex-col gap-2" variant="outline">
+                  <Mail className="h-6 w-6" />
+                  Browse Templates
+                </Button>
+                <Button onClick={() => setActiveTab('e-signatures')} className="h-20 flex-col gap-2" variant="outline">
+                  <FileSignature className="h-6 w-6" />
+                  E-Signatures
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -569,30 +517,10 @@ export default function ContractsV2() {
 
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search contracts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Contracts</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Contracts</h2>
+              <p className="text-muted-foreground">Manage your business contracts and agreements</p>
             </div>
             <Button onClick={() => setShowContractDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -600,82 +528,111 @@ export default function ContractsV2() {
             </Button>
           </div>
 
+          {/* Search and Filter */}
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Contract Name</TableHead>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>Value</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contractsLoading ? (
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search contracts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-contracts"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contracts Table */}
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                    </TableCell>
+                    <TableHead>Contract</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Value</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ) : contracts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-medium mb-2">No contracts found</h3>
-                        <p className="text-muted-foreground mb-4">Get started by creating your first contract.</p>
-                        <Button onClick={() => setShowContractDialog(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Create First Contract
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  contracts
-                    .filter((contract: any) => 
-                      contract.contractName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      contract.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                    .map((contract: any) => {
-                      const StatusIcon = getStatusIcon(contract.status);
-                      return (
-                        <TableRow key={contract.id}>
-                          <TableCell className="font-medium">{contract.contractName}</TableCell>
-                          <TableCell>{contract.clientName || 'N/A'}</TableCell>
-                          <TableCell>
-                            <Badge className={statusColors[contract.status as keyof typeof statusColors]}>
-                              <StatusIcon className="h-3 w-3 mr-1" />
+                </TableHeader>
+                <TableBody>
+                  {contracts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <div>
+                          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-medium mb-2">No contracts found</h3>
+                          <p className="text-muted-foreground mb-4">Get started by creating your first contract.</p>
+                          <Button onClick={() => setShowContractDialog(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Contract
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    contracts.map((contract: any) => (
+                      <TableRow key={contract.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{contract.contractName || contract.title}</p>
+                            <p className="text-sm text-muted-foreground">{contract.description}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>{contract.clientName || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{contract.contractType || contract.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[contract.status as keyof typeof statusColors]}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(contract.status)}
                               {contract.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {contract.startDate ? format(new Date(contract.startDate), 'MMM dd, yyyy') : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {contract.value ? `R ${contract.value.toLocaleString()}` : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => setSelectedContract(contract)}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                )}
-              </TableBody>
-            </Table>
+                            </span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {contract.value ? `R ${contract.value.toLocaleString()}` : '-'}
+                        </TableCell>
+                        <TableCell>{format(new Date(contract.endDate), 'MMM dd, yyyy')}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </TabsContent>
 
@@ -920,8 +877,8 @@ export default function ContractsV2() {
               ) : workflows.length === 0 ? (
                 <div className="text-center py-8">
                   <FileSignature className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No signature workflows</h3>
-                  <p className="text-muted-foreground mb-4">Start your first digital signature workflow.</p>
+                  <h3 className="text-lg font-medium mb-2">No signature workflows yet</h3>
+                  <p className="text-muted-foreground mb-4">Create your first signature workflow to start collecting signatures.</p>
                   <Button onClick={() => setShowSignatureDialog(true)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Workflow
@@ -934,7 +891,7 @@ export default function ContractsV2() {
                       <TableHead>Workflow Name</TableHead>
                       <TableHead>Document Title</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Created Date</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -952,15 +909,12 @@ export default function ContractsV2() {
                           {format(new Date(workflow.createdAt), 'MMM dd, yyyy')}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm">
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline">
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm">
-                              <Send className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Download className="h-4 w-4" />
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -980,9 +934,10 @@ export default function ContractsV2() {
           <DialogHeader>
             <DialogTitle>Create New Contract</DialogTitle>
             <DialogDescription>
-              Enter the contract details to get started
+              Add a new contract to your system
             </DialogDescription>
           </DialogHeader>
+
           <Form {...contractForm}>
             <form onSubmit={contractForm.handleSubmit(handleCreateContract)} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -999,6 +954,7 @@ export default function ContractsV2() {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={contractForm.control}
                   name="contractType"
@@ -1012,7 +968,7 @@ export default function ContractsV2() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="service">Service Contract</SelectItem>
+                          <SelectItem value="service">Service Agreement</SelectItem>
                           <SelectItem value="maintenance">Maintenance Contract</SelectItem>
                           <SelectItem value="consulting">Consulting Agreement</SelectItem>
                           <SelectItem value="development">Development Contract</SelectItem>
@@ -1025,6 +981,7 @@ export default function ContractsV2() {
                   )}
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={contractForm.control}
@@ -1044,6 +1001,7 @@ export default function ContractsV2() {
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={contractForm.control}
                   name="currency"
@@ -1057,10 +1015,10 @@ export default function ContractsV2() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="ZAR">ZAR (South African Rand)</SelectItem>
-                          <SelectItem value="USD">USD (US Dollar)</SelectItem>
-                          <SelectItem value="EUR">EUR (Euro)</SelectItem>
-                          <SelectItem value="GBP">GBP (British Pound)</SelectItem>
+                          <SelectItem value="ZAR">ZAR - South African Rand</SelectItem>
+                          <SelectItem value="USD">USD - US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR - Euro</SelectItem>
+                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1068,6 +1026,7 @@ export default function ContractsV2() {
                   )}
                 />
               </div>
+
               <FormField
                 control={contractForm.control}
                 name="description"
@@ -1075,8 +1034,9 @@ export default function ContractsV2() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Enter contract description"
+                        className="resize-none"
                         rows={3}
                         {...field}
                       />
@@ -1085,6 +1045,7 @@ export default function ContractsV2() {
                   </FormItem>
                 )}
               />
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setShowContractDialog(false)}>
                   Cancel
@@ -1092,14 +1053,11 @@ export default function ContractsV2() {
                 <Button type="submit" disabled={createContractMutation.isPending}>
                   {createContractMutation.isPending ? (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Creating...
                     </>
                   ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Contract
-                    </>
+                    "Create Contract"
                   )}
                 </Button>
               </DialogFooter>
