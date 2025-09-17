@@ -1,0 +1,233 @@
+/**
+ * AI-Powered Template Customization Service
+ * Uses OpenAI to provide intelligent template customization and preview features
+ */
+
+import OpenAI from 'openai';
+
+// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export interface TemplateCustomizationRequest {
+  templateContent: string;
+  serviceType: string;
+  clientDetails?: {
+    name: string;
+    industry?: string;
+    size?: string;
+    specificRequirements?: string;
+  };
+  customizationPrompt?: string;
+  complianceLevel?: 'basic' | 'standard' | 'comprehensive';
+}
+
+export interface TemplateCustomizationResponse {
+  customizedContent: string;
+  suggestions: string[];
+  complianceNotes: string[];
+  estimatedFees: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  keyTerms: string[];
+}
+
+export class TemplateAIService {
+  /**
+   * Customize engagement letter template using AI
+   */
+  async customizeTemplate(request: TemplateCustomizationRequest): Promise<TemplateCustomizationResponse> {
+    try {
+      const systemPrompt = `You are a South African professional accounting expert specializing in engagement letter customization. Your role is to:
+
+1. Customize engagement letter templates for South African accounting practices
+2. Ensure compliance with SAICA, SAIPA, and IRBA standards
+3. Provide realistic fee estimates in South African Rand (ZAR)
+4. Suggest improvements and compliance considerations
+5. Adapt content based on client industry and business size
+
+Always maintain professional language and ensure all legal and compliance requirements are met.`;
+
+      const userPrompt = `Please customize this ${request.serviceType} engagement letter template:
+
+ORIGINAL TEMPLATE:
+${request.templateContent}
+
+CLIENT DETAILS:
+- Company: ${request.clientDetails?.name || 'Client Name'}
+- Industry: ${request.clientDetails?.industry || 'General Business'}
+- Size: ${request.clientDetails?.size || 'Small Business'}
+- Special Requirements: ${request.clientDetails?.specificRequirements || 'Standard requirements'}
+
+CUSTOMIZATION REQUEST:
+${request.customizationPrompt || 'Standard professional customization'}
+
+COMPLIANCE LEVEL: ${request.complianceLevel || 'standard'}
+
+Please provide a JSON response with:
+1. customizedContent: The fully customized template with placeholders
+2. suggestions: Array of 3-5 improvement suggestions
+3. complianceNotes: Array of compliance considerations for SA practices
+4. estimatedFees: Min/max fee range in ZAR for this service type
+5. keyTerms: Array of 5-7 key terms/clauses that should be highlighted
+
+Ensure the customized content maintains professional standards and includes all necessary South African regulatory references.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 2000
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+
+      return {
+        customizedContent: result.customizedContent || request.templateContent,
+        suggestions: result.suggestions || [],
+        complianceNotes: result.complianceNotes || [],
+        estimatedFees: result.estimatedFees || { min: 1000, max: 5000, currency: 'ZAR' },
+        keyTerms: result.keyTerms || []
+      };
+    } catch (error) {
+      console.error('AI template customization error:', error);
+      throw new Error('Failed to customize template with AI');
+    }
+  }
+
+  /**
+   * Generate smart field suggestions for template placeholders
+   */
+  async generateFieldSuggestions(
+    fieldName: string, 
+    context: { serviceType: string; clientDetails?: any }
+  ): Promise<string[]> {
+    try {
+      const prompt = `Generate 5 professional suggestions for the field "${fieldName}" in a ${context.serviceType} engagement letter for a South African accounting practice.
+
+Context:
+- Service: ${context.serviceType}
+- Client: ${context.clientDetails?.name || 'Professional client'}
+- Industry: ${context.clientDetails?.industry || 'General business'}
+
+Provide realistic, professional suggestions appropriate for South African business practices. Return as JSON array of strings.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.8,
+        max_tokens: 500
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      return result.suggestions || [];
+    } catch (error) {
+      console.error('AI field suggestions error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Analyze template for compliance and improvement opportunities
+   */
+  async analyzeTemplate(templateContent: string, serviceType: string): Promise<{
+    complianceScore: number;
+    riskAreas: string[];
+    improvements: string[];
+    missingClauses: string[];
+  }> {
+    try {
+      const prompt = `Analyze this ${serviceType} engagement letter template for South African professional accounting practice compliance:
+
+TEMPLATE:
+${templateContent}
+
+Provide analysis as JSON with:
+1. complianceScore: Score from 1-100 based on SA professional standards
+2. riskAreas: Array of potential legal/professional risks
+3. improvements: Array of suggested improvements
+4. missingClauses: Array of important clauses that should be added
+
+Consider SAICA, SAIPA, IRBA requirements and South African legal framework.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+        max_tokens: 1000
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+
+      return {
+        complianceScore: result.complianceScore || 85,
+        riskAreas: result.riskAreas || [],
+        improvements: result.improvements || [],
+        missingClauses: result.missingClauses || []
+      };
+    } catch (error) {
+      console.error('AI template analysis error:', error);
+      return {
+        complianceScore: 85,
+        riskAreas: [],
+        improvements: [],
+        missingClauses: []
+      };
+    }
+  }
+
+  /**
+   * Generate professional fee estimates based on service type and complexity
+   */
+  async estimateFees(serviceType: string, clientDetails: any, complexity: string = 'standard'): Promise<{
+    monthlyFee?: number;
+    projectFee?: number;
+    hourlyRate?: number;
+    annualFee?: number;
+    breakdown: string[];
+  }> {
+    try {
+      const prompt = `Estimate professional fees for ${serviceType} services in South Africa:
+
+Client Details:
+- Size: ${clientDetails?.size || 'Small business'}
+- Industry: ${clientDetails?.industry || 'General'}
+- Complexity: ${complexity}
+
+Provide realistic ZAR amounts as JSON with:
+- monthlyFee (if applicable)
+- projectFee (if applicable) 
+- hourlyRate (if applicable)
+- annualFee (if applicable)
+- breakdown: Array explaining fee components
+
+Base on current South African market rates for professional accounting services.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.5,
+        max_tokens: 600
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || '{}');
+      return result;
+    } catch (error) {
+      console.error('AI fee estimation error:', error);
+      return {
+        monthlyFee: 2500,
+        breakdown: ['Standard service fee based on market rates']
+      };
+    }
+  }
+}
+
+export const templateAIService = new TemplateAIService();

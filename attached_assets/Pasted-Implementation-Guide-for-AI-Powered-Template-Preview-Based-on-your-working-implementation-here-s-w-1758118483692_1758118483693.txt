@@ -1,0 +1,58 @@
+Implementation Guide for AI-Powered Template Preview
+Based on your working implementation, here's what the other agent needs to implement:
+
+1. Core Components Needed
+Frontend Component: AITemplatePreview.tsx
+
+4-tab interface: Preview, AI Customize, Analysis, Pricing
+Client details form (name, industry, size, requirements)
+Compliance scoring with progress bars
+Fee estimation display
+Real-time AI customization
+Backend Service: template-ai-service.ts
+
+OpenAI integration using GPT-4o model
+Template customization method
+Compliance analysis
+Fee estimation for South African market
+Field suggestions generator
+2. Key Features to Implement
+AI Customization Tab:
+
+Client details form (industry dropdown, business size, specific requirements)
+Customization prompt textarea
+Compliance level selector (basic/standard/comprehensive)
+"Customize with AI" button with loading states
+Analysis Tab:
+
+Compliance score (1-100%) with progress bar
+Risk areas identification
+Improvement suggestions
+Missing clauses detection
+Pricing Tab:
+
+ZAR fee estimates (monthly/project/hourly/annual)
+Fee breakdown with explanations
+Industry-specific pricing
+3. Required API Endpoints
+POST /api/engagement-letter-templates/ai/customize
+POST /api/engagement-letter-templates/ai/analyze  
+POST /api/engagement-letter-templates/ai/estimate-fees
+4. Essential Dependencies
+OpenAI API key (OPENAI_API_KEY environment variable)
+React Query for state management
+Shadcn/ui components (Dialog, Tabs, Cards, Progress, etc.)
+Lucide React icons (Sparkles, Wand2, Eye, DollarSign, etc.)
+5. Integration Steps
+Copy the AITemplatePreview component with all its tab functionality
+Implement the TemplateAIService class with OpenAI integration
+Add the API routes in your backend routes file
+Import and use AITemplatePreview in your contracts/templates module
+Set up proper error handling and loading states
+6. Key Implementation Tips
+Ensure OpenAI API key is configured in environment
+The AI prompts are tailored for South African professional standards (SAICA, SAIPA, IRBA)
+Fee estimates are in ZAR currency
+Template content should support placeholder variables like {client_name}
+Include proper error handling for AI API failures
+The working implementation here shows this creates the exact interface from your second image with full AI-powered capabilities.

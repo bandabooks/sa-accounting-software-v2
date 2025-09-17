@@ -1225,69 +1225,25 @@ export default function ContractsV2() {
         </DialogContent>
       </Dialog>
 
-      {/* Template Preview Dialog */}
-      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Template Preview: {selectedTemplate?.name}</DialogTitle>
-            <DialogDescription>
-              {selectedTemplate?.servicePackage && (
-                <Badge variant="outline" className="mt-2">
-                  {professionalCategories.find(c => c.value === selectedTemplate.servicePackage)?.label}
-                </Badge>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900 rounded-lg">
-            {selectedTemplate?.bodyMd ? (
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <div className="whitespace-pre-wrap font-mono text-sm">
-                  {selectedTemplate.bodyMd}
-                </div>
-              </div>
-            ) : selectedTemplate?.content ? (
-              <div className="prose prose-sm max-w-none dark:prose-invert">
-                <div className="whitespace-pre-wrap font-mono text-sm">
-                  {selectedTemplate.content}
-                </div>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">No preview available</p>
-            )}
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="text-sm text-muted-foreground">
-              <strong>Template Fields:</strong> {selectedTemplate?.fields ? 
-                (Array.isArray(selectedTemplate.fields) ? 
-                  selectedTemplate.fields.join(', ') : 
-                  typeof selectedTemplate.fields === 'string' ? 
-                    selectedTemplate.fields : 
-                    'No custom fields'
-                ) : 
-                'No custom fields'}
-            </div>
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowPreviewDialog(false)}>
-              Close
-            </Button>
-            <Button 
-              onClick={() => {
-                setShowPreviewDialog(false);
-                setShowContractDialog(true);
-                contractForm.setValue('contractType', 'engagement');
-                contractForm.setValue('description', `Based on template: ${selectedTemplate?.name}`);
-              }}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Use This Template
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* AI-Powered Template Preview Dialog */}
+      {showPreviewDialog && selectedTemplate && (
+        <AITemplatePreview
+          template={selectedTemplate}
+          onClose={() => setShowPreviewDialog(false)}
+          onUseTemplate={(template) => {
+            setShowPreviewDialog(false);
+            setShowContractDialog(true);
+            contractForm.setValue('contractType', 'engagement');
+            contractForm.setValue('description', `Based on template: ${template.name}`);
+            if (template.clientDetails?.name) {
+              contractForm.setValue('clientId', 0); // Will need proper client lookup
+            }
+            if (template.feeEstimate?.monthlyFee) {
+              contractForm.setValue('value', template.feeEstimate.monthlyFee);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

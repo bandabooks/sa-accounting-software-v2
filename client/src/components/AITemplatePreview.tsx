@@ -49,7 +49,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('preview');
   const [isCustomizing, setIsCustomizing] = useState(false);
-  const [customizedContent, setCustomizedContent] = useState(template.templateContent);
+  const [customizedContent, setCustomizedContent] = useState(template.bodyMd || template.content || template.templateContent || '');
   const [clientDetails, setClientDetails] = useState<ClientDetails>({
     name: '',
     industry: '',
@@ -107,8 +107,8 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
   const handleCustomizeWithAI = () => {
     setIsCustomizing(true);
     customizeTemplateMutation.mutate({
-      templateContent: template.templateContent,
-      serviceType: template.serviceType,
+      templateContent: customizedContent,
+      serviceType: template.servicePackage || template.serviceType,
       clientDetails,
       customizationPrompt,
       complianceLevel
@@ -133,15 +133,15 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
 
   const serviceTypeLabels: Record<string, string> = {
     bookkeeping: 'Bookkeeping Services',
-    tax: 'Tax Services',
-    vat: 'VAT Services',
+    tax_compliance: 'Tax Compliance Services',
+    vat_compliance: 'VAT Compliance Services',
     payroll: 'Payroll Services',
-    audit: 'Audit Engagements',
-    review: 'Independent Reviews',
-    compilation: 'Compilation Services',
-    cipc: 'CIPC & Company Secretarial',
-    management_accounts: 'Management Accounts',
-    advisory: 'Business Advisory'
+    audit_services: 'Audit Services',
+    company_secretarial: 'Company Secretarial Services',
+    advisory_services: 'Business Advisory Services',
+    basic: 'Basic Services',
+    standard: 'Standard Services',
+    premium: 'Premium Services'
   };
 
   return (
@@ -185,7 +185,7 @@ const AITemplatePreview: React.FC<AITemplatePreviewProps> = ({ template, onClose
                 <CardContent className="space-y-3">
                   <div>
                     <Label className="text-xs text-muted-foreground">Service Type</Label>
-                    <p className="text-sm font-medium">{serviceTypeLabels[template.serviceType]}</p>
+                    <p className="text-sm font-medium">{serviceTypeLabels[template.servicePackage] || serviceTypeLabels[template.serviceType] || template.servicePackage || 'Professional Services'}</p>
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Compliance Standards</Label>
