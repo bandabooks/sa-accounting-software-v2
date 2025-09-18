@@ -1,29 +1,28 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
-
-# Environment files
-.env
-.env.local
-.env.production
-.env.development
-
-# Database files
-*.db
-*.sqlite
-
-# Log files
-*.log
+# Dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Build files
+# Production builds
+dist/
 build/
-out/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs
+*.log
 
 # IDE files
 .vscode/
@@ -31,15 +30,32 @@ out/
 *.swp
 *.swo
 
-# OS files
-Thumbs.db
+# OS generated files
 .DS_Store
+Thumbs.db
 
 # Temporary files
-temp/
 tmp/
-*.tmp
+temp/
 
-# Deployment files
-.vercel
-.netlify
+# Upload directories
+uploads/
+public/uploads/
+
+# Replit specific files (exclude from GitHub)
+.replit
+replit.nix
+.config/
+
+# Google Cloud Storage credentials
+*.json
+service-account-*.json
+
+# SSL certificates
+*.pem
+*.crt
+*.key
+
+# Backup files
+*.backup
+*.bak
