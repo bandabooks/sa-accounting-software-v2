@@ -551,8 +551,8 @@ export default function ContractsV2() {
       contractType: data.contractType || "service", 
       clientId: Number(data.clientId), // must be number not string
       projectId: data.projectId ? Number(data.projectId) : undefined,
-      startDate: toISO(data.startDate),
-      endDate: toISO(data.endDate),
+      startDate: data.startDate instanceof Date ? data.startDate : new Date(data.startDate),
+      endDate: data.endDate instanceof Date ? data.endDate : new Date(data.endDate),
       value: Number(data.value) || 0,
       currency: "ZAR",
       paymentTerms: data.paymentTerms || "Net 30 Days",
