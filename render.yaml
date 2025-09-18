@@ -1,0 +1,71 @@
+services:
+  - type: web
+    name: accounting-app-staging
+    env: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    plan: free
+    region: oregon
+    branch: develop
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: accounting-app-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_STORAGE_BUCKET
+        sync: false
+      - key: GOOGLE_CLOUD_STORAGE_KEY_FILE
+        sync: false
+
+databases:
+  - name: accounting-app-db
+    databaseName: accounting_staging
+    plan: free
+    region: oregon
+
+  - type: web
+    name: accounting-app-production
+    env: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    plan: starter
+    region: oregon
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: accounting-app-prod-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_STORAGE_BUCKET
+        sync: false
+      - key: GOOGLE_CLOUD_STORAGE_KEY_FILE
+        sync: false
+
+  - name: accounting-app-prod-db
+    databaseName: accounting_production
+    plan: starter
+    region: oregon
